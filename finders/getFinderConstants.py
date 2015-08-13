@@ -29,8 +29,8 @@ def getTeams(soup):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('constfile', nargs='?', default='constants.json',
-                        help='file to output as constants JSON')
+    parser.add_argument('constfile', nargs='?', default='finderConstants.json',
+                        help='file to output as finder constants JSON')
 
     args = parser.parse_args()
     constfile = args.constfile
@@ -39,9 +39,9 @@ if __name__ == '__main__':
     soup = BeautifulSoup(html, 'lxml')
 
     obj = {
-        'positions': getPositions(soup),
-        'stats': getStats(soup),
-        'teams': getTeams(soup)
+        'POSITIONS': getPositions(soup),
+        'STATS': getStats(soup),
+        'TEAMS': getTeams(soup)
     }
 
     with open(constfile, 'w') as f:
