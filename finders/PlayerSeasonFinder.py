@@ -1,7 +1,9 @@
+from bs4 import BeautifulSoup
 from copy import deepcopy
 import json
 import os
 from pprint import pprint
+import requests
 import time
 
 from constants import constants
@@ -14,6 +16,11 @@ def PlayerSeasonFinder(**kwargs):
            'play-index/psl_finder.cgi?' +
            querystring)
     print url
+    html = requests.get(url).text
+    soup = BeautifulSoup(html, 'lxml')
+    for row in soup.select('table#stats tbody tr[class=""]'):
+        row.select_one('a').get('href')
+        # I'm here
 
 def kwArgsToOpts(**kwargs):
 
@@ -81,3 +88,7 @@ def kwArgsToOpts(**kwargs):
         opts['draft'] = '1'
 
     return opts
+
+PlayerSeasonFinder(**{
+    'year_min': 2000, 'year_max': 2014, 'pos': 'rb', 'order_by': 'rush_yds_per_g'
+})
