@@ -70,6 +70,8 @@ def getDraftInputs(soup):
     return draftInputs
 
 if __name__ == '__main__':
+    # being run from command line
+    # so generate a new constants JSON file
     parser = argparse.ArgumentParser()
     parser.add_argument('constfile', nargs='?', default=CONSTANTS_FN,
                         help='file to output as finder constants JSON')
@@ -91,17 +93,22 @@ if __name__ == '__main__':
     with open(constfile, 'w') as f:
         json.dump(obj, f)
 else:
+    # being imported as module
+    # so generate new file if there is no constants file
+    # or if it's more than a week old
+
     # switch to finders directory
     orig_cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     # if file not found or it's been a week, generate it
     modtime = os.path.getmtime(CONSTANTS_FN)
     curtime = time.time()
-    if not os.path.exists(CONSTANTS_FN) or curtime - modtime >= 7*24*60*60:
+    if not os.path.isfile(CONSTANTS_FN) or curtime - modtime >= 7*24*60*60:
         subprocess.call([
             'python',
             'getFinderConstants.py'
         ])
-    # store defaults variable
+    # store constants variable
     with open(CONSTANTS_FN, 'r') as const_f:
         constants = json.load(const_f)
+    os.chdir(orig_cwd)
