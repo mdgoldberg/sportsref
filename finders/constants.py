@@ -106,9 +106,9 @@ else:
     if not os.path.isfile(CONSTANTS_FN) or curtime - modtime >= 7*24*60*60:
         subprocess.call([
             'python',
-            'getFinderConstants.py'
+            'constants.py'
         ])
-    # store constants variable
+    # populate constants variable
     with open(CONSTANTS_FN, 'r') as const_f:
         constants = json.load(const_f)
     os.chdir(orig_cwd)
