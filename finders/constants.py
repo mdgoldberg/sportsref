@@ -4,12 +4,13 @@ import json
 import os
 from pprint import pprint
 import requests
+import subprocess
 import time
 
 PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
                      'play-index/psl_finder.cgi')
 
-CONSTANTS_FN = 'finderConstants.json'
+CONSTANTS_FN = 'constants.json'
 
 def getPositions(soup):
     striplen = len('pos_is_')
@@ -90,7 +91,7 @@ if __name__ == '__main__':
         'DRAFT_INPUTS': getDraftInputs(soup),
     }
 
-    with open(constfile, 'w') as f:
+    with open(constfile, 'w+') as f:
         json.dump(obj, f)
 else:
     # being imported as module
@@ -101,14 +102,16 @@ else:
     orig_cwd = os.getcwd()
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     # if file not found or it's been a week, generate it
-    modtime = os.path.getmtime(CONSTANTS_FN)
-    curtime = time.time()
-    if not os.path.isfile(CONSTANTS_FN) or curtime - modtime >= 7*24*60*60:
+    if os.path.isfile(CONSTANTS_FN):
+        modtime = os.path.getmtime(CONSTANTS_FN)
+        curtime = time.time()
+    if (not os.path.isfile(CONSTANTS_FN) or
+            not int(curtime - modtime) >= 7*24*60*60):
         subprocess.call([
             'python',
-            'constants.py'
-        ])
-    # populate constants variable
+            __file__
+            ])
+    # populate constants variables
     with open(CONSTANTS_FN, 'r') as const_f:
         constants = json.load(const_f)
     os.chdir(orig_cwd)
