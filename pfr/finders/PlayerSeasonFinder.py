@@ -16,18 +16,29 @@ CONSTANTS_FN = 'PSFConstants.json'
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 
-    opts = kwArgsToOpts(**kwargs)
-    querystring = '&'.join(['{}={}'.format(k, v)
-                            for k, v in sorted(opts.iteritems())])
-    url = ('http://www.pro-football-reference.com/' +
-           'play-index/psl_finder.cgi?' +
-           querystring)
-    print url
-    html = requests.get(url).text
-    soup = BeautifulSoup(html, 'lxml')
-    for row in soup.select('table#stats tbody tr[class=""]'):
-        print row.select_one('a').get('href')
-        # I'm here
+    if 'offset' not in kwargs:
+        kwargs['offset'] = 0
+    
+    playerseasons = []
+    while True:
+        opts = kwArgsToOpts(**kwargs)
+        querystring = '&'.join(['{}={}'.format(k, v)
+                                for k, v in sorted(opts.iteritems())])
+        url = '{}?{}'.format(PLAYER_SEASON_URL, querystring)
+        print url
+        html = requests.get(url).text
+        soup = BeautifulSoup(html, 'lxml')
+        for row in soup.select('table#stats tbody tr[class=""]'):
+            player_url = row.select_one('a').get('href')
+            year = int(row.find_all('td')[2].string)
+            playerseasons.append((player_url, year))
+
+        if soup.find(string='Next page'):
+            kwargs['offset'] += 100
+        else:
+            break
+
+    return playerseasons
 
 def kwArgsToOpts(**kwargs):
 
@@ -62,9 +73,10 @@ def kwArgsToOpts(**kwargs):
     for k, v in kwargs.iteritems():
         # small changes to keys/values for convenience
         k = 'team_id' if k in ('tm', 'team') else k
-        v = 'Y' if v == True else v
-        v = 'N' if v == False else v
-        # if overwriting a default
+        if isinstance(v, bool):
+            v = 'Y' if v == True else v
+            v = 'N' if v == False else v
+        # if overwriting a default, overwrite it
         if k in opts:
             opts[k] = v
 
@@ -90,12 +102,14 @@ def kwArgsToOpts(**kwargs):
 
     # turning on draft flag if necessary
     draft = False
-    for k in opts:
+    for k in kwargs:
         if k in constants['DRAFT_INPUTS']:
             draft = True
+            break
     if draft:
         opts['draft'] = '1'
 
+    opts['request'] = 1
     return opts
 
 def getPositions(soup):
@@ -145,13 +159,15 @@ def getInputsAndDefaults(soup):
             def_dict[sel['name']] = defaultOpt.get('value', '')
         else:
             def_dict[sel['name']] = sel.select_one('option').get('value', '')
-
+    
+    # set all position and draft position defaults to 'N' (False)
     for k in def_dict:
         if 'pos_is_' in k:
             def_dict[k] = 'N'
     
     def_dict.pop('request', None)
     def_dict.pop('use_favorites', None)
+    def_dict['offset'] = 0
     return def_dict
 
 def getDraftInputs(soup):
@@ -201,5 +217,6 @@ def getConstants():
 
 if __name__ == "__main__":
     psf = PlayerSeasonFinder(**{
-        'year_min': 2000, 'year_max': 2014, 'pos': 'rb', 'order_by': 'av', 'tm': 'nwe'
+        'pos': 'rb', 'year_min': '2003', 'c1comp': 'gt', 'c1stat': 'rush_att', 'c1val': 50, 'order_by': 'av'
     })
+    print psf
