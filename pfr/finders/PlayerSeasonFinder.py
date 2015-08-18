@@ -14,11 +14,7 @@ PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
 CONSTANTS_FN = 'PSFConstants.json'
 
 def PlayerSeasonFinder(**kwargs):
-    """Finds player-seasons that match criteria given in kwargs.
-
-    :returns: list of criteria-matching player-seasons
-    :rtype: list of (player relative URL, season year) tuples
-    """
+    """ Docstring will be filled in by __init__.py """
 
     opts = kwArgsToOpts(**kwargs)
     querystring = '&'.join(['{}={}'.format(k, v)
@@ -153,7 +149,9 @@ def getInputsAndDefaults(soup):
     for k in def_dict:
         if 'pos_is_' in k:
             def_dict[k] = 'N'
-
+    
+    def_dict.pop('request', None)
+    def_dict.pop('use_favorites', None)
     return def_dict
 
 def getDraftInputs(soup):
