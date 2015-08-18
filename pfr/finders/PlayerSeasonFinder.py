@@ -6,7 +6,7 @@ from pprint import pprint
 import requests
 import time
 
-from finders.PlayerSeasonFinder import constants
+from pfr.decorators import *
 
 PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
                      'play-index/psl_finder.cgi')
