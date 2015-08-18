@@ -58,5 +58,5 @@ target/
 
 # Misc
 **/.DS_Store
-**/.swp
+**/*.swp
 **/*.json
