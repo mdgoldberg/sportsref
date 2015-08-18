@@ -6,22 +6,20 @@ from pprint import pprint
 import requests
 import time
 
+from pfr.decorators import *
+
 PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
                      'play-index/psl_finder.cgi')
 
 CONSTANTS_FN = 'PSFConstants.json'
 
 def PlayerSeasonFinder(**kwargs):
-    """Description
-    
-    @param param:  Description
-    @type  param:  Type
-    
-    @return:  Description
-    @rtype :  Type
-    
-    @raise e:  Description
+    """Finds player-seasons that match criteria given in kwargs.
+
+    :returns: list of criteria-matching player-seasons
+    :rtype: list of (player relative URL, season year) tuples
     """
+    pass
 
     opts = kwArgsToOpts(**kwargs)
     querystring = '&'.join(['{}={}'.format(k, v) for k, v in opts.iteritems()])
@@ -155,7 +153,7 @@ def getInputsAndDefaults(soup):
     for k in def_dict:
         if 'pos_is_' in k:
             def_dict[k] = 'N'
-    
+
     return def_dict
 
 def getDraftInputs(soup):
@@ -168,11 +166,8 @@ def getDraftInputs(soup):
             draftInputs.append(opt['name'])
     return draftInputs
 
+@switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getConstants():
-    
-    # switch to finders directory
-    orig_cwd = os.getcwd()
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
     # set time variables
     if os.path.isfile(CONSTANTS_FN):
@@ -181,9 +176,9 @@ def getConstants():
     # if file not found or it's been >= a day, generate new constants
     if (not os.path.isfile(CONSTANTS_FN) or
             not int(curtime) - int(modtime) >= 24*60*60):
-        
+
         # must generate the file
-        
+
         html = requests.get(PLAYER_SEASON_URL).text
         soup = BeautifulSoup(html, 'lxml')
 
@@ -198,15 +193,14 @@ def getConstants():
 
         with open(CONSTANTS_FN, 'w+') as f:
             json.dump(constants, f)
-
+    
+    # else, just read variable from cached file
     else:
         with open(CONSTANTS_FN, 'r') as const_f:
             constants = json.load(const_f)
-    
-    # change back to original directory and return
-    os.chdir(orig_cwd)
+
     return constants
-    
+
 if __name__ == "__main__":
     psf = PlayerSeasonFinder(**{
         'year_min': 2000, 'year_max': 2014, 'pos': 'rb', 'order_by': 'rush_yds_per_g'
