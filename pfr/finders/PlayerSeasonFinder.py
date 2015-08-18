@@ -6,7 +6,7 @@ from pprint import pprint
 import requests
 import time
 
-from pfr.decorators import *
+from finders.PlayerSeasonFinder import constants
 
 PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
                      'play-index/psl_finder.cgi')
@@ -19,10 +19,10 @@ def PlayerSeasonFinder(**kwargs):
     :returns: list of criteria-matching player-seasons
     :rtype: list of (player relative URL, season year) tuples
     """
-    pass
 
     opts = kwArgsToOpts(**kwargs)
-    querystring = '&'.join(['{}={}'.format(k, v) for k, v in opts.iteritems()])
+    querystring = '&'.join(['{}={}'.format(k, v)
+                            for k, v in sorted(opts.iteritems())])
     url = ('http://www.pro-football-reference.com/' +
            'play-index/psl_finder.cgi?' +
            querystring)
@@ -203,5 +203,5 @@ def getConstants():
 
 if __name__ == "__main__":
     psf = PlayerSeasonFinder(**{
-        'year_min': 2000, 'year_max': 2014, 'pos': 'rb', 'order_by': 'rush_yds_per_g'
+        'year_min': 2000, 'year_max': 2014, 'pos': 'rb', 'order_by': 'av', 'tm': 'nwe'
     })
