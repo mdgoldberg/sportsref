@@ -19,10 +19,16 @@ def getPositions(soup):
         soup.select('form#psl_finder input[name^="pos_is"]')
     ]
 
-def getStats(soup):
+def getCompStats(soup):
     return [
         option['value'] for option in 
         soup.select('form#psl_finder select#c1stat option') if option.get('value')
+    ]
+
+def getSortStats(soup):
+    return [
+        option['value'] for option in 
+        soup.select('form#psl_finder select[name="order_by"] option') if option.get('value')
     ]
 
 def getTeams(soup):
@@ -85,7 +91,8 @@ if __name__ == '__main__':
 
     obj = {
         'POSITIONS': getPositions(soup),
-        'STATS': getStats(soup),
+        'COMP_STATS': getCompStats(soup),
+        'SORT_STATS': getSortStats(soup),
         'TEAMS': getTeams(soup),
         'INPUTS_DEFAULTS': getInputsAndDefaults(soup),
         'DRAFT_INPUTS': getDraftInputs(soup),
