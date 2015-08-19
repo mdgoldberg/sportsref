@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from copy import deepcopy
 import json
 import os
+from pprint import pprint
 import requests
 import time
 
@@ -24,12 +25,15 @@ def PlayerSeasonFinder(**kwargs):
         querystring = '&'.join(['{}={}'.format(k, v)
                                 for k, v in sorted(opts.iteritems())])
         url = '{}?{}'.format(PLAYER_SEASON_URL, querystring)
-        print url
         html = requests.get(url).text
         soup = BeautifulSoup(html, 'lxml')
+        yearTh = soup.select_one(
+            'table#stats thead tr[class=""] th[data-stat="year_id"]'
+        )
+        yearIdx = soup.select('table#stats thead tr[class=""] th').index(yearTh)
         for row in soup.select('table#stats tbody tr[class=""]'):
-            player_url = row.select_one('a').get('href')
-            year = int(row.find_all('td')[2].string)
+            player_url = row.select_one('a[href*="/players/"]').get('href')
+            year = int(row.find_all('td')[yearIdx].string)
             playerseasons.append((player_url, year))
 
         if soup.find(string='Next page'):
