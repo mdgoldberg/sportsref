@@ -187,11 +187,15 @@ def getConstants():
     if os.path.isfile(CONSTANTS_FN):
         modtime = os.path.getmtime(CONSTANTS_FN)
         curtime = time.time()
+    else:
+        modtime = 0
+        curtime = 0
     # if file not found or it's been >= a day, generate new constants
-    if (not os.path.isfile(CONSTANTS_FN) or
-            not int(curtime) - int(modtime) >= 24*60*60):
+    if not (os.path.isfile(CONSTANTS_FN) and
+            int(curtime) - int(modtime) <= 24*60*60):
 
         # must generate the file
+        print 'WARNING: Regenerating PSF constants file.'
 
         html = requests.get(PLAYER_SEASON_URL).text
         soup = BeautifulSoup(html, 'lxml')
