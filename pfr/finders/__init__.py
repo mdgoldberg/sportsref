@@ -1,6 +1,5 @@
 # Fill in PlayerSeasonFinder docstring
-from pfr.finders.PlayerSeasonFinder import PlayerSeasonFinder
-from pfr.finders.PlayerSeasonFinder import getConstants
+from pfr.finders.PlayerSeasonFinder import PlayerSeasonFinder, getConstants
 
 constants = getConstants()
 inpDefs = constants['INPUTS_DEFAULTS']
@@ -27,10 +26,10 @@ Options for sorting stats:
 {}
 """.format(paramDocstring, compStatsString, sortStatsString)
 
-# clean up
+
+# clean up namespace
 exposed_vars = [
-    'PlayerSeasonFinder',
-    'constants'
+    'PlayerSeasonFinder'
 ]
 variables = locals().keys()
 for var in variables:
@@ -39,3 +38,5 @@ for var in variables:
             or var in exposed_vars):
         # delete the variable
         del locals()[var]
+
+del exposed_vars
