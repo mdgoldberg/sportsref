@@ -1,3 +1,4 @@
+from functools import wraps
 import os
 
 def switchToDir(dirPath):
@@ -7,6 +8,7 @@ def switchToDir(dirPath):
     """
 
     def decorator(func):
+        @wraps(func)
         def wrapFunc(*args, **kwargs):
             orig_cwd = os.getcwd()
             os.chdir(dirPath)
