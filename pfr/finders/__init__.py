@@ -39,4 +39,4 @@ for var in variables:
         # delete the variable
         del locals()[var]
 
-del exposed_vars
+del exposed_vars, var, variables
