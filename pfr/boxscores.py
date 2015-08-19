@@ -4,7 +4,14 @@ from urlparse import urljoin as _urljoin
 
 from pfr.players import getGamelogURL as _getGamelogURL
 
-def PStoBoxScoreURLs(playerURL, year):
+def getBoxScoreURLs(playerURL, year):
+    """Get list of box score URLs for a given player-season.
+
+    :playerURL: absolute or relative URL for player
+    :year: year for corresponding season in player-season.
+    :returns: ["relative_box_score_URL"]
+
+    """
     gamelogURL = _getGamelogURL(playerURL, year)
     html = _requests.get(gamelogURL).text
     soup = _BeautifulSoup(html, 'lxml')
