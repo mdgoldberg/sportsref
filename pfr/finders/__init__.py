@@ -28,15 +28,15 @@ Options for sorting stats:
 
 
 # clean up namespace
-exposed_vars = [
+__all__ = [
+    # modules/variables to expose
     'PlayerSeasonFinder'
 ]
 variables = locals().keys()
 for var in variables:
-    # if not __var__ and not exposed_vars and not meant to be exposed...
-    if not (var.startswith('__') or var == 'exposed_vars' 
-            or var in exposed_vars):
+    # if not __var__ and not meant to be exposed...
+    if not (var.startswith('__') or var in __all__):
         # delete the variable
         del locals()[var]
 
-del exposed_vars, var, variables
+del var, variables
