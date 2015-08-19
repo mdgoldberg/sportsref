@@ -34,8 +34,8 @@ __all__ = [
 ]
 variables = locals().keys()
 for var in variables:
-    # if not __var__ and not meant to be exposed...
-    if not (var.startswith('__') or var in __all__):
+    # if not _var and not meant to be exposed...
+    if not (var.startswith('_') or var in __all__):
         # delete the variable
         del locals()[var]
 
