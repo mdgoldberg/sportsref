@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup as _BeautifulSoup
+import re as _re
 import requests as _requests
 from urlparse import urljoin as _urljoin
 
@@ -17,6 +18,8 @@ def getBoxScoreURLs(playerURL, year):
     soup = _BeautifulSoup(html, 'lxml')
     bsURLs = [boxscore_a.get('href')
               for boxscore_a in 
-              soup.select('table#stats a[href*="/boxscores/"]')]
+              soup.select('table#stats a[href*="/boxscores/"]')
+              if _re.match(r'^\d{4}\-\d{2}\-\d{2}$', boxscore_a.string)
+              ]
     return bsURLs
 
