@@ -11,7 +11,6 @@ paramDocstring = '\n'.join(':param {}: default="{}"'.format(k, v)
 compStatsString = '\n'.join('* {}'.format(cs) for cs in compStats)
 sortStatsString = '\n'.join('* {}'.format(ss) for ss in sortStats)
 
-
 PlayerSeasonFinder.__doc__ = """
 Finds player-seasons that match criteria supplied by keyword arguments.
 
@@ -26,17 +25,11 @@ Options for sorting stats:
 {}
 """.format(paramDocstring, compStatsString, sortStatsString)
 
-
 # clean up namespace
+del constants, getConstants, inpDefs, compStats, sortStats
+del paramDocstring, compStatsString, sortStatsString
+
+# modules/variables to expose
 __all__ = [
-    # modules/variables to expose
     'PlayerSeasonFinder'
 ]
-variables = locals().keys()
-for var in variables:
-    # if not _var and not meant to be exposed...
-    if not (var.startswith('_') or var in __all__):
-        # delete the variable
-        del locals()[var]
-
-del var, variables
