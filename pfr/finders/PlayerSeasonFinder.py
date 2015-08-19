@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 from copy import deepcopy
 import json
 import os
-from pprint import pprint
 import requests
 import time
 
@@ -195,7 +194,6 @@ def getConstants():
             int(curtime) - int(modtime) <= 24*60*60):
 
         # must generate the file
-        print 'WARNING: Regenerating PSF constants file.'
 
         html = requests.get(PLAYER_SEASON_URL).text
         soup = BeautifulSoup(html, 'lxml')
