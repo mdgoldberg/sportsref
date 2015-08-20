@@ -4,6 +4,7 @@ import boxscores
 import decorators
 import finders
 import players
+import utils
 
 # modules/variables to expose
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     'boxscores',
     'decorators',
     'finders',
-    'players'
+    'players',
+    'utils',
 ]
