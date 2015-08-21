@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from copy import deepcopy
 import json
 import os
+import pandas as pd
 from pprint import pprint
 import requests
 import time
@@ -17,12 +18,25 @@ CONSTANTS_FN = 'GPFConstants.json'
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 
-    plays = []
     querystring = kwArgsToQS(**kwargs)
     url = '{}?{}'.format(GAME_PLAY_URL, querystring)
     html = _getHTML(url)
     soup = BeautifulSoup(html, 'lxml')
+    
     # parse soup
+    table = soup.select_one('#div_ table.stats_table')
+    cols = [
+        th.string
+        for th in table.select('thead tr th[data-stat]')
+    ]
+    cols[-1] = 'EPDiff'
+    data = [
+        [td.get_text() if td.get_text() else '0'
+         for td in row.find_all('td')]
+        for row in table.select('tbody tr[class=""]')
+    ]
+    
+    plays = pd.DataFrame(data, columns=cols, dtype=float)
 
     return plays
 
@@ -133,15 +147,15 @@ def getInputsOptionsDefaults():
                                          if opt.get('value')}
         
         # ignore QB kneels
-        def_dict['include_kneels']['value'] = [0]
+        def_dict['include_kneels']['value'] = ['0']
 
         def_dict.pop('request', None)
         def_dict.pop('use_favorites', None)
         
         with open(CONSTANTS_FN, 'w+') as f:
             for k in def_dict:
-                def_dict[k]['value'] = list(def_dict[k]['value'])
-                def_dict[k]['options'] = list(def_dict[k]['options'])
+                def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
+                def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
             json.dump(def_dict, f)
 
     # else, just read variable from cached file
@@ -150,7 +164,3 @@ def getInputsOptionsDefaults():
             def_dict = json.load(const_f)
 
     return def_dict
-
-
-if __name__ == "__main__":
-    GamePlayFinder(player_id='MurrDe00', year_min=2014, year_max=2014)
