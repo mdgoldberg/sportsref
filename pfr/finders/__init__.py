@@ -29,7 +29,39 @@ Options for sorting stats:
 del constants, getConstants, inpDefs, compStats, sortStats
 del paramDocstring, compStatsString, sortStatsString
 
+
+# Fill in GamePlayFinder docstring
+from pfr.finders.GamePlayFinder import GamePlayFinder, getInputsOptionsDefaults
+
+IOD = getInputsOptionsDefaults()
+
+paramStr = '\n'.join(
+    ':param {}: default="{}"'.format(name, ','.join(dct['value']))
+    for name, dct in sorted(IOD.iteritems())
+)
+
+optsStr = '\n'.join(
+    '{}: {}'.format(name, ','.join(dct['options']))
+    if len(dct['options']) <= 10 else
+    '{}: {}...'.format(name, ','.join(dct['options'][:10]))
+    for name, dct in sorted(IOD.iteritems())
+)
+
+GamePlayFinder.__doc__ = """
+Finds plays that match criteria supplied by keyword arguments.
+
+{}
+:returns: Pandas dataframe of plays
+
+Options for the inputs:
+{}
+""".format(paramStr, optsStr)
+
+# clean up namespace
+del getInputsOptionsDefaults, paramStr, optsStr, IOD
+
 # modules/variables to expose
 __all__ = [
-    'PlayerSeasonFinder'
+    'PlayerSeasonFinder',
+    'GamePlayFinder',
 ]
