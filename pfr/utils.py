@@ -1,3 +1,4 @@
+import os as _os
 import requests as _requests
 import time as _time
 
@@ -10,7 +11,7 @@ def getHTML(url):
     :returns: a string of HTML.
 
     """
-    K = 60 # K is length of next backoff (in seconds)
+    K = 60*3 # K is length of next backoff (in seconds)
     html = None
     numTries = 0
     while not html and numTries < 10:
@@ -34,5 +35,9 @@ def getHTML(url):
             else:
                 # Some other error code
                 raise e
-    _time.sleep(0.5)
+    _time.sleep(2)
     return html
+
+def relURLToPlayerID(url):
+    playerID, _ = _os.path.splitext(_os.path.basename(url))
+    return playerID
