@@ -39,5 +39,27 @@ def getHTML(url):
     return html
 
 def relURLToPlayerID(url):
+    """Converts relative or absolute player URL to player ID.
+
+    :returns: playerID associated with the given player URL.
+    :rtype: str
+    """
     playerID, _ = _os.path.splitext(_os.path.basename(url))
     return playerID
+
+def parsePlayDetails(details):
+    """
+    
+    :returns:
+    """
+    details = details.lower()
+    
+    ptype = 'pass' if 'pass' in details else 'rush'
+    if ptype == 'pass':
+        pass
+
+    RUSH_OPTS = ['LE', 'LT', 'LG', 'M', 'RG', 'RT', 'RE']
+    PASS_OPTS = ['SL', 'SM', 'SR', 'DL', 'DM', 'DR']
+
+
+    return None
