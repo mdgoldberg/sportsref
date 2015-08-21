@@ -34,4 +34,5 @@ def getHTML(url):
             else:
                 # Some other error code
                 raise e
+    _time.sleep(0.5)
     return html

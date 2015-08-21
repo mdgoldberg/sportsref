@@ -145,8 +145,8 @@ def getTeams(soup):
     return teams
 
 def getInputsAndDefaults(soup):
-    # start with input elements
     def_dict = {}
+    # start with input elements
     for inp in soup.select('form#psl_finder input[name]'):
         if inp['type'] in ('checkbox', 'radio'):
             if 'checked' in inp.attrs:
