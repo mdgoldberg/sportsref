@@ -1,14 +1,15 @@
-from bs4 import BeautifulSoup
 from copy import deepcopy
 import json
 import os
-import pandas as pd
 from pprint import pprint
 import requests
 import time
 
-from pfr.decorators import switchToDir as _switchToDir
-from pfr.utils import getHTML as _getHTML
+from bs4 import BeautifulSoup
+import pandas as pd
+
+from pfr.decorators import switchToDir
+from pfr.utils import getHTML
 
 GAME_PLAY_URL = ('http://www.pro-football-reference.com/'
                  'play-index/play_finder.cgi')
@@ -20,7 +21,7 @@ def GamePlayFinder(**kwargs):
 
     querystring = kwArgsToQS(**kwargs)
     url = '{}?{}'.format(GAME_PLAY_URL, querystring)
-    html = _getHTML(url)
+    html = getHTML(url)
     soup = BeautifulSoup(html, 'lxml')
     
     # parse soup
@@ -74,7 +75,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@_switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for play finder form.
 
@@ -94,7 +95,7 @@ def getInputsOptionsDefaults():
 
         # must generate the file
 
-        html = _getHTML(GAME_PLAY_URL)
+        html = getHTML(GAME_PLAY_URL)
         soup = BeautifulSoup(html, 'lxml')
         
         def_dict = {}

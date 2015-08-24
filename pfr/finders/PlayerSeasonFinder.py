@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 from copy import deepcopy
 import json
 import os
@@ -6,8 +5,10 @@ from pprint import pprint
 import requests
 import time
 
-from pfr.decorators import switchToDir as _switchToDir
-from pfr.utils import getHTML as _getHTML
+from bs4 import BeautifulSoup
+
+from pfr.decorators import switchToDir
+from pfr.utils import getHTML
 
 PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
                      'play-index/psl_finder.cgi')
@@ -26,7 +27,7 @@ def PlayerSeasonFinder(**kwargs):
         querystring = '&'.join(['{}={}'.format(k, v)
                                 for k, v in sorted(opts.iteritems())])
         url = '{}?{}'.format(PLAYER_SEASON_URL, querystring)
-        html = _getHTML(url)
+        html = getHTML(url)
         soup = BeautifulSoup(html, 'lxml')
         yearTh = soup.select_one(
             'table#stats thead tr[class=""] th[data-stat="year_id"]'
@@ -184,7 +185,7 @@ def getDraftInputs(soup):
             draftInputs.append(opt['name'])
     return draftInputs
 
-@_switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getConstants():
 
     # set time variables
@@ -200,7 +201,7 @@ def getConstants():
 
         # must generate the file
 
-        html = _getHTML(PLAYER_SEASON_URL)
+        html = getHTML(PLAYER_SEASON_URL)
         soup = BeautifulSoup(html, 'lxml')
 
         constants = {
