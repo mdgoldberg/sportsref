@@ -5,7 +5,7 @@ import time
 def getHTML(url):
     """Gets the HTML for the given URL using a GET request.
 
-    Incorporates an exponential timeout.
+    Incorporates an exponential timeout starting with 2 seconds.
 
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
@@ -42,7 +42,6 @@ def relURLToPlayerID(url):
     """Converts relative or absolute player URL to player ID.
 
     :returns: playerID associated with the given player URL.
-    :rtype: str
     """
     playerID, _ = os.path.splitext(os.path.basename(url))
     return playerID

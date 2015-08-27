@@ -1,19 +1,12 @@
-import os
-from urlparse import urljoin
-
 from pfr import PFR_BASE_URL
 
-def getGamelogURL(playerURL, year):
+def getGamelogURL(playerID, year):
     """Returns gamelog URL for given player-season.
 
-    :playerURL: either relative or absolute player URL.
+    :playerID: PFR player ID
     :year: year corresponding to season in player-season.
     :returns: URL for the gamelog of the player-season.
-
     """
-
-    playerURL_base, playerURL_ext = os.path.splitext(playerURL)
-    gamelogURL = urljoin(urljoin(_PFR_BASE_URL, playerURL_base + '/'),
-                         'gamelog/{}'.format(year)
-                         )
+    template = '{0}/players/{1[0]}/{1}/gamelog/{2}/'
+    gamelogURL = template.format(PFR_BASE_URL, playerID, year)
     return gamelogURL

@@ -8,15 +8,16 @@ from pfr.utils import getHTML
 
 dateRegex = re.compile(r'^\d{4}\-\d{2}\-\d{2}$')
 
-def getBoxScoreURLs(playerURL, year):
+def getBoxScoreURLs(playerID, year):
     """Get list of box score URLs for a given player-season.
 
-    :playerURL: absolute or relative URL for player
+    :playerID: PFR player ID
     :year: year for corresponding season in player-season.
-    :returns: ["relative_box_score_URL"]
+    :returns: list of relative box score URLs
+    :rtype: [string]
 
     """
-    gamelogURL = getGamelogURL(playerURL, year)
+    gamelogURL = getGamelogURL(playerID, year)
     html = getHTML(gamelogURL)
     soup = BeautifulSoup(html, 'lxml')
     bsURLs = [boxscore_a.get('href')

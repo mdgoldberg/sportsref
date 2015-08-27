@@ -1,4 +1,4 @@
-PFR_BASE_URL = 'http://www.pro-football-reference.com/'
+PFR_BASE_URL = 'http://www.pro-football-reference.com'
 
 import boxscores
 import decorators
