@@ -1,5 +1,9 @@
 from pfr import PFR_BASE_URL
 
+__all__ = [
+    'getGamelogURL',
+]
+
 def getGamelogURL(playerID, year):
     """Returns gamelog URL for given player-season.
 

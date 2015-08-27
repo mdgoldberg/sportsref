@@ -1,6 +1,10 @@
 from functools import wraps
 import os
 
+__all__ = [
+    'switchToDir',
+]
+
 def switchToDir(dirPath):
     """
     Decorator that switches to given directory before executing function, and

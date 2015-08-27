@@ -2,6 +2,12 @@ import os
 import requests
 import time
 
+__all__ = [
+    'getHTML',
+    'relURLToPlayerID',
+    'parsePlayDetails',
+]
+
 def getHTML(url):
     """Gets the HTML for the given URL using a GET request.
 

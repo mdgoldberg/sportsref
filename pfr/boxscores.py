@@ -6,6 +6,10 @@ from urlparse import urljoin
 from pfr.players import getGamelogURL
 from pfr.utils import getHTML
 
+__all__ = [
+    'getBoxScoreURLs',
+]
+
 dateRegex = re.compile(r'^\d{4}\-\d{2}\-\d{2}$')
 
 def getBoxScoreURLs(playerID, year):
@@ -26,4 +30,3 @@ def getBoxScoreURLs(playerID, year):
               if re.match(dateRegex, boxscore_a.string)
               ]
     return bsURLs
-
