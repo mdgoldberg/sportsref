@@ -36,19 +36,33 @@ from pfr.finders.GamePlayFinder import GamePlayFinder, getInputsOptionsDefaults
 IOD = getInputsOptionsDefaults()
 
 paramStr = '\n'.join(
-    ':param {}: default="{}"'.format(name, ','.join(dct['value']))
+    ':param {}: default="{}"'.format(
+        name,
+        ','.join(dct['value'])
+    )
     for name, dct in sorted(IOD.iteritems())
 )
 
 optsStr = '\n'.join(
-    '{}: {}'.format(name, ','.join(dct['options']))
+    '{}: {}'.format(
+        name,
+        ','.join('"{}"'.format(opt) for opt in dct['options'])
+    )
     if len(dct['options']) <= 10 else
-    '{}: {}...'.format(name, ','.join(dct['options'][:10]))
+    '{}: {}...{}'.format(
+        name,
+        ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
+        ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
+    )
     for name, dct in sorted(IOD.iteritems())
 )
 
 GamePlayFinder.__doc__ = """
 Finds plays that match criteria supplied by keyword arguments.
+
+Can use tm or team instead of team_id.
+For multi-valued options (like down or rush direction), separate values with commas.
+For options that are yes/no/either or yes/no/any, -1 is either/any, 0 is no, 1 is yes.
 
 {}
 :returns: Pandas dataframe of plays
