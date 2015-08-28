@@ -66,7 +66,10 @@ def kwArgsToQS(**kwargs):
             v = 'N' if v == False else v
         # if overwriting a default, overwrite it
         if k in opts:
-            opts[k].append(v)
+            # if multiple values separated by commas, split em
+            v = v.split(',')
+            for val in v:
+                opts[k].append(val)
 
     opts['request'] = [1]
     
@@ -147,7 +150,7 @@ def getInputsOptionsDefaults():
                                          for opt in sel.select('option')
                                          if opt.get('value')}
         
-        # ignore QB kneels
+        # ignore QB kneels by default
         def_dict['include_kneels']['value'] = ['0']
 
         def_dict.pop('request', None)
@@ -155,8 +158,16 @@ def getInputsOptionsDefaults():
         
         with open(CONSTANTS_FN, 'w+') as f:
             for k in def_dict:
-                def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
-                def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
+                try:
+                    def_dict[k]['value'] = sorted(
+                        list(def_dict[k]['value']), key=int
+                    )
+                    def_dict[k]['options'] = sorted(
+                        list(def_dict[k]['options']), key=int
+                    )
+                except:
+                    def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
+                    def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
             json.dump(def_dict, f)
 
     # else, just read variable from cached file
