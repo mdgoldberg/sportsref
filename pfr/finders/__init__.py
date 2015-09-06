@@ -26,6 +26,10 @@ optsStr = '\n'.join(
 PlayerSeasonFinder.PlayerSeasonFinder.__doc__ = """
 Finds player-seasons that match criteria supplied by keyword arguments.
 
+Can use tm or team for team_id.
+Can use yr, year, yrs, or years for year_min, year_max.
+Can use [draft_]pos, [draft_]position, [draft_]positions for a shortcut for [draft_]positions.
+
 {}
 :returns: list of matching player-season tuples
 :rtype: [(player ID, season year)]
@@ -69,12 +73,13 @@ GamePlayFinder.GamePlayFinder.__doc__ = """
 Finds plays that match criteria supplied by keyword arguments.
 
 Can use tm or team instead of team_id.
-Can use [draft_]pos, [draft_]position, [draft_]positions for a shortcut for [draft_]positions.
-For multi-valued options (like down or rush direction), separate values with commas.
+Can use yr, year, yrs, or years instead of year_min, year_max.
+For multi-valued options (like down or rush direction), separate values with commas or use a list.
 For options that are yes/no/either or yes/no/any, -1 is either/any, 0 is no, 1 is yes.
 
 {}
 :returns: Pandas dataframe of plays
+:rtype: pd.DataFrame
 
 Options for the inputs:
 {}

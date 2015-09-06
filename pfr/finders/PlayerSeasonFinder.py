@@ -68,6 +68,20 @@ def kwArgsToQS(**kwargs):
         if k.lower() in ('tm', 'team'):
             del kwargs[k]
             kwargs['team_id'] = v
+        # yr, year, yrs, years => year_min, year_max
+        if k.lower() in ('yr', 'year', 'yrs', 'years'):
+            del kwargs[k]
+            if isinstance(v, collections.Iterable):
+                lst = list(v)
+                kwargs['year_min'] = min(lst)
+                kwargs['year_max'] = max(lst)
+            elif isinstance(v, basestring):
+                v = map(int, v.split(','))
+                kwargs['year_min'] = min(v)
+                kwargs['year_max'] = max(v)
+            else:
+                kwargs['year_min'] = v
+                kwargs['year_max'] = v
         # pos, position, positions => pos_is_X
         if k.lower() in ('pos', 'position', 'positions'):
             del kwargs[k]

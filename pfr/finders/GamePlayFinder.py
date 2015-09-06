@@ -28,7 +28,7 @@ def GamePlayFinder(**kwargs):
     html = getHTML(url)
     soup = BeautifulSoup(html, 'lxml')
     
-    # parse soup
+    # try to parse soup
     try:
         table = soup.select_one('#div_ table.stats_table')
         cols = [
@@ -41,10 +41,10 @@ def GamePlayFinder(**kwargs):
              for td in row.find_all('td')]
             for row in table.select('tbody tr[class=""]')
         ]
+        plays = pd.DataFrame(data, columns=cols, dtype=float)
     except Exception:
-        return pd.DataFrame()
-    
-    plays = pd.DataFrame(data, columns=cols, dtype=float)
+        # if parsing goes wrong, return empty DataFrame
+        plays = pd.DataFrame()
 
     return plays
 
@@ -76,6 +76,10 @@ def kwArgsToQS(**kwargs):
                 lst = list(v)
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
+            elif isinstance(v, basestring):
+                v = map(int, v.split(','))
+                kwargs['year_min'] = min(v)
+                kwargs['year_max'] = max(v)
             else:
                 kwargs['year_min'] = v
                 kwargs['year_max'] = v
