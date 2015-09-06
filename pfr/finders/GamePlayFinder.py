@@ -111,7 +111,7 @@ def kwArgsToQS(**kwargs):
     opts['request'] = [1]
     
     qs = '&'.join('{}={}'.format(name, val)
-                      for name, vals in opts.iteritems() for val in vals)
+                  for name, vals in sorted(opts.iteritems()) for val in vals)
 
     return qs
 

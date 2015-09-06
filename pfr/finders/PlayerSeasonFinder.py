@@ -104,28 +104,48 @@ def kwArgsToQS(**kwargs):
             for pos in v:
                 kwargs['draft_pos_is_' + pos] = 'Y'
 
-    # reset values to blank for defined kwargs
+    # reset opts values to blank for defined kwargs
     for k in kwargs:
         # for regular keys
         if k in opts:
             opts[k] = []
+        # for positions
+        if k.startswith('pos_is'):
+            # if a position is defined, mark all pos as 'N'
+            for k in opts:
+                if k.startswith('pos_is'):
+                    opts[k] = ['N']
+        # for draft positions
+        if k.startswith('draft_pos_is'):
+            # if a draft draft_position is defined, mark all draft draft_pos as 'N'
+            for k in opts:
+                if k.startswith('draft_pos_is'):
+                    opts[k] = ['N']
 
     # update based on kwargs
     for k, v in kwargs.iteritems():
-        # if overwriting a default, overwrite it
+        # if overwriting a default, overwrite it (with a list so the
+        # opts -> querystring list comp works)
         if k in opts:
             # if multiple values separated by commas, split em
             if isinstance(v, basestring):
                 v = v.split(',')
+            # otherwise, make sure it's a list
             elif not isinstance(v, collections.Iterable):
                 v = [v]
+            # then, add all values to the querystring dict (opts)
             for val in v:
                 opts[k].append(val)
+            # now, for Y|N inputs, make sure there's only one entry
+            # (if any entries are Y, then the entry becomes Y)
+            if all([val in ('Y', 'y', 'N', 'n') for val in opts[k]]):
+                opts[k] = ('Y' if any([val in ('Y', 'y') for val in opts[k]])
+                           else 'N')
 
     opts['request'] = [1]
 
     qs = '&'.join('{}={}'.format(name, val)
-                  for name, vals in opts.iteritems() for val in vals)
+                  for name, vals in sorted(opts.iteritems()) for val in vals)
 
     return qs
 
