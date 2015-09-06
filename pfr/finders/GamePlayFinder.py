@@ -1,3 +1,4 @@
+import collections
 from copy import deepcopy
 import json
 import os
@@ -21,28 +22,37 @@ def GamePlayFinder(**kwargs):
 
     querystring = kwArgsToQS(**kwargs)
     url = '{}?{}'.format(GAME_PLAY_URL, querystring)
+    # if verbose, print url
+    if kwargs.get('verbose', False):
+        print url
     html = getHTML(url)
     soup = BeautifulSoup(html, 'lxml')
     
     # parse soup
-    table = soup.select_one('#div_ table.stats_table')
-    cols = [
-        th.string
-        for th in table.select('thead tr th[data-stat]')
-    ]
-    cols[-1] = 'EPDiff'
-    data = [
-        [td.get_text() if td.get_text() else '0'
-         for td in row.find_all('td')]
-        for row in table.select('tbody tr[class=""]')
-    ]
+    try:
+        table = soup.select_one('#div_ table.stats_table')
+        cols = [
+            th.string
+            for th in table.select('thead tr th[data-stat]')
+        ]
+        cols[-1] = 'EPDiff'
+        data = [
+            [td.get_text() if td.get_text() else '0'
+             for td in row.find_all('td')]
+            for row in table.select('tbody tr[class=""]')
+        ]
+    except Exception:
+        return pd.DataFrame()
     
     plays = pd.DataFrame(data, columns=cols, dtype=float)
 
     return plays
 
 def kwArgsToQS(**kwargs):
+    """Converts kwargs given to GPF to a querystring.
 
+    :returns: the querystring.
+    """
     # start with defaults
     inpOptDef = getInputsOptionsDefaults()
     opts = {
@@ -50,24 +60,47 @@ def kwArgsToQS(**kwargs):
         for name, dct in inpOptDef.iteritems()
     }
 
+    # clean up keys and values
+    for k, v in kwargs.items():
+        # bool => 'Y'|'N'
+        if isinstance(v, bool):
+            kwargs[k] = 'Y' if v else 'N'
+        # tm, team => team_id
+        if k.lower() in ('tm', 'team'):
+            del kwargs[k]
+            kwargs['team_id'] = v
+        # yr, year, yrs, years => year_min, year_max
+        if k.lower() in ('yr', 'year', 'yrs', 'years'):
+            del kwargs[k]
+            if isinstance(v, collections.Iterable):
+                lst = list(v)
+                kwargs['year_min'] = min(lst)
+                kwargs['year_max'] = max(lst)
+            else:
+                kwargs['year_min'] = v
+                kwargs['year_max'] = v
+        # if playoff_round defined, then turn on playoff flag
+        if k == 'playoff_round':
+            kwargs['game_type'] = 'P'
+        if isinstance(v, basestring):
+            v = v.split(',')
+        if not isinstance(v, collections.Iterable):
+            v = [v]
+
     # reset values to blank for defined kwargs
     for k in kwargs:
-        # small changes to keys for convenience
-        k = 'team_id' if k in ('tm', 'team') else k
         if k in opts:
             opts[k] = []
 
     # update based on kwargs
     for k, v in kwargs.iteritems():
-        # small changes to keys/values for convenience
-        k = 'team_id' if k in ('tm', 'team') else k
-        if isinstance(v, bool):
-            v = 'Y' if v == True else v
-            v = 'N' if v == False else v
         # if overwriting a default, overwrite it
         if k in opts:
             # if multiple values separated by commas, split em
-            v = v.split(',')
+            if isinstance(v, basestring):
+                v = v.split(',')
+            elif not isinstance(v, collections.Iterable):
+                v = [v]
             for val in v:
                 opts[k].append(val)
 
@@ -97,6 +130,7 @@ def getInputsOptionsDefaults():
             int(curtime) - int(modtime) <= 24*60*60):
 
         # must generate the file
+        print 'Regenerating constants file'
 
         html = getHTML(GAME_PLAY_URL)
         soup = BeautifulSoup(html, 'lxml')

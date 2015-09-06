@@ -7,6 +7,7 @@ import sys
 from pfr.finders import PlayerSeasonFinder, GamePlayFinder
 from pfr.utils import relURLToPlayerID
 
+# RBs with >= 100 rushes since 2013
 psf = PlayerSeasonFinder(
     pos='rb', year_min=2013, order_by='fantasy_points_per_game',
     c1stat='rush_att', c1val=100, c1comp='gt'
