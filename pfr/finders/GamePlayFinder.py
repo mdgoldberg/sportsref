@@ -9,8 +9,7 @@ import time
 from bs4 import BeautifulSoup
 import pandas as pd
 
-from pfr.decorators import switchToDir
-from pfr.utils import getHTML
+from pfr import decorators, utils
 
 GAME_PLAY_URL = ('http://www.pro-football-reference.com/'
                  'play-index/play_finder.cgi')
@@ -25,7 +24,7 @@ def GamePlayFinder(**kwargs):
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
-    html = getHTML(url)
+    html = utils.getHTML(url)
     soup = BeautifulSoup(html, 'lxml')
     
     # try to parse soup
@@ -36,15 +35,28 @@ def GamePlayFinder(**kwargs):
             for th in table.select('thead tr th[data-stat]')
         ]
         cols[-1] = 'EPDiff'
+        for row in table.select('tbody tr[class=""]'):
+            for td in row.find_all('td'):
+                for c in td.contents:
+                    if not isinstance(c, basestring):
+                        pass
+                        # print c['href']
+
         data = [
-            [td.get_text() if td.get_text() else '0'
+            [''.join([utils.relURLToID(c['href'])
+                      if not isinstance(c, basestring)
+                      else c
+                      for c in td.contents]
+                     )
+             if td.get_text() else '0'
              for td in row.find_all('td')]
             for row in table.select('tbody tr[class=""]')
         ]
         plays = pd.DataFrame(data, columns=cols, dtype=float)
-    except Exception:
+    except Exception as e:
         # if parsing goes wrong, return empty DataFrame
-        plays = pd.DataFrame()
+        raise e
+        return pd.DataFrame()
 
     return plays
 
@@ -115,7 +127,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for play finder form.
 
@@ -136,7 +148,7 @@ def getInputsOptionsDefaults():
         # must generate the file
         print 'Regenerating constants file'
 
-        html = getHTML(GAME_PLAY_URL)
+        html = utils.getHTML(GAME_PLAY_URL)
         soup = BeautifulSoup(html, 'lxml')
         
         def_dict = {}
