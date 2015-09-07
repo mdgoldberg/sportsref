@@ -44,7 +44,7 @@ def GamePlayFinder(**kwargs):
         plays = pd.DataFrame(data, columns=cols, dtype=float)
     except Exception:
         # if parsing goes wrong, return empty DataFrame
-        plays = pd.DataFrame()
+        return pd.DataFrame()
 
     return plays
 
