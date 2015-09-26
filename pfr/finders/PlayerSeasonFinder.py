@@ -36,7 +36,7 @@ def PlayerSeasonFinder(**kwargs):
         yearIdx = soup.select('table#stats thead tr[class=""] th').index(yearTh)
         for row in soup.select('table#stats tbody tr[class=""]'):
             player_url = row.select_one('a[href*="/players/"]').get('href')
-            playerID = utils.relURLToPlayerID(player_url)
+            playerID = utils.relURLToID(player_url)
             year = int(row.find_all('td')[yearIdx].string)
             playerseasons.append((playerID, year))
 
