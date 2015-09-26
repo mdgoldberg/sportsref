@@ -3,10 +3,10 @@ from copy import deepcopy
 import json
 import os
 from pprint import pprint
-import requests
 import time
 
-import bs4
+from pyquery import PyQuery as pq
+import requests
 
 from pfr import decorators
 from pfr import utils
@@ -29,18 +29,16 @@ def PlayerSeasonFinder(**kwargs):
         if kwargs.get('verbose', False):
             print url
         html = utils.getHTML(url)
-        soup = bs4.BeautifulSoup(html, 'lxml')
-        yearTh = soup.select_one(
-            'table#stats thead tr[class=""] th[data-stat="year_id"]'
-        )
-        yearIdx = soup.select('table#stats thead tr[class=""] th').index(yearTh)
-        for row in soup.select('table#stats tbody tr[class=""]'):
-            player_url = row.select_one('a[href*="/players/"]').get('href')
-            playerID = utils.relURLToID(player_url)
-            year = int(row.find_all('td')[yearIdx].string)
-            playerseasons.append((playerID, year))
+        doc = pq(html)
+        table = doc('table#stats')
+        yearTh = table('thead tr[class=""] th[data-stat="year_id"]')[0]
+        yearIdx = table('thead tr[class=""] th').index(yearTh)
+        for row in map(pq, table('tbody tr[class=""]')):
+            player_url = row('a[href*="/players/"]').attr.href
+            year = int(row('td')[yearIdx].text)
+            playerseasons.append((player_url, year))
 
-        if soup.find(string='Next page'):
+        if doc('*:contains("Next page")'):
             kwargs['offset'] += 100
         else:
             break
@@ -143,6 +141,7 @@ def kwArgsToQS(**kwargs):
                            else 'N')
 
     opts['request'] = [1]
+    opts['offset'] = [kwargs['offset']]
 
     qs = '&'.join('{}={}'.format(name, val)
                   for name, vals in sorted(opts.iteritems()) for val in vals)
@@ -167,55 +166,57 @@ def getInputsOptionsDefaults():
         print 'Regenerating constants file'
 
         html = utils.getHTML(PLAYER_SEASON_URL)
-        soup = bs4.BeautifulSoup(html, 'lxml')
+        doc = pq(html)
 
         def_dict = {}
         # start with input elements
-        for inp in soup.select('form#psl_finder input[name]'):
-            name = inp['name']
+        for inp in doc('form#psl_finder input[name]'):
+            name = inp.attrib['name']
             # add blank dict if not present
             if name not in def_dict:
                 def_dict[name] = {
                     'value': set(),
                     'options': set(),
-                    'type': inp['type']
+                    'type': inp.attrib['type']
                 }
 
             # handle checkboxes and radio buttons
-            if inp['type'] in ('checkbox', 'radio'):
+            if inp.attrib['type'] in ('checkbox', 'radio'):
                 # deal with default value
-                if 'checked' in inp.attrs:
-                    def_dict[name]['value'].add(inp['value'])
+                if 'checked' in inp.attrib:
+                    def_dict[name]['value'].add(inp.attrib['value'])
                 # add to options
-                def_dict[name]['options'].add(inp['value'])
+                def_dict[name]['options'].add(inp.attrib['value'])
             # handle other types of inputs (only other type is hidden?)
             else:
-                def_dict[name]['value'].add(inp.get('value', ''))
+                def_dict[name]['value'].add(inp.attrib.get('value', ''))
 
         # deal with dropdowns (select elements)
-        for sel in soup.select('form#psl_finder select[name]'):
-            name = sel['name']
+        for sel in doc('form#psl_finder select[name]'):
+            name = sel.attrib['name']
             # add blank dict if not present
             if name not in def_dict:
                 def_dict[name] = {
                     'value': set(),
                     'options': set(),
-                    'type': inp['type']
+                    'type': 'select'
                 }
 
             # deal with default value
-            defaultOpt = sel.select_one('option[selected]')
-            if defaultOpt:
-                def_dict[name]['value'].add(defaultOpt.get('value', ''))
+            defaultOpt = pq(sel)('option[selected]')
+            if len(defaultOpt):
+                defaultOpt = defaultOpt[0]
+                def_dict[name]['value'].add(defaultOpt.attrib.get('value', ''))
             else:
                 def_dict[name]['value'].add(
-                    sel.select_one('option').get('value', '')
+                    pq(sel)('option')[0].attrib.get('value', '')
                 )
                 
             # deal with options
-            def_dict[name]['options'] = {opt['value']
-                                         for opt in sel.select('option')
-                                         if opt.get('value')}
+            def_dict[name]['options'] = {
+                opt.attrib['value'] for opt in pq(sel)('option')
+                if opt.attrib.get('value')
+            }
 
         def_dict.pop('request', None)
         def_dict.pop('use_favorites', None)

@@ -6,8 +6,8 @@ from pprint import pprint
 import requests
 import time
 
-from bs4 import BeautifulSoup
 import pandas as pd
+from pyquery import PyQuery as pq
 
 from pfr import decorators, utils
 
@@ -25,32 +25,23 @@ def GamePlayFinder(**kwargs):
     if kwargs.get('verbose', False):
         print url
     html = utils.getHTML(url)
-    soup = BeautifulSoup(html, 'lxml')
+    doc = pq(html)
     
-    # try to parse soup
+    # try to parse
     try:
-        table = soup.select_one('#div_ table.stats_table')
-        cols = [
-            th.string
-            for th in table.select('thead tr th[data-stat]')
-        ]
+        table = doc('#div_ table.stats_table')
+        cols = [th.text for th in table('thead tr th[data-stat]')]
         cols[-1] = 'EPDiff'
-        for row in table.select('tbody tr[class=""]'):
-            for td in row.find_all('td'):
-                for c in td.contents:
-                    if not isinstance(c, basestring):
-                        pass
-                        # print c['href']
-
+        
         data = [
-            [''.join([utils.relURLToID(c['href'])
-                      if not isinstance(c, basestring)
-                      else c
-                      for c in td.contents]
-                     )
-             if td.get_text() else '0'
-             for td in row.find_all('td')]
-            for row in table.select('tbody tr[class=""]')
+            [
+                ''.join(
+                    [c if isinstance(c, basestring) else c.attrib['href']
+                     for c in td.contents()]
+                )
+                for td in map(pq, row('td'))
+            ]
+            for row in map(pq, table('tbody tr[class=""]'))
         ]
         plays = pd.DataFrame(data, columns=cols, dtype=float)
     except Exception as e:
@@ -74,6 +65,10 @@ def kwArgsToQS(**kwargs):
 
     # clean up keys and values
     for k, v in kwargs.items():
+        # player_id can accept rel URLs
+        if k == 'player_id':
+            if v.startswith('/players/'):
+                kwargs[k] = utils.relURLToID(v)
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
@@ -149,56 +144,59 @@ def getInputsOptionsDefaults():
         print 'Regenerating constants file'
 
         html = utils.getHTML(GAME_PLAY_URL)
-        soup = BeautifulSoup(html, 'lxml')
+        doc = pq(html)
         
         def_dict = {}
         # start with input elements
-        for inp in soup.select('form#play_finder input[name]'):
-            name = inp['name']
+        for inp in doc('form#play_finder input[name]'):
+            name = inp.attrib['name']
             # add blank dict if not present
             if name not in def_dict:
                 def_dict[name] = {
                     'value': set(),
                     'options': set(),
-                    'type': inp['type']
+                    'type': inp.type
                 }
 
+            val = inp.attrib.get('value', '')
             # handle checkboxes and radio buttons
-            if inp['type'] in ('checkbox', 'radio'):
+            if inp.type in ('checkbox', 'radio'):
                 # deal with default value
-                if 'checked' in inp.attrs:
-                    def_dict[name]['value'].add(inp['value'])
+                if 'checked' in inp.attrib:
+                    def_dict[name]['value'].add(val)
                 # add to options
-                def_dict[name]['options'].add(inp['value'])
+                def_dict[name]['options'].add(val)
             # handle other types of inputs (only other type is hidden?)
             else:
-                def_dict[name]['value'].add(inp.get('value', ''))
+                def_dict[name]['value'].add(val)
 
 
         # for dropdowns (select elements)
-        for sel in soup.select('form#play_finder select[name]'):
-            name = sel['name']
+        for sel in doc('form#play_finder select[name]'):
+            name = sel.attrib['name']
             # add blank dict if not present
             if name not in def_dict:
                 def_dict[name] = {
                     'value': set(),
                     'options': set(),
-                    'type': inp['type']
+                    'type': 'select'
                 }
             
             # deal with default value
-            defaultOpt = sel.select_one('option[selected]')
-            if defaultOpt:
-                def_dict[name]['value'].add(defaultOpt.get('value', ''))
+            defaultOpt = pq(sel)('option[selected]')
+            if len(defaultOpt):
+                defaultOpt = defaultOpt[0]
+                def_dict[name]['value'].add(defaultOpt.attrib.get('value', ''))
             else:
                 def_dict[name]['value'].add(
-                    sel.select_one('option').get('value', '')
+                    pq(sel)('option')[0].attrib.get('value', '')
                 )
 
             # deal with options
-            def_dict[name]['options'] = {opt['value']
-                                         for opt in sel.select('option')
-                                         if opt.get('value')}
+            def_dict[name]['options'] = {
+                opt.attrib['value'] for opt in pq(sel)('option')
+                if opt.attrib.get('value')
+            }
         
         # ignore QB kneels by default
         def_dict['include_kneels']['value'] = ['0']
