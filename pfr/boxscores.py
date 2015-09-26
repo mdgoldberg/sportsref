@@ -1,10 +1,10 @@
-from bs4 import BeautifulSoup
 import re
-import requests
 from urlparse import urljoin
 
-from pfr.players import getGamelogURL
-from pfr.utils import getHTML
+import requests
+from pyquery import PyQuery as pq
+
+from pfr import players, utils
 
 __all__ = [
     'getBoxScoreURLs',
@@ -21,12 +21,12 @@ def getBoxScoreURLs(playerID, year):
     :rtype: [string]
 
     """
-    gamelogURL = getGamelogURL(playerID, year)
-    html = getHTML(gamelogURL)
-    soup = BeautifulSoup(html, 'lxml')
-    bsURLs = [boxscore_a.get('href')
+    gamelogURL = players.getGamelogURL(playerID, year)
+    html = utils.getHTML(gamelogURL)
+    doc = pq(html)
+    bsURLs = [boxscore_a.attrib['href']
               for boxscore_a in 
-              soup.select('table#stats a[href*="/boxscores/"]')
-              if re.match(dateRegex, boxscore_a.string)
+              doc('table#stats a[href*="/boxscores/"]')
+              if re.match(dateRegex, boxscore_a.text)
               ]
     return bsURLs
