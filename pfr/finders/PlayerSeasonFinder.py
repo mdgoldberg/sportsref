@@ -19,9 +19,6 @@ CONSTANTS_FN = 'PSFConstants.json'
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 
-    if 'offset' not in kwargs:
-        kwargs['offset'] = 0
-    
     playerseasons = []
     while True:
         querystring = kwArgsToQS(**kwargs)
@@ -141,7 +138,7 @@ def kwArgsToQS(**kwargs):
                            else 'N')
 
     opts['request'] = [1]
-    opts['offset'] = [kwargs['offset']]
+    opts['offset'] = [kwargs.get('offset', 0)]
 
     qs = '&'.join('{}={}'.format(name, val)
                   for name, vals in sorted(opts.iteritems()) for val in vals)

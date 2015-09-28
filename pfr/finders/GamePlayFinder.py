@@ -32,7 +32,7 @@ def GamePlayFinder(**kwargs):
         table = doc('#div_ table.stats_table')
         cols = [th.text for th in table('thead tr th[data-stat]')]
         cols[-1] = 'EPDiff'
-        
+
         data = [
             [
                 ''.join(
