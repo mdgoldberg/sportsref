@@ -36,7 +36,8 @@ def GamePlayFinder(**kwargs):
         data = [
             [
                 ''.join(
-                    [c if isinstance(c, basestring) else c.attrib['href']
+                    [c if isinstance(c, basestring) 
+                     else utils.relURLToID(c.attrib['href'])
                      for c in td.contents()]
                 )
                 for td in map(pq, row('td'))
