@@ -1,16 +1,15 @@
-from pfr import PFR_BASE_URL
+import numpy as np
+import pandas as pd
+
+import pfr
 
 __all__ = [
-    'getGamelogURL',
+    'Player',
 ]
 
-def getGamelogURL(playerID, year):
-    """Returns gamelog URL for given player-season.
+class Player:
 
-    :playerID: PFR player ID
-    :year: year corresponding to season in player-season.
-    :returns: URL for the gamelog of the player-season.
-    """
-    template = '{0}/players/{1[0]}/{1}/gamelog/{2}/'
-    gamelogURL = template.format(PFR_BASE_URL, playerID, year)
-    return gamelogURL
+    def __init__(playerID):
+        self.pID = playerID
+
+
