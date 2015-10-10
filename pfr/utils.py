@@ -63,6 +63,7 @@ def relURLToID(url):
     """
     playerRegex = re.compile(r'/players/[A-Z]/(.+?)\.html?', re.IGNORECASE)
     boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?', re.IGNORECASE)
+    teamRegex = re.compile(r'/teams/(\w{3})/', re.IGNORECASE)
 
     # check if player ID
     match = playerRegex.match(url)
@@ -71,6 +72,10 @@ def relURLToID(url):
     
     # check if boxscores ID
     match = boxscoresRegex.match(url)
+    if match:
+        return match.group(1)
+
+    match = teamRegex.match(url)
     if match:
         return match.group(1)
 
