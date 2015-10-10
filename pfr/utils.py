@@ -61,8 +61,8 @@ def relURLToID(url):
 
     :returns: ID associated with the given relative URL.
     """
-    playerRegex = re.compile(r'/players/[A-Z]/(\w+)\.html?', re.IGNORECASE)
-    boxscoresRegex = re.compile(r'/boxscores/(\w+)\.html?', re.IGNORECASE)
+    playerRegex = re.compile(r'/players/[A-Z]/(.+?)\.html?', re.IGNORECASE)
+    boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?', re.IGNORECASE)
 
     # check if player ID
     match = playerRegex.match(url)
@@ -88,12 +88,12 @@ def parsePlayDetails(details):
         'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
         'up the middle': 'M',
         'right end': 'RE', 'right tackle': 'RT', 'right guard': 'RG',
-        '': np.nan
+        '': None
     }
     PASS_OPTS = {
         'short left': 'SL', 'short middle': 'SM', 'short right': 'SR',
         'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
-        '': np.nan
+        '': None
     }
 
     # have to sort them to make sure it matches empty string last
