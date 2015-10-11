@@ -92,6 +92,20 @@ def kwArgsToQS(**kwargs):
         if k.lower() in ('tm', 'team'):
             del kwargs[k]
             kwargs['team_id'] = v
+        # yr_min, yr_max => year_min, year_max
+        if k.lower() in ('yr_min', 'yr_max'):
+            del kwargs[k]
+            if k.lower() == 'yr_min':
+                kwargs['year_min'] = int(v)
+            else:
+                kwargs['year_max'] = int(v)
+        # wk_min, wk_max => week_num_min, week_num_max
+        if k.lower() in ('wk_min', 'wk_max'):
+            del kwargs[k]
+            if k.lower() == 'wk_min':
+                kwargs['week_num_min'] = int(v)
+            else:
+                kwargs['week_num_max'] = int(v)
         # yr, year, yrs, years => year_min, year_max
         if k.lower() in ('yr', 'year', 'yrs', 'years'):
             del kwargs[k]
@@ -106,6 +120,20 @@ def kwArgsToQS(**kwargs):
             else:
                 kwargs['year_min'] = v
                 kwargs['year_max'] = v
+        # wk, week, wks, weeks => week_num_min, week_num_max
+        if k.lower() in ('wk', 'week', 'wks', 'weeks'):
+            del kwargs[k]
+            if isinstance(v, collections.Iterable):
+                lst = list(v)
+                kwargs['week_num_min'] = min(lst)
+                kwargs['week_num_max'] = max(lst)
+            elif isinstance(v, basestring):
+                v = map(int, v.split(','))
+                kwargs['week_num_min'] = min(v)
+                kwargs['week_num_max'] = max(v)
+            else:
+                kwargs['week_num_min'] = v
+                kwargs['week_num_max'] = v
         # if playoff_round defined, then turn on playoff flag
         if k == 'playoff_round':
             kwargs['game_type'] = 'P'
