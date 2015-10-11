@@ -5,8 +5,9 @@ import pandas as pd
 from pfr.finders import GamePlayFinder as GPF
 from pfr import utils
 
-r = GPF.GamePlayFinder(type='RUSH', yr=2014)
+p = GPF.GamePlayFinder(type='PASS', yr=2014, order_by='game_date')
+r = GPF.GamePlayFinder(type='RUSH', yr=2014, order_by='game_date')
 
-matches = r.Detail.apply(lambda x: (x, utils.parsePlayDetails(x)))
-missed = filter(lambda x: not x[1], matches)
-print missed
+plays = pd.concat([p,r])
+
+matches = pd.DataFrame(map(utils.parsePlayDetails, plays.Detail))
