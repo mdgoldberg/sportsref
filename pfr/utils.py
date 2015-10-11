@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import time
 
 import numpy as np
@@ -79,7 +80,8 @@ def relURLToID(url):
     if match:
         return match.group(1)
 
-    return None
+    print 'WARNING. WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
+    return ''
 
 def parsePlayDetails(details):
     """Parses play details from play-by-play and returns structured data.
@@ -91,53 +93,51 @@ def parsePlayDetails(details):
     
     RUSH_OPTS = {
         'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
-        'up the middle': 'M',
+        'up the middle': 'M', 'middle': 'M',
         'right end': 'RE', 'right tackle': 'RT', 'right guard': 'RG',
-        '': None
     }
     PASS_OPTS = {
         'short left': 'SL', 'short middle': 'SM', 'short right': 'SR',
         'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
-        '': None
     }
 
-    # have to sort them to make sure it matches empty string last
     rushOptRE = r'(?P<rushDir>{})'.format(
-        r'|'.join(sorted(RUSH_OPTS.iterkeys(), reverse=True))
+        r'|'.join(RUSH_OPTS.iterkeys())
     )
     passOptRE = r'(?P<passLoc>{})'.format(
-        r'|'.join(sorted(PASS_OPTS.iterkeys(), reverse=True))
+        r'|'.join(PASS_OPTS.iterkeys())
     )
 
-    playerRE = r"(?P<rusher>\S{6}\d{2})"
+    playerRE = r"\S{6}\d{2}"
+    rusherRE = r"(?P<rusher>{0})".format(playerRE)
     rushOptRE = r"(?: {})?".format(rushOptRE)
     yardsRE = r"(?:(?:(?P<yds>\-?\d+) yards?)|(?:no gain))"
-    # cases after this: tackle, fumble, or nothing
+    # cases after this: tackle, fumble, td, penalty
+    tackleRE = (r"(?: \(tackle by (?P<tackler1>{0})"
+                r"(?: and (?P<tackler2>{0}))?\))?"
+                .format(playerRE))
+    fumbleRE = (r"(?:"
+                r"\. (?P<fumbler>{0}) fumbles"
+                r"(?: \(forced by (?P<forcer>{0})\))?"
+                r"(?:, recovered by (?P<recoverer>{0}) at )?"
+                r"(?:, ball out of bounds at )?"
+                r"(?:(?P<fieldside>\w*)\-(?P<ydline>\-?\d*))?"
+                r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
+                r")?"
+                .format(playerRE))
+    tdRE = r"(?P<is_td>, touchdown)?"
+    penaltyRE = (r"(?:"
+                 r"\. Penalty on (?P<pen_on>{0}): "
+                 r"(?P<penalty>[^\(,]+)"
+                 r"(?: \((?P<pen_declined>Declined)\)|"
+                 r", (?P<pen_yds>\d*) yards?)"
+                 r")?"
+                 .format(playerRE))
 
     rushREstr = (
-        r"{}{} for {}"
-    ).format(playerRE, rushOptRE, yardsRE)
+        r"{}{} for {}{}{}{}{}"
+    ).format(rusherRE, rushOptRE, yardsRE, tackleRE, fumbleRE, tdRE, penaltyRE)
     print rushREstr
     rushRE = re.compile(rushREstr, re.IGNORECASE)
-    return rushRE
     match = rushRE.match(details)
     return match
-
-
-    # first, figure out play type
-    if ' pass ' in details or ' sacked ' in details:
-        ptype = 'pass'
-    # below line not tested
-    elif any([ro in details for ro in RUSH_OPTS.itervalues()]):
-        ptype = 'rush'
-
-    if ptype == 'pass':
-        # analyze the pass
-        pass
-
-    elif ptype == 'rush':
-        # analyze the rush
-        pass
-
-
-    return None
