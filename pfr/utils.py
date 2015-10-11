@@ -123,16 +123,16 @@ def parsePlayDetails(details):
                 r"(?: \(forced by (?P<forcer>{0})\))?"
                 r"(?:, recovered by (?P<recoverer>{0}) at )?"
                 r"(?:, ball out of bounds at )?"
-                r"(?:(?P<fumbrec_fieldside>\w*)\-(?P<fumbrec_ydline>\-?\d*))?"
+                r"(?:(?P<fumbRecFieldside>\w*)\-(?P<fumbRecYdLine>\-?\d*))?"
                 r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
                 r")?"
                 .format(playerRE))
-    tdRE = r"(?P<is_td>, touchdown)?"
+    tdRE = r"(?P<isTD>, touchdown)?"
     penaltyRE = (r"(?:.*?"
-                 r"\. Penalty on (?P<pen_on>{0}): "
+                 r"\. Penalty on (?P<penOn>{0}): "
                  r"(?P<penalty>[^\(,]+)"
-                 r"(?: \((?P<pen_declined>Declined)\)|"
-                 r", (?P<pen_yds>\d*) yards?)"
+                 r"(?: \((?P<penDeclined>Declined)\)|"
+                 r", (?P<penYds>\d*) yards?)"
                  r")?"
                  .format(playerRE))
 
@@ -144,12 +144,12 @@ def parsePlayDetails(details):
     # create passing regex
     passerRE = r"(?P<passer>{0})".format(playerRE)
     sackRE = (r"sacked by (?P<sacker1>{0})(?: and (?P<sacker2>{0}))? "
-              r"for (?P<sack_yds>\-?\d+) yards?"
+              r"for (?P<sackYds>\-?\d+) yards?"
               .format(playerRE))
-    completeRE = r"pass (?P<comp>(?:in)?complete)"
+    completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE = r"(?: (?:to|intended for)? (?P<target>{0}))?".format(playerRE)
-    yardsRE = r"(?: for (?:(?P<rec_yds>\-?\d+) yards?|no gain))?"
+    yardsRE = r"(?: for (?:(?P<recYds>\-?\d+) yards?|no gain))?"
     throwRE = r'{}{}{}{}{}'.format(
         completeRE, passOptRE, targetedRE, yardsRE, tackleRE
     )
@@ -157,13 +157,42 @@ def parsePlayDetails(details):
     passREstr = (
         r"{} (?:{}|{}){}{}{}"
     ).format(passerRE, sackRE, throwRE, fumbleRE, tdRE, penaltyRE)
-    print passREstr
     passRE = re.compile(passREstr, re.IGNORECASE)
 
     # try rushing
     match = rushRE.match(details)
-    # if that doesn't work, try passing
-    if not match:
+    # if it was a run...
+    if match:
+        # parse as a run
+        struct = match.groupdict()
+        struct['isRun'] = True
+        struct['isPass'] = False
+        # change type to int when applicable
+        for k in ('yds', 'fumbRecYdLine', 'fumbRetYds', 'penYds'):
+            struct[k] = int(struct[k]) if struct[k] else 0
+        # change type to bool when applicable
+        struct['isTD'] = bool(struct['isTD'])
+        struct['penDeclined'] = bool(struct['penDeclined'])
+        # convert rush type
+        struct['rushDir'] = RUSH_OPTS.get(struct['rushDir'], None)
+        return struct
+    # otherwise, try parsing as a pass
+    else:
         match = passRE.match(details)
-    # whatever we have by now, return it
-    return match
+        # if that didn't work, return None
+        if not match: return None
+
+        # parse as a pass
+        struct = match.groupdict()
+        struct['isPass'] = True
+        struct['isRun'] = False
+        # change type to int when applicable
+        for k in ('recYds','fumbRecYdLine','fumbRetYds','penYds','sackYds'):
+            struct[k] = int(struct[k]) if struct[k] else 0
+        # change type to bool when applicable
+        struct['isTD'] = bool(struct['isTD'])
+        struct['penDeclined'] = bool(struct['penDeclined'])
+        struct['isComplete'] = struct['isComplete'] == 'complete'
+        # convert pass type
+        struct['passLoc'] = PASS_OPTS.get(struct['passLoc'], None)
+        return struct
