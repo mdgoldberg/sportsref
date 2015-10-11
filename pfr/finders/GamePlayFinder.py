@@ -81,6 +81,10 @@ def kwArgsToQS(**kwargs):
 
     # clean up keys and values
     for k, v in kwargs.items():
+        # pID, playerID => player_id
+        if k.lower() in ('pid', 'playerid'):
+            del kwargs[k]
+            kwargs['player_id'] = v
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
