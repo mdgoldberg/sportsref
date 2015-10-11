@@ -69,6 +69,8 @@ def GamePlayFinder(**kwargs):
     plays['Month'] = plays.Date.str[4:6].astype(int)
     plays['Date'] = plays.Date.str[6:8].astype(int)
     plays = plays.rename({'Date': 'Boxscore'})
+    details = pd.DataFrame(map(utils.parsePlayDetails, plays.Detail))
+    plays = pd.merge(plays, details, left_index=True, right_index=True)
 
     return plays
 
