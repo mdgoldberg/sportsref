@@ -28,27 +28,42 @@ def GamePlayFinder(**kwargs):
     doc = pq(html)
     
     # try to parse
-    try:
-        table = doc('#div_ table.stats_table')
-        cols = [th.text for th in table('thead tr th[data-stat]')]
-        cols[-1] = 'EPDiff'
+    # try:
+    table = doc('#div_ table.stats_table')
+    cols = [th.text for th in table('thead tr th[data-stat]')]
+    cols[-1] = 'EPDiff'
 
-        data = [
-            [
-                ''.join(
-                    [c if isinstance(c, basestring) 
-                     else utils.relURLToID(c.attrib['href'])
-                     for c in td.contents()]
-                )
-                for td in map(pq, row('td'))
-            ]
-            for row in map(pq, table('tbody tr[class=""]'))
+    # data = []
+    # for row in map(pq, table('tbody tr[class=""]')):
+    #     newrow = []
+    #     for td in map(pq, row('td')):
+    #         try:
+    #             newrow.append(''.join(
+    #                 [c if isinstance(c, basestring) 
+    #                  else utils.relURLToID(c.attrib['href'])
+    #                  for c in td.contents()]
+    #             ))
+    #         except:
+    #             print td
+    #     data.append(newrow)
+
+    data = [
+        [
+            ''.join(
+                [c if isinstance(c, basestring) 
+                 else utils.relURLToID(c.attrib['href'])
+                 for c in td.contents()]
+            )
+            for td in map(pq, row('td'))
         ]
-        plays = pd.DataFrame(data, columns=cols, dtype=float)
-    except Exception as e:
-        # if parsing goes wrong, return empty DataFrame
-        raise e
-        return pd.DataFrame()
+        for row in map(pq, table('tbody tr[class=""]'))
+    ]
+
+    plays = pd.DataFrame(data, columns=cols, dtype=float)
+    # except Exception as e:
+    #     # if parsing goes wrong, return empty DataFrame
+    #     raise e
+    #     return pd.DataFrame()
 
     return plays
 
