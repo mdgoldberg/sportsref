@@ -109,6 +109,8 @@ def parsePlayDetails(details):
     )
 
     playerRE = r"\S{6}\d{2}"
+
+    # create rushing regex
     rusherRE = r"(?P<rusher>{0})".format(playerRE)
     rushOptRE = r"(?: {})?".format(rushOptRE)
     yardsRE = r"(?:(?:(?P<yds>\-?\d+) yards?)|(?:no gain))"
@@ -121,12 +123,12 @@ def parsePlayDetails(details):
                 r"(?: \(forced by (?P<forcer>{0})\))?"
                 r"(?:, recovered by (?P<recoverer>{0}) at )?"
                 r"(?:, ball out of bounds at )?"
-                r"(?:(?P<fieldside>\w*)\-(?P<ydline>\-?\d*))?"
+                r"(?:(?P<fumbrec_fieldside>\w*)\-(?P<fumbrec_ydline>\-?\d*))?"
                 r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
                 r")?"
                 .format(playerRE))
     tdRE = r"(?P<is_td>, touchdown)?"
-    penaltyRE = (r"(?:"
+    penaltyRE = (r"(?:.*?"
                  r"\. Penalty on (?P<pen_on>{0}): "
                  r"(?P<penalty>[^\(,]+)"
                  r"(?: \((?P<pen_declined>Declined)\)|"
@@ -137,7 +139,31 @@ def parsePlayDetails(details):
     rushREstr = (
         r"{}{} for {}{}{}{}{}"
     ).format(rusherRE, rushOptRE, yardsRE, tackleRE, fumbleRE, tdRE, penaltyRE)
-    print rushREstr
     rushRE = re.compile(rushREstr, re.IGNORECASE)
+
+    # create passing regex
+    passerRE = r"(?P<passer>{0})".format(playerRE)
+    sackRE = (r"sacked by (?P<sacker1>{0})(?: and (?P<sacker2>{0}))? "
+              r"for (?P<sack_yds>\-?\d+) yards?"
+              .format(playerRE))
+    completeRE = r"pass (?P<comp>(?:in)?complete)"
+    passOptRE = r"(?: {})?".format(passOptRE)
+    targetedRE = r"(?: (?:to|intended for)? (?P<target>{0}))?".format(playerRE)
+    yardsRE = r"(?: for (?:(?P<rec_yds>\-?\d+) yards?|no gain))?"
+    throwRE = r'{}{}{}{}{}'.format(
+        completeRE, passOptRE, targetedRE, yardsRE, tackleRE
+    )
+    
+    passREstr = (
+        r"{} (?:{}|{}){}{}{}"
+    ).format(passerRE, sackRE, throwRE, fumbleRE, tdRE, penaltyRE)
+    print passREstr
+    passRE = re.compile(passREstr, re.IGNORECASE)
+
+    # try rushing
     match = rushRE.match(details)
+    # if that doesn't work, try passing
+    if not match:
+        match = passRE.match(details)
+    # whatever we have by now, return it
     return match
