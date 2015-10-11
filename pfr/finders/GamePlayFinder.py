@@ -63,7 +63,12 @@ def GamePlayFinder(**kwargs):
     # except Exception as e:
     #     # if parsing goes wrong, return empty DataFrame
     #     raise e
-    #     return pd.DataFrame()
+    #     return pd.DataFrame(columns=cols)
+
+    plays['Year'] = plays.Date.str[:4].astype(int)
+    plays['Month'] = plays.Date.str[4:6].astype(int)
+    plays['Date'] = plays.Date.str[6:8].astype(int)
+    plays = plays.rename({'Date': 'Boxscore'})
 
     return plays
 
