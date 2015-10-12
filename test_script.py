@@ -17,12 +17,12 @@ psf = PSF.PlayerSeasonFinder(
 print len(psf)
 
 dfs = []
-pURLs = []
-for ps in psf:
-    print ps
-    pURL, yr = ps
-    pURLs.append(pURL)
-    df = GPF.GamePlayFinder(player_id=pURL, year=yr, type='rush')
+pIDs = []
+for i, ps in enumerate(psf):
+    print i, ps
+    pID, yr = ps
+    pIDs.append(pID)
+    df = GPF.GamePlayFinder(player_id=pID, year=yr, type='RUSH', verbose=True)
     dfs.append(df)
 
 total_df = pd.concat(dfs)

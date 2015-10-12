@@ -63,7 +63,14 @@ def GamePlayFinder(**kwargs):
     # except Exception as e:
     #     # if parsing goes wrong, return empty DataFrame
     #     raise e
-    #     return pd.DataFrame()
+    #     return pd.DataFrame(columns=cols)
+
+    plays['Year'] = plays.Date.str[:4].astype(int)
+    plays['Month'] = plays.Date.str[4:6].astype(int)
+    plays['Date'] = plays.Date.str[6:8].astype(int)
+    plays = plays.rename({'Date': 'Boxscore'})
+    details = pd.DataFrame(map(utils.parsePlayDetails, plays.Detail))
+    plays = pd.merge(plays, details, left_index=True, right_index=True)
 
     return plays
 
@@ -81,6 +88,10 @@ def kwArgsToQS(**kwargs):
 
     # clean up keys and values
     for k, v in kwargs.items():
+        # pID, playerID => player_id
+        if k.lower() in ('pid', 'playerid'):
+            del kwargs[k]
+            kwargs['player_id'] = v
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
