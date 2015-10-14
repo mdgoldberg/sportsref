@@ -1,7 +1,7 @@
 # Fill in PlayerSeasonFinder docstring
-from pfr.finders import PlayerSeasonFinder
+from pfr.finders import PSF
 
-IOD = PlayerSeasonFinder.getInputsOptionsDefaults()
+IOD = PSF.getInputsOptionsDefaults()
 
 paramStr = '\n'.join(
     ':param {}: default="{}"'.format(
@@ -23,7 +23,7 @@ optsStr = '\n'.join(
     for name, dct in sorted(IOD.iteritems()))
 
 
-PlayerSeasonFinder.PlayerSeasonFinder.__doc__ = """
+PSF.PlayerSeasonFinder.__doc__ = """
 Finds player-seasons that match criteria supplied by keyword arguments.
 
 Can use tm or team for team_id.
@@ -43,9 +43,9 @@ del IOD, paramStr, optsStr
 
 
 # Fill in GamePlayFinder docstring
-from pfr.finders import GamePlayFinder
+from pfr.finders import GPF
 
-IOD = GamePlayFinder.getInputsOptionsDefaults()
+IOD = GPF.getInputsOptionsDefaults()
 
 paramStr = '\n'.join(
     ':param {}: default="{}"'.format(
@@ -69,7 +69,7 @@ optsStr = '\n'.join(
     for name, dct in sorted(IOD.iteritems())
 )
 
-GamePlayFinder.GamePlayFinder.__doc__ = """
+GPF.GamePlayFinder.__doc__ = """
 Finds plays that match criteria supplied by keyword arguments.
 
 Can use tm or team instead of team_id.
@@ -90,6 +90,6 @@ del IOD, paramStr, optsStr
 
 # modules/variables to expose
 __all__ = [
-    'PlayerSeasonFinder',
-    'GamePlayFinder',
+    'PSF',
+    'GPF',
 ]
