@@ -39,9 +39,9 @@ def getHTML(url):
                 # sleep
                 for _ in xrange(K):
                     time.sleep(1)
-                # backoff gets doubled, capped at 3 hours
+                # backoff gets doubled, capped at 1 hour
                 K *= 2
-                K = min(K, 60*60*3)
+                K = min(K, 60*60)
             else:
                 # Some other error code
                 raise e
