@@ -33,20 +33,6 @@ def GamePlayFinder(**kwargs):
     cols = [th.text for th in table('thead tr th[data-stat]')]
     cols[-1] = 'EPDiff'
 
-    # data = []
-    # for row in map(pq, table('tbody tr[class=""]')):
-    #     newrow = []
-    #     for td in map(pq, row('td')):
-    #         try:
-    #             newrow.append(''.join(
-    #                 [c if isinstance(c, basestring) 
-    #                  else utils.relURLToID(c.attrib['href'])
-    #                  for c in td.contents()]
-    #             ))
-    #         except:
-    #             print td
-    #     data.append(newrow)
-
     data = [
         [
             ''.join(
