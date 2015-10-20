@@ -1,4 +1,4 @@
-PFR_BASE_URL = 'http://www.pro-football-reference.com'
+BASE_URL = 'http://www.pro-football-reference.com'
 
 import boxscores
 import decorators
@@ -8,7 +8,7 @@ import utils
 
 # modules/variables to expose
 __all__ = [
-    'PFR_BASE_URL',
+    'BASE_URL',
     'boxscores',
     'decorators',
     'finders',
