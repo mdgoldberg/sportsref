@@ -6,12 +6,15 @@ import time
 import numpy as np
 import requests
 
+import decorators
+
 __all__ = [
     'getHTML',
     'relURLToID',
     'parsePlayDetails',
 ]
 
+@decorators.cacheHTML
 def getHTML(url):
     """Gets the HTML for the given URL using a GET request.
 
