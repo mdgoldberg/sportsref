@@ -6,6 +6,7 @@ import appdirs
 
 __all__ = [
     'switchToDir',
+    'cacheHTML',
 ]
 
 def switchToDir(dirPath):
@@ -35,7 +36,9 @@ def cacheHTML(func):
     @wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
-        relURL = '{}?{}'.format(parsed.path, parsed.query)
+        relURL = parsed.path
+        if parsed.query:
+            relURL += '?' + parsed.query
         relURL = relURL.strip('/').replace('/', '__')
         fn = '{}/{}'.format(CACHE_DIR, relURL)
 
