@@ -73,12 +73,14 @@ def relURLToID(url):
     boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')
     teamRegex = re.compile(r'/teams/(\w{3})/')
     yearRegex = re.compile(r'/years/(\d{4})/')
+    coachRegex = re.compile(r'/coaches/(.+?)\.html?')
 
     regexes = [
         playerRegex,
         boxscoresRegex,
         teamRegex,
         yearRegex,
+        coachRegex,
     ]
 
     for regex in regexes:
