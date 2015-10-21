@@ -1,3 +1,4 @@
+import datetime
 import re
 
 import requests
@@ -12,6 +13,8 @@ __all__ = [
     'Team',
 ]
 
+yr = datetime.datetime.now().year
+
 def listTeams():
     doc = pq(utils.getHTML(BASE_URL + '/teams/'))
     table = doc('table#teams_active')
@@ -22,3 +25,12 @@ class Team:
 
     def __init__(self, teamID):
         self.teamID = teamID
+
+    def roster(self, year=yr):
+        """Returns the roster table for the given year.
+
+        :year: The year for which we want the roster.
+        :returns: A DataFrame containing roster information for that year.
+
+        """
+        raise "not yet implemented"
