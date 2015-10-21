@@ -3,7 +3,10 @@ import re
 import sys
 import time
 
+import lxml
 import numpy as np
+import pandas as pd
+from pyquery import PyQuery as pq
 import requests
 
 import decorators
@@ -11,6 +14,7 @@ import decorators
 __all__ = [
     'getHTML',
     'relURLToID',
+    'parseTable',
     'parsePlayDetails',
 ]
 
@@ -65,26 +69,64 @@ def relURLToID(url):
 
     :returns: ID associated with the given relative URL.
     """
-    playerRegex = re.compile(r'/players/[A-Z]/(.+?)\.html?', re.IGNORECASE)
-    boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?', re.IGNORECASE)
-    teamRegex = re.compile(r'/teams/(\w{3})/', re.IGNORECASE)
+    playerRegex = re.compile(r'/players/[A-Z]/(.+?)\.html?')
+    boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')
+    teamRegex = re.compile(r'/teams/(\w{3})/')
+    yearRegex = re.compile(r'/years/(\d{4})/')
 
-    # check if player ID
-    match = playerRegex.match(url)
-    if match:
-        return match.group(1)
-    
-    # check if boxscores ID
-    match = boxscoresRegex.match(url)
-    if match:
-        return match.group(1)
+    regexes = [
+        playerRegex,
+        boxscoresRegex,
+        teamRegex,
+        yearRegex,
+    ]
 
-    match = teamRegex.match(url)
-    if match:
-        return match.group(1)
+    for regex in regexes:
+        match = regex.match(url)
+        if match:
+            return match.group(1)
 
     print 'WARNING. WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
     return ''
+
+
+def parseTable(table):
+    """Parses a table from PFR into a pandas dataframe.
+
+    :table: the PyQuery, HtmlElement, or raw HTML of the table
+    :returns: Pandas dataframe
+    """
+    if isinstance(table, pq):
+        pass
+    elif isinstance(table, lxml.html.HtmlElement):
+        table = pq(table.text_content())
+    elif isinstance(table, basestring):
+        table = pq(table)
+    else:
+        raise 'UNKNOWN TYPE PASSED TO parseTable'
+
+    # get columns and over-headers (if they exist)
+    columns = [c.attrib['data-stat']
+               for c in table('thead tr[class=""] th[data-stat]')]
+    
+    # get data
+    data = [
+        [_flattenLinks(td) for td in row('td')]
+        for row in map(pq, table('tbody tr'))
+    ]
+
+    # make DataFrame
+    df = pd.DataFrame(data, columns=columns, dtype='float')
+    
+    # small fixes to DataFrame
+    # ignore * and + after the year
+    if 'year_id' in df.columns:
+        df.year_id = df.year_id.apply(
+            lambda y: int(y[:4]) if isinstance(y, basestring) else y
+        )
+    
+    return df
+    
 
 def parsePlayDetails(details):
     """Parses play details from play-by-play and returns structured data.
@@ -199,3 +241,30 @@ def parsePlayDetails(details):
         # convert pass type
         struct['passLoc'] = PASS_OPTS.get(struct['passLoc'], None)
         return struct
+
+def _flattenLinks(td):
+    """Flattens relative URLs within text of a table cell to IDs and returns
+    the result.
+
+    :td: the PQ object, HtmlElement, or string of raw HTML to convert
+    :returns: the string with the links flattened to IDs
+
+    """
+    # ensure it's a PyQuery object
+    if isinstance(td, basestring) or isinstance(td, lxml.html.HtmlElement):
+        td = pq(td)
+
+    # if there's no text, just return np.nan
+    if not td.text():
+        return np.nan
+
+    def _flattenC(c):
+        if isinstance(c, basestring):
+            return c
+        elif 'href' in c.attrib:
+            cID = relURLToID(c.attrib['href'])
+            return cID if cID else pq(c).text()
+        else:
+            return pq(c).text()
+
+    return ''.join(_flattenC(c) for c in td.contents())
