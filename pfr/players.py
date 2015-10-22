@@ -6,8 +6,7 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import pfr
-from pfr import utils
+from pfr import utils, BASE_URL
 
 __all__ = [
     'Player',
@@ -20,8 +19,7 @@ class Player:
     def __init__(self, playerID):
         self.pID = playerID
         self.mainURL = urlparse.urljoin(
-            pfr.BASE_URL,
-            '/players/{0[0]}/{0}.htm'
+            BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
 
     def age(self, year=yr):
