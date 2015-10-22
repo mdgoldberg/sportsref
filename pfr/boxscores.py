@@ -22,6 +22,11 @@ class BoxScore:
             BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
         )
 
+    def date(self):
+        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.bsID)
+        year, month, day = map(int, match.groups())
+        return datetime.date(year=year, month=month, day=day)
+
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
