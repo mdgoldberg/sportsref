@@ -186,3 +186,19 @@ class BoxScore:
             giDict[key] = val
 
         return giDict
+
+    def pbp(self):
+        """Returns a dataframe of the play-by-play data from the game.
+        :returns: pandas DataFrame of play-by-play. Similar to GPF.
+
+        """
+        table = self.doc('table#pbp_data')
+        pbp = pfr.utils.parseTable(table)
+        dicts = map(pfr.utils.parsePlayDetails, pbp.detail)
+        cols = reduce(lambda x, y: set(x) | set(y),
+                      [d.iterkeys() for d in dicts if d is not None])
+        blankEntry = {c: None for c in cols}
+        dicts = [d if d is not None else  blankEntry for d in dicts]
+        details = pd.DataFrame(dicts)
+        pbp = pd.merge(pbp, details, left_index=True, right_index=True)
+        return pbp
