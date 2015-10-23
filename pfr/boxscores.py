@@ -27,6 +27,17 @@ class BoxScore:
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
+    def weekday(self):
+        """Returns the day of the week on which the game occurred.
+        :returns: String representation of the day of the week for the game.
+
+        """
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+                'Saturday', 'Sunday']
+        date = self.date()
+        wd = date.weekday()
+        return days[wd]
+
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
