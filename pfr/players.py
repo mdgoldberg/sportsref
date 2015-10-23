@@ -38,10 +38,6 @@ class Player:
         tables = doc('table').filter(
             lambda i,e: 'AV' in e.text_content()
         )
-        
-        if len(tables) > 1:
-            print 'TOO MANY TABLES for AV for player ' + self.pID
-        
         table = pq(tables[0])
         df = utils.parseTable(table)
         df = df.query('year_id == @year')

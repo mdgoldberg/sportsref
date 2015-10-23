@@ -46,7 +46,6 @@ class Team:
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
-
     def roster(self, year=yr):
         """Returns the roster table for the given year.
 
