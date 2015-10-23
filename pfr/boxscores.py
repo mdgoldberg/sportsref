@@ -58,6 +58,24 @@ class BoxScore:
         away = pfr.utils.relURLToID(pq(table('tr')[1])('a').attr['href'])
         return away
 
+    def homeScore(self):
+        """Returns score of the home team.
+        :returns: int of the home score.
+
+        """
+        table = self.doc('table#linescore')
+        homeScore = pq(table('tr')[2])('td')[-1].text_content()
+        return int(homeScore)
+
+    def awayScore(self):
+        """Returns score of the away team.
+        :returns: int of the away score.
+
+        """
+        table = self.doc('table#linescore')
+        awayScore = pq(table('tr')[1])('td')[-1].text_content()
+        return int(awayScore)
+
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
         from PFR. The columns are:
