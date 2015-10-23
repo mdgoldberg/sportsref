@@ -66,6 +66,9 @@ def relURLToID(url):
     Supported types:
     * player/...
     * boxscores/...
+    * teams/...
+    * years/...
+    * coaches/...
 
     :returns: ID associated with the given relative URL.
     """
@@ -74,6 +77,7 @@ def relURLToID(url):
     teamRegex = re.compile(r'/teams/(\w{3})/.*')
     yearRegex = re.compile(r'/years/(\d{4})/')
     coachRegex = re.compile(r'/coaches/(.+?)\.html?')
+    stadiumRegex = re.compile(r'/stadiums/(.+?)\.html?')
 
     regexes = [
         playerRegex,
@@ -81,6 +85,7 @@ def relURLToID(url):
         teamRegex,
         yearRegex,
         coachRegex,
+        stadiumRegex,
     ]
 
     for regex in regexes:
@@ -121,12 +126,21 @@ def parseTable(table):
     df = pd.DataFrame(data, columns=columns, dtype='float')
     
     # small fixes to DataFrame
-    # ignore * and + after the year
+
+    # team_index table (and others?) fix
+    if 'year_id' in df.columns and 'league_id' in df.columns:
+        df['year_id'] = df['league_id']
+        del df['league_id']
+
     if 'year_id' in df.columns:
+        df = df.query('year_id != "AFL"')
         df.year_id = df.year_id.apply(
             lambda y: int(y[:4]) if isinstance(y, basestring) else y
         )
-    
+
+    # ignore * and + to note things
+    df.replace(re.compile(r'[\*\+]'), '', inplace=True)
+
     return df
     
 
