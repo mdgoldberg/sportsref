@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-from pfr import utils, BASE_URL
+import pfr
 
 __all__ = [
+    'BoxScore',
 ]
 
 yr = datetime.datetime.now().year
@@ -19,10 +20,15 @@ class BoxScore:
     def __init__(self, bsID):
         self.bsID = bsID
         self.mainURL = urlparse.urljoin(
-            BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
+            pfr.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
         )
+        self.doc = pq(pfr.utils.getHTML(self.mainURL))
 
     def date(self):
+        """Returns the date of the game. See Python datetime.date documentation
+        for more.
+        :returns: A datetime.date object with year, month, and day attributes.
+        """
         match = re.match(r'(\d{4})(\d{2})(\d{2})', self.bsID)
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
@@ -48,9 +54,8 @@ class BoxScore:
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        doc = pq(utils.getHTML(self.mainURL))
-        table = doc('table#linescore')
-        away = utils.relURLToID(pq(table('tr')[1])('a').attr['href'])
+        table = self.doc('table#linescore')
+        away = pfr.utils.relURLToID(pq(table('tr')[1])('a').attr['href'])
         return away
 
     def starters(self):
@@ -69,7 +74,7 @@ class BoxScore:
 
         :returns: A pandas DataFrame. See the description for details.
         """
-        doc = pq(utils.getHTML(self.mainURL))
+        doc = self.doc
         pretable = next(div for div in map(pq, doc('div.table_heading')) 
                         if div('h2:contains("Starting Lineups")'))
         tableCont = map(pq, pretable.nextAll('div.table_container')[:2])
@@ -79,7 +84,9 @@ class BoxScore:
             team = self.home() if h else self.away()
             for i, row in enumerate(map(pq, table('tr[class=""]'))):
                 datum = {}
-                datum['playerID'] = utils.relURLToID(row('a')[0].attrib['href'])
+                datum['playerID'] = pfr.utils.relURLToID(
+                    row('a')[0].attrib['href']
+                )
                 datum['playerName'] = row('a').filter(
                     lambda i,e: len(e.text_content()) > 0
                 ).text()
@@ -90,4 +97,72 @@ class BoxScore:
                 data.append(datum)
         return pd.DataFrame(data)
 
+    def gameInfo(self):
+        """Gets a dictionary of information about the game.
+        :returns: Dictionary of game information.
 
+        """
+        # starting values
+        giDict = {
+            'home': self.home(),
+            'away': self.away(),
+            'weekday': self.weekday(),
+        }
+        giTable = self.doc('table#game_info')
+        for tr in map(pq, giTable('tr[class=""]')):
+            td0, td1 = tr('td')
+            key = td0.text_content()
+            # keys to skip
+            if key in ('Tickets'):
+                continue
+            # small adjustments
+            elif key == 'Stadium':
+                val = pfr.utils._flattenLinks(td1).strip()
+            elif key == 'Attendance':
+                val = int(td1.text_content().replace(',',''))
+            elif key == 'Over/Under':
+                val = float(td1.text_content().split()[0])
+            elif key == 'Won Toss':
+                txt = td1.text_content()
+                if 'deferred' in txt:
+                    giDict['deferred'] = True
+                    defIdx = txt.index('deferred')
+                    tm = txt[:defIdx-2]
+                else:
+                    giDict['deferred'] = False
+                    tm = txt
+
+                if tm in pfr.teams.Team(self.home()).realName():
+                    giDict['wonToss'] = self.home()
+                else:
+                    giDict['wonToss'] = self.away()
+
+                continue
+            # create datetime.time object for start time
+            elif key == 'Start Time (ET)':
+                txt = td1.text_content()
+                colon = txt.index(':')
+                hour = int(txt[:colon])
+                mins = int(txt[colon+1:colon+3])
+                hour += (0 if txt[colon+3] == 'a' else 12)
+                giDict['startTimeET'] = datetime.time(hour=hour, minute=mins)
+                continue
+            # give duration in minutes
+            elif key == 'Duration':
+                hrs, mins = td1.text_content().split(':')
+                val = int(hrs)*60 + int(mins)
+            elif key == 'Vegas Line':
+                favorite, line = re.match(r'(.+?) ([\-\.\d]+)',
+                                          td1.text_content()).groups()
+                line = float(line)
+                # given in terms of the home team
+                if favorite != pfr.teams.Team(self.home()).realName():
+                    line = -line
+                giDict['line'] = line 
+                giDict['favorite'] = self.home() if line < 0 else self.away()
+                continue
+            else:
+                val = td1.text_content().strip()
+            giDict[key] = val
+
+        return giDict

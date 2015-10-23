@@ -66,4 +66,4 @@ class Team:
         doc = pq(self.teamYearURL(year))
         table = doc('table#team_gamelogs')
         df = utils.parseTable(table)
-        return df.boxscore_word.apply(boxscores.BoxScore).values
+        return df.boxscore_word.dropna().apply(boxscores.BoxScore).values
