@@ -69,6 +69,7 @@ def relURLToID(url):
     * teams/...
     * years/...
     * coaches/...
+    * officials/...
 
     :returns: ID associated with the given relative URL.
     """
@@ -78,6 +79,7 @@ def relURLToID(url):
     yearRegex = re.compile(r'/years/(\d{4})/')
     coachRegex = re.compile(r'/coaches/(.+?)\.html?')
     stadiumRegex = re.compile(r'/stadiums/(.+?)\.html?')
+    refRegex = re.compile(r'/officials/(.+?r)\.html?')
 
     regexes = [
         playerRegex,
@@ -86,6 +88,7 @@ def relURLToID(url):
         yearRegex,
         coachRegex,
         stadiumRegex,
+        refRegex,
     ]
 
     for regex in regexes:

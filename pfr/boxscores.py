@@ -202,3 +202,18 @@ class BoxScore:
         details = pd.DataFrame(dicts)
         pbp = pd.merge(pbp, details, left_index=True, right_index=True)
         return pbp
+
+    def refInfo(self):
+        """Gets a dictionary of ref positions and the ref IDs of the refs for
+        that game.
+        :returns: A dictionary of ref positions and IDs.
+
+        """
+        refDict = {}
+        refTable = self.doc('table#ref_info')
+        for tr in map(pq, refTable('tr[class=""]')):
+            td0, td1 = tr('td')
+            key = td0.text_content().lower().replace(' ', '_')
+            val = pfr.utils._flattenLinks(td1)
+            refDict[key] = val
+        return refDict
