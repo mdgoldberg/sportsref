@@ -27,35 +27,16 @@ def GamePlayFinder(**kwargs):
     html = utils.getHTML(url)
     doc = pq(html)
     
-    # try to parse
-    # try:
+    # parse
     table = doc('#div_ table.stats_table')
-    cols = [th.text for th in table('thead tr th[data-stat]')]
-    cols[-1] = 'EPDiff'
+    plays = utils.parseTable(table)
 
-    data = [
-        [
-            ''.join(
-                [c if isinstance(c, basestring) 
-                 else utils.relURLToID(c.attrib['href'])
-                 for c in td.contents()]
-            )
-            for td in map(pq, row('td'))
-        ]
-        for row in map(pq, table('tbody tr[class=""]'))
-    ]
-
-    plays = pd.DataFrame(data, columns=cols, dtype=float)
-    # except Exception as e:
-    #     # if parsing goes wrong, return empty DataFrame
-    #     raise e
-    #     return pd.DataFrame(columns=cols)
-
-    plays['Year'] = plays.Date.str[:4].astype(int)
-    plays['Month'] = plays.Date.str[4:6].astype(int)
-    plays['Date'] = plays.Date.str[6:8].astype(int)
-    plays = plays.rename({'Date': 'Boxscore'})
-    details = pd.DataFrame(map(utils.parsePlayDetails, plays.Detail))
+    # clean
+    plays['year'] = plays.game_date.str[:4].astype(int)
+    plays['month'] = plays.game_date.str[4:6].astype(int)
+    plays['day'] = plays.game_date.str[6:8].astype(int)
+    plays = plays.rename({'game_date': 'bsID'})
+    details = pd.DataFrame(map(utils.parsePlayDetails, plays.description))
     plays = pd.merge(plays, details, left_index=True, right_index=True)
 
     return plays
