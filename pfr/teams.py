@@ -26,10 +26,26 @@ class Team:
 
     def __init__(self, teamID):
         self.teamID = teamID
-        self.teamURL = urlparse.urljoin(
-            BASE_URL, '/teams/{}'.format(self.teamID))
+        self.relURL = '/teams/{}'.format(self.teamID)
+        self.teamURL = urlparse.urljoin(BASE_URL, self.relURL)
         self.teamYearURL = lambda yr: urlparse.urljoin(
             BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+
+    def realName(self):
+        """Returns the real name of the franchise given a team ID.
+
+        Examples:
+        'nwe' -> 'New England Patriots'
+        'sea' -> 'Seattle Seahawks'
+
+        :returns: A string corresponding to the team's full name.
+        """
+        doc = pq(utils.getHTML(BASE_URL + '/teams/{}/'.format(self.teamID)))
+        headerwords = doc('div#info_box h1')[0].text_content().split()
+        lastIdx = headerwords.index('Franchise')
+        teamwords = headerwords[:lastIdx]
+        return ' '.join(teamwords)
+
 
     def roster(self, year=yr):
         """Returns the roster table for the given year.
