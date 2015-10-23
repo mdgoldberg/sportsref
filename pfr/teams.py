@@ -31,7 +31,7 @@ class Team:
         self.teamYearURL = lambda yr: urlparse.urljoin(
             BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
 
-    def realName(self):
+    def name(self):
         """Returns the real name of the franchise given a team ID.
 
         Examples:

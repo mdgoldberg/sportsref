@@ -152,7 +152,7 @@ class BoxScore:
                     giDict['deferred'] = False
                     tm = txt
 
-                if tm in pfr.teams.Team(self.home()).realName():
+                if tm in pfr.teams.Team(self.home()).name():
                     giDict['wonToss'] = self.home()
                 else:
                     giDict['wonToss'] = self.away()
@@ -176,7 +176,7 @@ class BoxScore:
                                           td1.text_content()).groups()
                 line = float(line)
                 # given in terms of the home team
-                if favorite != pfr.teams.Team(self.home()).realName():
+                if favorite != pfr.teams.Team(self.home()).name():
                     line = -line
                 giDict['line'] = line 
                 giDict['favorite'] = self.home() if line < 0 else self.away()
