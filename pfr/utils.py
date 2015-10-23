@@ -119,7 +119,7 @@ def parseTable(table):
     # get data
     data = [
         [_flattenLinks(td) for td in row('td')]
-        for row in map(pq, table('tbody tr'))
+        for row in map(pq, table('tbody tr').not_('.thead'))
     ]
 
     # make DataFrame

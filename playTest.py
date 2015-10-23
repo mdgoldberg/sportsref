@@ -2,7 +2,7 @@ import operator as op
 
 import pandas as pd
 
-from pfr.finders import GamePlayFinder as GPF
+from pfr.finders import GPF
 from pfr import utils
 
 p = GPF.GamePlayFinder(type='PASS', yr=2014, order_by='game_date')
