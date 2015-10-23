@@ -116,14 +116,16 @@ class BoxScore:
         return pd.DataFrame(data)
 
     def gameInfo(self):
-        """Gets a dictionary of information about the game.
+        """Gets a dictionary of basic information about the game.
         :returns: Dictionary of game information.
 
         """
         # starting values
         giDict = {
             'home': self.home(),
+            'homeScore': self.homeScore(),
             'away': self.away(),
+            'awayScore': self.awayScore(),
             'weekday': self.weekday(),
         }
         giTable = self.doc('table#game_info')
