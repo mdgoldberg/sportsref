@@ -1,17 +1,19 @@
 BASE_URL = 'http://www.pro-football-reference.com'
 
-import boxscores
-import decorators
 import finders
-import players
+import decorators
 import utils
+import boxscores
+import players
+import teams
 
 # modules/variables to expose
 __all__ = [
     'BASE_URL',
-    'boxscores',
-    'decorators',
     'finders',
-    'players',
+    'decorators',
     'utils',
+    'boxscores'
+    'players',
+    'teams',
 ]
