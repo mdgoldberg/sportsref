@@ -35,7 +35,7 @@ class Player:
 
     def av(self, year=yr):
         doc = pq(utils.getHTML(self.mainURL))
-        tables = doc('table').filter(
+        tables = doc('table[id]').filter(
             lambda i,e: 'AV' in e.text_content()
         )
         table = pq(tables[0])
