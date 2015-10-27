@@ -38,10 +38,16 @@ class Player:
         tables = doc('table[id]').filter(
             lambda i,e: 'AV' in e.text_content()
         )
+        # if no AV table, return NaN
+        if not tables:
+            return np.nan
+        # otherwise, extract the AV
         table = pq(tables[0])
         df = utils.parseTable(table)
         df = df.query('year_id == @year')
+        # if the player has an AV for that year, return it
         if not df.empty:
             return df['av'].iloc[0]
+        # otherwise, return NaN
         else:
             return np.nan
