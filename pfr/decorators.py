@@ -1,5 +1,6 @@
 from functools import wraps
 import os
+import time
 import urlparse
 
 import appdirs
@@ -47,11 +48,19 @@ def cacheHTML(func):
             # filename is too long, just evaluate the function
             return func(url).encode('ascii', 'replace')
         
-        # TODO: check how long since last cached
+        # set time variables
+        if os.path.isfile(fn):
+            modtime = os.path.getmtime(fn)
+            curtime = time.time()
+        else:
+            modtime = 0
+            curtime = 0
+        # if file found, read from file (not using time variables for now)
         if os.path.isfile(fn):
             with open(fn, 'r') as f:
                 text = f.read()
             return text
+        # otherwise, download html and cache it
         else:
             text = func(url).encode('ascii', 'replace')
             with open(fn, 'w+') as f:
