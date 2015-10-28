@@ -86,9 +86,9 @@ class BoxScore:
         necessarily unique.
         * position - the position at which the player started for their team.
         * team - the team for which the player started.
-        * home - 1 if the player's team was at home, 0 if they were away
-        * offense - 1 if the player is starting on an offensive position, 0 if
-        defense.
+        * home - True if the player's team was at home, False if they were away
+        * offense - True if the player is starting on an offensive position,
+        False if defense.
 
         :returns: A pandas DataFrame. See the description for details.
         """
@@ -196,9 +196,9 @@ class BoxScore:
         pbp = pfr.utils.parseTable(table)
         dicts = map(pfr.utils.parsePlayDetails, pbp.detail)
         cols = reduce(lambda x, y: set(x) | set(y),
-                      [d.iterkeys() for d in dicts if d is not None])
+                      (d.iterkeys() for d in dicts if d is not None))
         blankEntry = {c: None for c in cols}
-        dicts = [d if d is not None else  blankEntry for d in dicts]
+        dicts = [d if d is not None else blankEntry for d in dicts]
         details = pd.DataFrame(dicts)
         pbp = pd.merge(pbp, details, left_index=True, right_index=True)
         return pbp

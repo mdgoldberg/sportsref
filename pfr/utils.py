@@ -154,6 +154,9 @@ def parsePlayDetails(details):
 
     :returns: dictionary of play attributes
     """
+
+    # TODO cases: rush, pass, kickoff, timeout, field goal, punt
+    # TODO clean up for missing data (None vs nan)
     
     RUSH_OPTS = {
         'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
@@ -206,6 +209,7 @@ def parsePlayDetails(details):
     rushRE = re.compile(rushREstr, re.IGNORECASE)
 
     # create passing regex
+    # TODO: implement interceptions
     passerRE = r"(?P<passer>{0})".format(playerRE)
     sackRE = (r"sacked by (?P<sacker1>{0})(?: and (?P<sacker2>{0}))? "
               r"for (?P<sackYds>\-?\d+) yards?"
@@ -213,7 +217,7 @@ def parsePlayDetails(details):
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE = r"(?: (?:to|intended for)? (?P<target>{0}))?".format(playerRE)
-    yardsRE = r"(?: for (?:(?P<recYds>\-?\d+) yards?|no gain))?"
+    yardsRE = r"(?: for (?:(?P<yds>\-?\d+) yards?|no gain))?"
     throwRE = r'{}{}{}{}{}'.format(
         completeRE, passOptRE, targetedRE, yardsRE, tackleRE
     )
@@ -251,7 +255,7 @@ def parsePlayDetails(details):
         struct['isPass'] = True
         struct['isRun'] = False
         # change type to int when applicable
-        for k in ('recYds','fumbRecYdLine','fumbRetYds','penYds','sackYds'):
+        for k in ('yds','fumbRecYdLine','fumbRetYds','penYds','sackYds'):
             struct[k] = int(struct[k]) if struct[k] else 0
         # change type to bool when applicable
         struct['isTD'] = bool(struct['isTD'])
