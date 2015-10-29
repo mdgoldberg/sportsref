@@ -63,3 +63,4 @@ target/
 **/TODO
 **/.R*
 **/*.csv
+**/*test*.py
