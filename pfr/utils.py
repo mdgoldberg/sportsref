@@ -115,7 +115,7 @@ def parseTable(table):
     else:
         raise 'UNKNOWN TYPE PASSED TO parseTable'
 
-    # get columns and over-headers (if they exist)
+    # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr[class=""] th[data-stat]')]
     
