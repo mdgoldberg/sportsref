@@ -1,7 +1,5 @@
 from setuptools import setup, find_packages
 
-print 'Packages found: {}'.format(find_packages())
-
 setup(name='pfr',
       version='0.2',
       description='Scraping data from pro-football-reference.com',
