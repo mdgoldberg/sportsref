@@ -8,8 +8,7 @@ import time
 from pyquery import PyQuery as pq
 import requests
 
-from pfr import decorators
-from pfr import utils
+import pfr
 
 PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
                      'play-index/psl_finder.cgi')
@@ -28,7 +27,7 @@ def PlayerSeasonFinder(**kwargs):
         url = '{}?{}'.format(PLAYER_SEASON_URL, querystring)
         if kwargs.get('verbose', False):
             print url
-        html = utils.getHTML(url)
+        html = pfr.utils.getHTML(url)
         doc = pq(html)
         table = doc('table#stats')
         yearTh = table('thead tr[class=""] th[data-stat="year_id"]')[0]
@@ -148,7 +147,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@pfr.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for player-season finder form.
 
@@ -165,7 +164,7 @@ def getInputsOptionsDefaults():
         # must generate the file
         print 'Regenerating constants file'
 
-        html = utils.getHTML(PLAYER_SEASON_URL)
+        html = pfr.utils.getHTML(PLAYER_SEASON_URL)
         doc = pq(html)
 
         def_dict = {}

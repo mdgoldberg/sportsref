@@ -9,7 +9,7 @@ import time
 import pandas as pd
 from pyquery import PyQuery as pq
 
-from pfr import decorators, utils
+import pfr
 
 GAME_PLAY_URL = ('http://www.pro-football-reference.com/'
                  'play-index/play_finder.cgi')
@@ -24,19 +24,19 @@ def GamePlayFinder(**kwargs):
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
-    html = utils.getHTML(url)
+    html = pfr.utils.getHTML(url)
     doc = pq(html)
     
     # parse
     table = doc('#div_ table.stats_table')
-    plays = utils.parseTable(table)
+    plays = pfr.utils.parseTable(table)
 
     # clean
     plays['year'] = plays.game_date.str[:4].astype(int)
     plays['month'] = plays.game_date.str[4:6].astype(int)
     plays['day'] = plays.game_date.str[6:8].astype(int)
     plays = plays.rename({'game_date': 'bsID'})
-    details = pd.DataFrame(map(utils.parsePlayDetails, plays.description))
+    details = pd.DataFrame(map(pfr.utils.parsePlayDetails, plays.description))
     plays = pd.merge(plays, details, left_index=True, right_index=True)
 
     return plays
@@ -62,7 +62,7 @@ def kwArgsToQS(**kwargs):
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
-                kwargs[k] = utils.relURLToID(v)
+                kwargs[k] = pfr.utils.relURLToID(v)
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
@@ -144,7 +144,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@pfr.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for play finder form.
 
@@ -165,7 +165,7 @@ def getInputsOptionsDefaults():
         # must generate the file
         print 'Regenerating constants file'
 
-        html = utils.getHTML(GAME_PLAY_URL)
+        html = pfr.utils.getHTML(GAME_PLAY_URL)
         doc = pq(html)
         
         def_dict = {}

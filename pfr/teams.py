@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-from pfr import boxscores, players, utils, BASE_URL
+import pfr
 
 __all__ = [
     'listTeams',
@@ -17,9 +17,9 @@ __all__ = [
 yr = datetime.datetime.now().year
 
 def listTeams():
-    doc = pq(utils.getHTML(BASE_URL + '/teams/'))
+    doc = pq(pfr.utils.getHTML(pfr.BASE_URL + '/teams/'))
     table = doc('table#teams_active')
-    df = utils.parseTable(table)
+    df = pfr.utils.parseTable(table)
     return df.team_name.str[:3].values
 
 class Team:
@@ -27,9 +27,9 @@ class Team:
     def __init__(self, teamID):
         self.teamID = teamID
         self.relURL = '/teams/{}'.format(self.teamID)
-        self.teamURL = urlparse.urljoin(BASE_URL, self.relURL)
+        self.teamURL = urlparse.urljoin(pfr.BASE_URL, self.relURL)
         self.teamYearURL = lambda yr: urlparse.urljoin(
-            BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+            pfr.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
 
     def name(self):
         """Returns the real name of the franchise given a team ID.
@@ -40,7 +40,7 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        doc = pq(utils.getHTML(BASE_URL + '/teams/{}/'.format(self.teamID)))
+        doc = pq(pfr.utils.getHTML(pfr.BASE_URL + '/teams/{}/'.format(self.teamID)))
         headerwords = doc('div#info_box h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
@@ -64,5 +64,5 @@ class Team:
         """
         doc = pq(self.teamYearURL(year))
         table = doc('table#team_gamelogs')
-        df = utils.parseTable(table)
-        return df.boxscore_word.dropna().apply(boxscores.BoxScore).values
+        df = pfr.utils.parseTable(table)
+        return df.boxscore_word.dropna().apply(pfr.boxscores.BoxScore).values

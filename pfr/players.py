@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-from pfr import utils, BASE_URL
+import pfr
 
 __all__ = [
     'Player',
@@ -19,11 +19,11 @@ class Player:
     def __init__(self, playerID):
         self.pID = playerID
         self.mainURL = urlparse.urljoin(
-            BASE_URL, '/players/{0[0]}/{0}.htm'
+            pfr.BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
 
     def age(self, year=yr):
-        doc = pq(utils.getHTML(self.mainURL))
+        doc = pq(pfr.utils.getHTML(self.mainURL))
         span = doc('div#info_box span#necro-birth')
         birthstring = span.attr('data-birth')
         dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})', birthstring).groups()
@@ -34,7 +34,7 @@ class Player:
         return age
 
     def av(self, year=yr):
-        doc = pq(utils.getHTML(self.mainURL))
+        doc = pq(pfr.utils.getHTML(self.mainURL))
         tables = doc('table[id]').filter(
             lambda i,e: 'AV' in e.text_content()
         )
@@ -43,7 +43,7 @@ class Player:
             return np.nan
         # otherwise, extract the AV
         table = pq(tables[0])
-        df = utils.parseTable(table)
+        df = pfr.utils.parseTable(table)
         df = df.query('year_id == @year')
         # if the player has an AV for that year, return it
         if not df.empty:
