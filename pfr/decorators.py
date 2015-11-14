@@ -56,6 +56,7 @@ def cacheHTML(func):
             modtime = 0
             curtime = 0
         # if file found, read from file (not using time variables for now)
+        # TODO: use time variables
         if os.path.isfile(fn):
             with open(fn, 'r') as f:
                 text = f.read()
