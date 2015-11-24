@@ -462,14 +462,13 @@ def parsePlayDetails(details):
     match = twoPointRE.match(details)
     if match:
         # parse as a 2-point conversion
-        struct.update(match.groupdict())
         struct['isTwoPoint'] = True
         realPlay = pfr.utils.parsePlayDetails(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
         else:
             print "Can't parse play:", match.group('twoPoint')
-        struct['twoPointSuccess'] = struct['twoPointSuccess'] == 'succeeds'
+        struct['twoPointSuccess'] = match.group('twoPointSuccess')=='succeeds'
         return struct
 
     # try parsing as a penalty
