@@ -231,7 +231,7 @@ def parsePlayDetails(details):
                  .format(playerRE))
 
     rushREstr = (
-        r"{}{} for {}{}{}{}{}"
+        r"{}{}(?: for {}{}{}{}{})?"
     ).format(rusherRE, rushOptRE, rushYardsRE, tackleRE, fumbleRE, tdRE,
              penaltyRE)
     rushRE = re.compile(rushREstr, re.IGNORECASE)
@@ -295,9 +295,9 @@ def parsePlayDetails(details):
     # create punt regex
     punterRE = r'(?P<punter>{0})'.format(playerRE)
     puntBlockRE = (
-        (r' punts, (?P<blocked>blocked) by (?P<puntBlocker>{0}),'
-         r' recovered by (?P<puntBlockRecoverer>{0})').format(playerRE) +
-        r'(?: and returned (?:(?P<puntBlockRetYds>\-?\d{1,2}) yards|no gain))?'
+        (r' punts, (?P<blocked>blocked) by (?P<puntBlocker>{0})'
+         r'(?:, recovered by (?P<puntBlockRecoverer>{0})').format(playerRE) +
+        r'(?: and returned (?:(?P<puntBlockRetYds>\-?\d{1,2}) yards|no gain))?)?'
     )
     puntYdsRE = r' punts (?P<puntYds>\d{1,2}) yards?'
     nextREs = []
@@ -465,7 +465,10 @@ def parsePlayDetails(details):
         struct.update(match.groupdict())
         struct['isTwoPoint'] = True
         realPlay = pfr.utils.parsePlayDetails(match.group('twoPoint'))
-        struct.update(realPlay)
+        if realPlay:
+            struct.update(realPlay)
+        else:
+            print "Can't parse play:", match.group('twoPoint')
         struct['twoPointSuccess'] = struct['twoPointSuccess'] == 'succeeds'
         return struct
 
