@@ -9,16 +9,17 @@ import pandas as pd
 from pyquery import PyQuery as pq
 import requests
 
-import decorators
+import pfr
 
 __all__ = [
     'getHTML',
     'relURLToID',
     'parseTable',
     'parsePlayDetails',
+    'expandDetails'
 ]
 
-@decorators.cacheHTML
+@pfr.decorators.cacheHTML
 def getHTML(url):
     """Gets the HTML for the given URL using a GET request.
 
@@ -99,7 +100,6 @@ def relURLToID(url):
     print 'WARNING. WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
     return ''
 
-
 def parseTable(table):
     """Parses a table from PFR into a pandas dataframe.
 
@@ -145,7 +145,6 @@ def parseTable(table):
     df.replace(re.compile(r'[\*\+]'), '', inplace=True)
 
     return df
-    
 
 def parsePlayDetails(details):
     """Parses play details from play-by-play and returns structured data.
@@ -264,6 +263,22 @@ def parsePlayDetails(details):
         # convert pass type
         struct['passLoc'] = PASS_OPTS.get(struct['passLoc'], None)
         return struct
+
+def expandDetails(df, detail='detail'):
+    """Expands the details column of the given dataframe and returns it.
+
+    :df: The input DataFrame.
+    :detail: The detail column name.
+    :returns: Returns DataFrame with new columns from pbp parsing.
+    """
+    dicts = map(pfr.utils.parsePlayDetails, df[detail])
+    cols = reduce(lambda x, y: set(x) | set(y),
+      (d.iterkeys() for d in dicts if d is not None))
+    blankEntry = {c: None for c in cols}
+    dicts = [d if d is not None else blankEntry for d in dicts]
+    details = pd.DataFrame(dicts)
+    df = pd.merge(df, details, left_index=True, right_index=True)
+    return df
 
 def _flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns

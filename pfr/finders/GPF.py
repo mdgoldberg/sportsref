@@ -36,8 +36,8 @@ def GamePlayFinder(**kwargs):
     plays['month'] = plays.game_date.str[4:6].astype(int)
     plays['day'] = plays.game_date.str[6:8].astype(int)
     plays = plays.rename({'game_date': 'bsID'})
-    details = pd.DataFrame(map(pfr.utils.parsePlayDetails, plays.description))
-    plays = pd.merge(plays, details, left_index=True, right_index=True)
+    # add pbp
+    plays = pfr.utils.expandDetails(plays, detail='description')
 
     return plays
 

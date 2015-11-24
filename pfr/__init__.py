@@ -1,11 +1,11 @@
 BASE_URL = 'http://www.pro-football-reference.com'
 
-import finders
 import decorators
 import utils
 import boxscores
 import players
 import teams
+import finders
 
 # modules/variables to expose
 __all__ = [

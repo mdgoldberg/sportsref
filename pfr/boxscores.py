@@ -192,16 +192,9 @@ class BoxScore:
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
 
         """
-        # TODO: turn this process into a utils function
         table = self.doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
-        dicts = map(pfr.utils.parsePlayDetails, pbp.detail)
-        cols = reduce(lambda x, y: set(x) | set(y),
-                      (d.iterkeys() for d in dicts if d is not None))
-        blankEntry = {c: None for c in cols}
-        dicts = [d if d is not None else blankEntry for d in dicts]
-        details = pd.DataFrame(dicts)
-        pbp = pd.merge(pbp, details, left_index=True, right_index=True)
+        pbp = pfr.utils.expandDetails(pbp)
         return pbp
 
     def refInfo(self):
