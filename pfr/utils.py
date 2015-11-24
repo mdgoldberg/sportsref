@@ -189,10 +189,7 @@ def parsePlayDetails(details):
         '(?P<challengeResult>upheld|overturned)\.',
         re.IGNORECASE
     )
-    try:
-        match = challengeRE.match(details)
-    except:
-        import pdb; pdb.set_trace()
+    match = challengeRE.match(details)
     if match:
         struct['challenged'] = True
         struct.update(match.groupdict())
@@ -200,7 +197,7 @@ def parsePlayDetails(details):
         if 'overturned' in details:
             overturnedIdx = details.index('overturned.')
             newStart = overturnedIdx + len('overturned.')
-            details = details[newStart].strip()
+            details = details[newStart:].strip()
     else:
         struct['challenged'] = False
 
