@@ -147,15 +147,15 @@ def parseTable(table):
     return df
 
 def parsePlayDetails(details):
-    """Parses play details from play-by-play and returns structured data.
+    """Parses play details from play-by-play string and returns structured
+    data.
     
-    Currently only handles passes and rushes.
+    Currently doesn't handle challenges as well as it could.
 
     :returns: dictionary of play attributes
     """
 
-    # TODO cases: rush, pass, kickoff, timeout, field goal, punt
-    # TODO clean up for missing data (None vs nan)
+    # TODO cases: pass, kickoff, timeout, field goal, punt, kneel
     
     RUSH_OPTS = {
         'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
@@ -175,6 +175,29 @@ def parsePlayDetails(details):
     )
 
     playerRE = r"\S{6}\d{2}"
+
+
+    # initialize return dictionary (struct) and handle challenges
+    # TODO: record the play both before & after an overturned challenge
+    struct = {}
+    challengeREstr = (
+        r'.+\. (?P<challenger>.+?) challenged.*? the play was '
+        r'(?P<challengeResult>upheld|overturned)\.'
+    )
+    match = challengeRE.match(details)
+    if match:
+        struct['challenged'] = True
+        struct.update(match.groupdict())
+        # if overturned, only record updated play
+        if 'overturned' in details:
+            overturnedIdx = details.index('overturned.')
+            newStart = overturnedIdx + len('overturned.')
+            details = details[newStart].strip()
+    else:
+        struct['challenged'] = False
+
+    # TODO: expand on laterals
+    struct['lateral'] = details.find('lateral') != -1
 
     # create rushing regex
     rusherRE = r"(?P<rusher>{0})".format(playerRE)
@@ -215,10 +238,13 @@ def parsePlayDetails(details):
               .format(playerRE))
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
-    targetedRE = r"(?: (?:to|intended for)? (?P<target>{0}))?".format(playerRE)
+    targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
+    intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE)
+             + r'(?P<intYdLine>\w{3}\-\d{1,2}) and returned for '
+             + r'(?P<intRetYds>\-?\d+) yards.)?')
     yardsRE = r"(?: for (?:(?P<yds>\-?\d+) yards?|no gain))?"
-    throwRE = r'{}{}{}{}{}'.format(
-        completeRE, passOptRE, targetedRE, yardsRE, tackleRE
+    throwRE = r'{}{}{}(?:{}|{}){}'.format(
+        completeRE, passOptRE, targetedRE, intRE, yardsRE, tackleRE
     )
     
     passREstr = (
@@ -231,7 +257,7 @@ def parsePlayDetails(details):
     # if it was a run...
     if match:
         # parse as a run
-        struct = match.groupdict()
+        struct.update(match.groupdict())
         struct['isRun'] = True
         struct['isPass'] = False
         # change type to int when applicable
@@ -250,7 +276,7 @@ def parsePlayDetails(details):
         if not match: return None
 
         # parse as a pass
-        struct = match.groupdict()
+        struct.update(match.groupdict())
         struct['isPass'] = True
         struct['isRun'] = False
         # change type to int when applicable
