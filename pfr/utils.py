@@ -159,8 +159,6 @@ def parsePlayDetails(details):
     if not isinstance(details, basestring):
         return None
 
-    # TODO cases: penalty
-    
     RUSH_OPTS = {
         'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
         'up the middle': 'M', 'middle': 'M',
