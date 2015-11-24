@@ -10,17 +10,28 @@ from pyquery import PyQuery as pq
 import pfr
 
 __all__ = [
+    'teamNames',
     'listTeams',
     'Team',
 ]
 
 yr = datetime.datetime.now().year
 
-def listTeams():
+def teamNames():
     doc = pq(pfr.utils.getHTML(pfr.BASE_URL + '/teams/'))
     table = doc('table#teams_active')
     df = pfr.utils.parseTable(table)
-    return df.team_name.str[:3].values
+    ids = df.team_name.str[:3].values
+    teamNames = [tr('td a') for tr in map(pq, table('tr'))]
+    teamNames = filter(None, teamNames)
+    teamNames = [lst[0].text_content() for lst in teamNames]
+    d = dict(zip(ids, teamNames))
+    d.update(dict(zip(teamNames, ids)))
+    return d
+
+def listTeams():
+    tmNames = teamNames()
+    return filter(lambda k: len(k) == 3, tmNames.keys())
 
 class Team:
 
