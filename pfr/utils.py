@@ -336,7 +336,10 @@ def parsePlayDetails(details):
     extraPointRE = re.compile(extraPointREstr, re.IGNORECASE)
 
     # create 2pt conversion regex
-    twoPointREstr = r'Two Point Attempt: (?P<twoPoint>.*)'
+    twoPointREstr = (
+        r'Two Point Attempt: (?P<twoPoint>.*?),\s+conversion '
+        r'(?P<twoPointSuccess>succeeds|fails)'
+    )
     twoPointRE = re.compile(twoPointREstr, re.IGNORECASE)
 
     # create penalty regex
@@ -459,9 +462,11 @@ def parsePlayDetails(details):
     match = twoPointRE.match(details)
     if match:
         # parse as a 2-point conversion
+        struct.update(match.groupdict())
         struct['isTwoPoint'] = True
         realPlay = pfr.utils.parsePlayDetails(match.group('twoPoint'))
         struct.update(realPlay)
+        struct['twoPointSuccess'] = struct['twoPointSuccess'] == 'succeeds'
         return struct
 
     # try parsing as a penalty
