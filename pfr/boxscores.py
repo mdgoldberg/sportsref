@@ -187,14 +187,17 @@ class BoxScore:
 
         return giDict
 
-    def pbp(self):
+    def pbp(self, keepErrors=False):
         """Returns a dataframe of the play-by-play data from the game.
+
+        :keepErrors: See pfr.utils.expandDetails.
+
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
 
         """
         table = self.doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
-        pbp = pfr.utils.expandDetails(pbp)
+        pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
         return pbp
 
     def refInfo(self):

@@ -246,7 +246,7 @@ def parsePlayDetails(details):
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
     intRE = (r' is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
-             r'(?P<intYdLine>\w{3}\-\d{1,2}) and returned for ' +
+             r'(?P<intYdLine>\w{3}\-+?\d{1,2}) and returned for ' +
              r'(?P<intRetYds>\-?\d+) yards.')
     passYardsRE = r" for (?:(?P<yds>\-?\d+) yards?|no gain)"
     throwRE = r'{}{}{}(?:{}|{}){}'.format(
@@ -347,7 +347,7 @@ def parsePlayDetails(details):
         r'Penalty on (?P<penOn>{0}|'.format(playerRE) + r'\w{3}): ' +
         r'(?P<penalty>[^\(,]+)(?: \((?P<penDeclined>Declined)\)|' +
         r', (?P<penYds>\d*) yards?|' +
-        r' \(no play\))')
+        r'.*? \(no play\))')
     penaltyRE = re.compile(penaltyREstr, re.IGNORECASE)
 
     # try parsing as a pass
@@ -497,14 +497,24 @@ def expandDetails(df, detail='detail', keepErrors=False):
     :returns: Returns DataFrame with new columns from pbp parsing.
     """
     dicts = map(pfr.utils.parsePlayDetails, df[detail])
-    errors = [i for i, d in enumerate(dicts) if d is None]
-    newDF = df.drop(errors).reset_index(drop=True)
-    newDicts = [d for i, d in enumerate(dicts) if i not in errors]
-    cols = {col for d in newDicts if d for col in d.iterkeys()}
+    if keepErrors:
+        cols = set(c for d in dicts if d for c in d.iterkeys())
+        blankEntry = {c: None for c in cols}
+        dicts = [d if d else blankEntry for i, d in enumerate(dicts)]
+    else:
+        errors = [i for i, d in enumerate(dicts) if d is None]
+        df = df.drop(errors).reset_index(drop=True)
+        dicts = [d for i, d in enumerate(dicts) if i not in errors]
     # get details dataframe and merge it with original
-    details = pd.DataFrame(newDicts)
-    newDF = pd.merge(newDF, details, left_index=True, right_index=True)
-    return newDF
+    details = pd.DataFrame(dicts)
+    df = pd.merge(df, details, left_index=True, right_index=True)
+    # enforce bool types when applicable, filling in False for nulls
+    for col in details.columns:
+        if all(pd.isnull(item) or item in (True, False)
+               for item in df[col]):
+            df[col] = df[col].fillna(False)
+            df[col] = df[col].astype(bool)
+    return df
 
 def _flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns
