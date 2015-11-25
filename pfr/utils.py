@@ -1,3 +1,4 @@
+import operator as op
 import os
 import re
 import sys
@@ -98,7 +99,7 @@ def relURLToID(url):
             return match.group(1)
 
     print 'WARNING. WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
-    return ''
+    return 'noIDer00'
 
 def parseTable(table):
     """Parses a table from PFR into a pandas dataframe.
@@ -150,8 +151,6 @@ def parsePlayDetails(details):
     """Parses play details from play-by-play string and returns structured
     data.
     
-    Currently doesn't handle challenges as well as it could.
-
     :returns: dictionary of play attributes
     """
 
@@ -186,13 +185,14 @@ def parsePlayDetails(details):
     # TODO: record the play both before & after an overturned challenge
     challengeRE = re.compile(
         r'.+\. (?P<challenger>.+?) challenged.*? the play was '
-        '(?P<challengeResult>upheld|overturned)\.',
+        '(?P<challengeUpheld>upheld|overturned)\.',
         re.IGNORECASE
     )
     match = challengeRE.match(details)
     if match:
         struct['challenged'] = True
         struct.update(match.groupdict())
+        struct['challengeUpheld'] = struct['challengeUpheld'] == 'upheld'
         # if overturned, only record updated play
         if 'overturned' in details:
             overturnedIdx = details.index('overturned.')
@@ -223,7 +223,7 @@ def parsePlayDetails(details):
                 .format(playerRE))
     tdRE = r"(?P<isTD>, touchdown)?"
     penaltyRE = (r"(?:.*?"
-                 r"\. Penalty on (?P<penOn>{0}): "
+                 r"\. Penalty on (?P<penOn>{0}|): "
                  r"(?P<penalty>[^\(,]+)"
                  r"(?: \((?P<penDeclined>Declined)\)|"
                  r", (?P<penYds>\d*) yards?)"
@@ -245,10 +245,10 @@ def parsePlayDetails(details):
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
-    intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE)
-             + r'(?P<intYdLine>\w{3}\-\d{1,2}) and returned for '
-             + r'(?P<intRetYds>\-?\d+) yards.)?')
-    passYardsRE = r"(?: for (?:(?P<yds>\-?\d+) yards?|no gain))?"
+    intRE = (r' is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
+             r'(?P<intYdLine>\w{3}\-\d{1,2}) and returned for ' +
+             r'(?P<intRetYds>\-?\d+) yards.')
+    passYardsRE = r" for (?:(?P<yds>\-?\d+) yards?|no gain)"
     throwRE = r'{}{}{}(?:{}|{}){}'.format(
         completeRE, passOptRE, targetedRE, intRE, passYardsRE, tackleRE
     )
@@ -345,25 +345,10 @@ def parsePlayDetails(details):
     # create penalty regex
     penaltyREstr = (
         r'Penalty on (?P<penOn>{0}|'.format(playerRE) + r'\w{3}): ' +
-        r'(?P<penalty>[^\(,]+)(?: \((?P<penDeclined>Declined)\)|'  +
-        r', (?P<penYds>\d*) yards?)?')
+        r'(?P<penalty>[^\(,]+)(?: \((?P<penDeclined>Declined)\)|' +
+        r', (?P<penYds>\d*) yards?|' +
+        r' \(no play\))')
     penaltyRE = re.compile(penaltyREstr, re.IGNORECASE)
-
-    # try parsing as a rush
-    match = rushRE.match(details)
-    if match:
-        # parse as a run
-        struct.update(match.groupdict())
-        struct['isRun'] = True
-        # change type to int when applicable
-        for k in ('yds', 'fumbRecYdLine', 'fumbRetYds', 'penYds'):
-            struct[k] = int(struct.get(k, 0)) if struct[k] else 0
-        # change type to bool when applicable
-        struct['isTD'] = bool(struct['isTD'])
-        struct['penDeclined'] = bool(struct['penDeclined'])
-        # convert rush type
-        struct['rushDir'] = RUSH_OPTS.get(struct['rushDir'], None)
-        return struct
 
     # try parsing as a pass
     match = passRE.match(details)
@@ -380,6 +365,22 @@ def parsePlayDetails(details):
         struct['isComplete'] = struct['isComplete'] == 'complete'
         # convert pass type
         struct['passLoc'] = PASS_OPTS.get(struct['passLoc'], None)
+        return struct
+
+    # try parsing as a rush
+    match = rushRE.match(details)
+    if match:
+        # parse as a run
+        struct.update(match.groupdict())
+        struct['isRun'] = True
+        # change type to int when applicable
+        for k in ('yds', 'fumbRecYdLine', 'fumbRetYds', 'penYds'):
+            struct[k] = int(struct.get(k, 0)) if struct[k] else 0
+        # change type to bool when applicable
+        struct['isTD'] = bool(struct['isTD'])
+        struct['penDeclined'] = bool(struct['penDeclined'])
+        # convert rush type
+        struct['rushDir'] = RUSH_OPTS.get(struct['rushDir'], None)
         return struct
     
     # try parsing as a kickoff
@@ -485,19 +486,29 @@ def parsePlayDetails(details):
     return None
         
 
-def expandDetails(df, detail='detail'):
-    """Expands the details column of the given dataframe and returns it.
+def expandDetails(df, detail='detail', keepErrors=False):
+    """Expands the details column of the given dataframe and returns the
+    resulting DataFrame.
 
     :df: The input DataFrame.
     :detail: The detail column name.
+    :keepErrors: If True, leave in rows with faulty play details; if False,
+    remove them from the resulting DataFrame.
     :returns: Returns DataFrame with new columns from pbp parsing.
     """
+    # TODO: implement keepErrors
     dicts = map(pfr.utils.parsePlayDetails, df[detail])
-    cols = reduce(lambda x, y: set(x) | set(y),
-      (d.iterkeys() for d in dicts if d is not None))
+    cols = {col for d in dicts if d for col in d.iterkeys()}
     blankEntry = {c: None for c in cols}
-    dicts = [d if d is not None else blankEntry for d in dicts]
-    details = pd.DataFrame(dicts)
+    nonBlanks = [(i, d) for i, d in enumerate(dicts) if d is not None]
+    blanks = [(i, blankEntry.copy()) for i, d in enumerate(dicts) if d is None]
+    # get types from nonblank entries
+    nonBlankDF = pd.DataFrame(map(op.itemgetter(1), nonBlanks))
+    types = nonBlankDF.dtypes
+    # get all dicts in right order and enforce inferred types
+    dicts = map(op.itemgetter(1), sorted(nonBlanks + blanks))
+    # get dataframe, merge, and return
+    details = pd.DataFrame(dicts, dtype=types)
     df = pd.merge(df, details, left_index=True, right_index=True)
     return df
 
@@ -513,9 +524,9 @@ def _flattenLinks(td):
     if isinstance(td, basestring) or isinstance(td, lxml.html.HtmlElement):
         td = pq(td)
 
-    # if there's no text, just return np.nan
+    # if there's no text, just return None
     if not td.text():
-        return np.nan
+        return None
 
     def _flattenC(c):
         if isinstance(c, basestring):
