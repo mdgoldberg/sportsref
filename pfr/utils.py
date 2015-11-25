@@ -492,25 +492,19 @@ def expandDetails(df, detail='detail', keepErrors=False):
 
     :df: The input DataFrame.
     :detail: The detail column name.
-    :keepErrors: If True, leave in rows with faulty play details; if False,
+    :keepErrors: If True, leave in rows with unmatched play details; if False,
     remove them from the resulting DataFrame.
     :returns: Returns DataFrame with new columns from pbp parsing.
     """
-    # TODO: implement keepErrors
     dicts = map(pfr.utils.parsePlayDetails, df[detail])
-    cols = {col for d in dicts if d for col in d.iterkeys()}
-    blankEntry = {c: None for c in cols}
-    nonBlanks = [(i, d) for i, d in enumerate(dicts) if d is not None]
-    blanks = [(i, blankEntry.copy()) for i, d in enumerate(dicts) if d is None]
-    # get types from nonblank entries
-    nonBlankDF = pd.DataFrame(map(op.itemgetter(1), nonBlanks))
-    types = nonBlankDF.dtypes
-    # get all dicts in right order and enforce inferred types
-    dicts = map(op.itemgetter(1), sorted(nonBlanks + blanks))
-    # get dataframe, merge, and return
-    details = pd.DataFrame(dicts, dtype=types)
-    df = pd.merge(df, details, left_index=True, right_index=True)
-    return df
+    errors = [i for i, d in enumerate(dicts) if d is None]
+    newDF = df.drop(errors).reset_index(drop=True)
+    newDicts = [d for i, d in enumerate(dicts) if i not in errors]
+    cols = {col for d in newDicts if d for col in d.iterkeys()}
+    # get details dataframe and merge it with original
+    details = pd.DataFrame(newDicts)
+    newDF = pd.merge(newDF, details, left_index=True, right_index=True)
+    return newDF
 
 def _flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns
