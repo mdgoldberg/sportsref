@@ -1,9 +1,6 @@
 import collections
-from copy import deepcopy
 import json
 import os
-from pprint import pprint
-import requests
 import time
 
 import pandas as pd

@@ -1,8 +1,6 @@
 import collections
-from copy import deepcopy
 import json
 import os
-from pprint import pprint
 import time
 
 from pyquery import PyQuery as pq
@@ -240,10 +238,3 @@ def getInputsOptionsDefaults():
             def_dict = json.load(const_f)
 
     return def_dict
-
-# testing
-if __name__ == "__main__":
-    psf = PlayerSeasonFinder(**{
-        'pos': 'rb', 'year_min': '2003', 'c1comp': 'gt', 'c1stat': 'rush_att', 'c1val': 50, 'order_by': 'av'
-    })
-    print psf

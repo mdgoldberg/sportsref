@@ -98,7 +98,7 @@ def relURLToID(url):
         if match:
             return match.group(1)
 
-    print 'WARNING. WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
+    print 'WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
     return 'noIDer00'
 
 def parseTable(table):
