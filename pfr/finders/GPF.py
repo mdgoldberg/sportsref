@@ -28,13 +28,15 @@ def GamePlayFinder(**kwargs):
     table = doc('#div_ table.stats_table')
     plays = pfr.utils.parseTable(table)
 
-    # clean
-    plays['year'] = plays.game_date.str[:4].astype(int)
-    plays['month'] = plays.game_date.str[4:6].astype(int)
-    plays['day'] = plays.game_date.str[6:8].astype(int)
-    plays = plays.rename({'game_date': 'bsID'})
+    # clean game date
+    if 'game_date' in plays.columns:
+        plays['year'] = plays.game_date.str[:4].astype(int)
+        plays['month'] = plays.game_date.str[4:6].astype(int)
+        plays['day'] = plays.game_date.str[6:8].astype(int)
+        plays = plays.rename({'game_date': 'bsID'})
     # add pbp
-    plays = pfr.utils.expandDetails(plays, detail='description')
+    if 'description' in plays.columns:
+        plays = pfr.utils.expandDetails(plays, detail='description')
 
     return plays
 
@@ -150,16 +152,18 @@ def getInputsOptionsDefaults():
     """
     # set time variables
     if os.path.isfile(CONSTANTS_FN):
-        modtime = os.path.getmtime(CONSTANTS_FN)
-        curtime = time.time()
-    else:
-        modtime = 0
-        curtime = 0
-    # if file not found or it's been >= a day, generate new constants
-    if not (os.path.isfile(CONSTANTS_FN) and
-            int(curtime) - int(modtime) <= 24*60*60):
+        modtime = int(os.path.getmtime(CONSTANTS_FN))
+        curtime = int(time.time())
+    # if file found and it's been <= a day
+    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 24*60*60:
 
-        # must generate the file
+        # just read the dict from the cached file
+        with open(CONSTANTS_FN, 'r') as const_f:
+            def_dict = json.load(const_f)
+
+    # otherwise, we must regenerate the dict and rewrite it
+    else:
+
         print 'Regenerating constants file'
 
         html = pfr.utils.getHTML(GAME_PLAY_URL)
@@ -222,7 +226,7 @@ def getInputsOptionsDefaults():
 
         def_dict.pop('request', None)
         def_dict.pop('use_favorites', None)
-        
+
         with open(CONSTANTS_FN, 'w+') as f:
             for k in def_dict:
                 try:
@@ -236,10 +240,5 @@ def getInputsOptionsDefaults():
                     def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
                     def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
             json.dump(def_dict, f)
-
-    # else, just read variable from cached file
-    else:
-        with open(CONSTANTS_FN, 'r') as const_f:
-            def_dict = json.load(const_f)
 
     return def_dict

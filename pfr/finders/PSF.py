@@ -153,13 +153,18 @@ def getInputsOptionsDefaults():
     """
     # set time variables
     if os.path.isfile(CONSTANTS_FN):
-        modtime = os.path.getmtime(CONSTANTS_FN)
-        curtime = time.time()
-    # if file not found or it's been >= a day, generate new constants
-    if not (os.path.isfile(CONSTANTS_FN) and
-            int(curtime) - int(modtime) <= 24*60*60):
+        modtime = int(os.path.getmtime(CONSTANTS_FN))
+        curtime = int(time.time())
+    # if file found and it's been <= a day
+    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 24*60*60:
 
-        # must generate the file
+        # just read the dict from cached file
+        with open(CONSTANTS_FN, 'r') as const_f:
+            def_dict = json.load(const_f)
+
+    # otherwise, we must regenerate the dict and rewrite it
+    else:
+
         print 'Regenerating constants file'
 
         html = pfr.utils.getHTML(PLAYER_SEASON_URL)
@@ -232,9 +237,4 @@ def getInputsOptionsDefaults():
                     def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
             json.dump(def_dict, f)
     
-    # else, just read variable from cached file
-    else:
-        with open(CONSTANTS_FN, 'r') as const_f:
-            def_dict = json.load(const_f)
-
     return def_dict

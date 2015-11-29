@@ -29,6 +29,9 @@ def switchToDir(dirPath):
     return decorator
 
 def cacheHTML(func):
+    """Caches the HTML returned by the specified function `func`. Caches it in
+    the user cache determined by the appdirs package.
+    """
 
     CACHE_DIR = appdirs.user_cache_dir('pfr', 'mgoldberg')
     if not os.path.isdir(CACHE_DIR):
@@ -50,14 +53,10 @@ def cacheHTML(func):
         
         # set time variables
         if os.path.isfile(fn):
-            modtime = os.path.getmtime(fn)
-            curtime = time.time()
-        else:
-            modtime = 0
-            curtime = 0
-        # if file found, read from file (not using time variables for now)
-        # TODO: use time variables
-        if os.path.isfile(fn):
+            modtime = int(os.path.getmtime(fn))
+            curtime = int(time.time())
+        # if file found and it's been <= a wee, read from file
+        if os.path.isfile(fn) and curtime - modtime <= 7*24*60*60:
             with open(fn, 'r') as f:
                 text = f.read()
             return text
