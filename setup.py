@@ -1,12 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(name='pfr',
-      version='0.2',
+      version='0.4.0.dev0',
       description='Scraping data from pro-football-reference.com',
       url='https://github.com/mdgoldberg/pfr',
       author='Matt Goldberg',
       author_email='mgoldberg@college.harvard.edu',
-      packages=find_packages()
+      license='Apache License 2.0',
+      packages=find_packages(),
       install_requires=[
           'pandas',
           'numpy',
