@@ -7,4 +7,11 @@ setup(name='pfr',
       author='Matt Goldberg',
       author_email='mgoldberg@college.harvard.edu',
       packages=find_packages()
+      install_requires=[
+          'pandas',
+          'numpy',
+          'requests',
+          'pyquery',
+          'appdirs',
+      ]
       )
