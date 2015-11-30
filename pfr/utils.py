@@ -253,7 +253,7 @@ def parsePlayDetails(details):
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
     intRE = (r' is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
-             r'(?P<intYdLine>\w{3}\-+?\d{1,2}) and returned for ' +
+             r'(?P<intYdLine>\w{3}\-+?\d+) and returned for ' +
              r'(?P<intRetYds>\-?\d+) yards.')
     passYardsRE = r" for (?:(?P<yds>\-?\d+) yards?|no gain)"
     throwRE = r'{}{}{}(?:{}|{}){}'.format(
@@ -293,7 +293,7 @@ def parsePlayDetails(details):
 
     # create FG regex
     fgKickerRE = r'(?P<fgKicker>{0})'.format(playerRE)
-    fgBaseRE = (r' (?P<fgDist>\d{1,2}) yard field goal'
+    fgBaseRE = (r' (?P<fgDist>\d+) yard field goal'
                 r' (?P<fgGood>good|no good)')
     fgBlockRE = r'(?:, blocked by (?P<fgBlocker>{0}))?'.format(playerRE)
     fgREstr = r'{}{}{}'.format(fgKickerRE, fgBaseRE, fgBlockRE)
@@ -304,9 +304,9 @@ def parsePlayDetails(details):
     puntBlockRE = (
         (r' punts, (?P<blocked>blocked) by (?P<puntBlocker>{0})'
          r'(?:, recovered by (?P<puntBlockRecoverer>{0})').format(playerRE) +
-        r'(?: and returned (?:(?P<puntBlockRetYds>\-?\d{1,2}) yards|no gain))?)?'
+        r'(?: and returned (?:(?P<puntBlockRetYds>\-?\d+) yards|no gain))?)?'
     )
-    puntYdsRE = r' punts (?P<puntYds>\d{1,2}) yards?'
+    puntYdsRE = r' punts (?P<puntYds>\d+) yards?'
     nextREs = []
     nextREs.append(r', (?P<fairCatch>fair catch) by (?P<fairCatcher>{0})'
                    .format(playerRE))
@@ -319,7 +319,7 @@ def parsePlayDetails(details):
     )
     nextREs.append(
         r', returned by (?P<puntReturner>{0}) for '.format(playerRE) +
-        r'(?:(?P<puntRetYds>\-?\d{1,2}) yards?|no gain)'
+        r'(?:(?P<puntRetYds>\-?\d+) yards?|no gain)'
     )
     nextRE = r'(?:{})?'.format('|'.join(nextREs))
     puntREstr = r'{}(?:{}|{}){}{}{}{}{}'.format(
@@ -330,7 +330,7 @@ def parsePlayDetails(details):
 
     # create kneel regex
     kneelREstr = (r'(?P<kneelQB>{0}) kneels for '.format(playerRE) +
-                  r'(?:(?P<kneelYds>\-?\d{1,2}) yards?|no gain)')
+                  r'(?:(?P<yds>\-?\d+) yards?|no gain)')
     kneelRE = re.compile(kneelREstr, re.IGNORECASE)
 
     # create spike regex
@@ -338,13 +338,13 @@ def parsePlayDetails(details):
     spikeRE = re.compile(spikeREstr, re.IGNORECASE)
 
     # create XP regex
-    extraPointREstr = (r'(?P<kicker>{0}) kicks extra point '
+    extraPointREstr = (r'(?:(?P<kicker>{0}) kicks)? ?extra point '
                        r'(?P<xpGood>good|no good)').format(playerRE)
     extraPointRE = re.compile(extraPointREstr, re.IGNORECASE)
 
     # create 2pt conversion regex
     twoPointREstr = (
-        r'Two Point Attempt: (?P<twoPoint>.*?),\s+conversion '
+        r'Two Point Attempt: (?P<twoPoint>.*?),?\s+conversion '
         r'(?P<twoPointSuccess>succeeds|fails)'
     )
     twoPointRE = re.compile(twoPointREstr, re.IGNORECASE)
@@ -363,9 +363,13 @@ def parsePlayDetails(details):
         # parse as a pass
         struct.update(match.groupdict())
         struct['isPass'] = True
+        # if it was a sack, move sackYds to yds
+        if struct.get('sackYds'):
+            struct['yds'] = struct['sackYds']
+            del struct['sackYds']
         # change type to int when applicable
-        for k in ('yds','fumbRecYdLine','fumbRetYds','penYds','sackYds'):
-            struct[k] = int(struct.get(k, 0)) if struct[k] else 0
+        for k in ('yds','fumbRecYdLine','fumbRetYds','penYds'):
+            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
         # change type to bool when applicable
         struct['isTD'] = bool(struct['isTD'])
         struct['penDeclined'] = bool(struct['penDeclined'])
@@ -382,7 +386,7 @@ def parsePlayDetails(details):
         struct['isRun'] = True
         # change type to int when applicable
         for k in ('yds', 'fumbRecYdLine', 'fumbRetYds', 'penYds'):
-            struct[k] = int(struct.get(k, 0)) if struct[k] else 0
+            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
         # change type to bool when applicable
         struct['isTD'] = bool(struct['isTD'])
         struct['penDeclined'] = bool(struct['penDeclined'])
@@ -398,7 +402,7 @@ def parsePlayDetails(details):
         struct['isKickoff'] = True
         # change type to int when applicable
         for k in ('koYds', 'koRetYds', 'penYds'):
-            struct[k] = int(struct.get(k, 0)) if struct[k] else 0
+            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
         # change type to bool when applicable
         for k in ('isTD','oob','touchback','muffedCatch','penDeclined'):
             struct[k] = bool(struct.get(k))
@@ -432,7 +436,7 @@ def parsePlayDetails(details):
         struct['isPunt'] = True
         # change type to int when applicable
         for k in ('puntYds', 'puntRetYds', 'penYds', 'puntBlockRetYds'):
-            struct[k] = int(struct.get(k, 0)) if struct[k] else 0
+            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
         # change type to bool when applicable
         for k in ('isTD', 'oob', 'touchback', 'muffedCatch', 
                   'penDeclined', 'blocked', 'fairCatch'):
@@ -446,7 +450,7 @@ def parsePlayDetails(details):
         struct.update(match.groupdict())
         struct['isKneel'] = True
         struct['kneelYds'] = (int(struct.get('kneelYds', 0))
-                              if struct['kneelYds'] else 0)
+                              if struct.get('kneelYds') else 0)
         return struct
     
     # try parsing as a spike
@@ -474,8 +478,6 @@ def parsePlayDetails(details):
         realPlay = pfr.utils.parsePlayDetails(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
-        else:
-            print "Can't parse play:", match.group('twoPoint')
         struct['twoPointSuccess'] = match.group('twoPointSuccess')=='succeeds'
         return struct
 
@@ -486,7 +488,7 @@ def parsePlayDetails(details):
         struct.update(match.groupdict())
         struct['isPenalty'] = True
         struct['penYds'] = (int(struct.get('penYds', 0))
-                            if struct['penYds'] else 0)
+                            if struct.get('penYds') else 0)
         struct['penDeclined'] = bool(struct['penDeclined'])
         return struct
 
