@@ -10,6 +10,13 @@ import pandas as pd
 from pyquery import PyQuery as pq
 import requests
 
+# import findspark
+# findspark.init()
+# findspark.find()
+# import pyspark
+# sc = pyspark.SparkContext('local', 'pfr')
+# sqlsc = pyspark.sql.SQLContext(sc)
+
 import pfr
 
 __all__ = [

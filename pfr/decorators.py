@@ -55,8 +55,8 @@ def cacheHTML(func):
         if os.path.isfile(fn):
             modtime = int(os.path.getmtime(fn))
             curtime = int(time.time())
-        # if file found and it's been <= a wee, read from file
-        if os.path.isfile(fn) and curtime - modtime <= 7*24*60*60:
+        # if file found and it's been <= a month, read from file
+        if os.path.isfile(fn) and curtime - modtime <= 30*24*60*60:
             with open(fn, 'r') as f:
                 text = f.read()
             return text
