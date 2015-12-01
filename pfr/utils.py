@@ -458,7 +458,7 @@ def parsePlayDetails(details):
     if match:
         # parse as a penalty
         struct.update(match.groupdict())
-        struct['isPresapPenalty'] = True
+        struct['isPresnapPenalty'] = True
         struct['penYds'] = (int(struct.get('penYds', 0))
                             if struct.get('penYds') else 0)
         struct['penDeclined'] = bool(struct['penDeclined'])
