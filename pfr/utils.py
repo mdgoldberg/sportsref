@@ -224,7 +224,7 @@ def parsePlayDetails(details):
                 r"(?: \(forced by (?P<forcer>{0})\))?"
                 r"(?:, recovered by (?P<recoverer>{0}) at )?"
                 r"(?:, ball out of bounds at )?"
-                r"(?:(?P<fumbRecFieldside>\w*)\-(?P<fumbRecYdLine>\-?\d*))?"
+                r"(?:(?P<fumbRecFieldside>[a-z]*)?\-?(?P<fumbRecYdLine>\-?\d*))?"
                 r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
                 r")?"
                 .format(playerRE))
@@ -246,8 +246,8 @@ def parsePlayDetails(details):
     # create passing regex
     # TODO: capture "defended by X" for defensive stats
     passerRE = r"(?P<passer>{0})".format(playerRE)
-    sackRE = (r"sacked (?:by (?P<sacker1>{0})(?: and (?P<sacker2>{0}))? )?"
-              r"for (?P<sackYds>\-?\d+) yards?"
+    sackRE = (r"(?:sacked (?:by (?P<sacker1>{0})(?: and (?P<sacker2>{0}))? )?"
+              r"for (?P<sackYds>\-?\d+) yards?)"
               .format(playerRE))
     # create throw RE
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
@@ -256,8 +256,8 @@ def parsePlayDetails(details):
     passYardsRE = r"(?: for (?:(?P<yds>\-?\d+) yards?|no gain))"
     intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
              r'(?P<intYdLine>\w{3}\-+?\d+) and returned for ' +
-             r'(?P<intRetYds>\-?\d+) yards.)')
-    throwRE = r'{}{}{}(?:(?:{}|{}){})?'.format(
+             r'(?P<intRetYds>\-?\d+) yards?\.?)')
+    throwRE = r'(?:{}{}{}(?:(?:{}|{}){})?)'.format(
         completeRE, passOptRE, targetedRE, passYardsRE, intRE, tackleRE
     )
     passREstr = (
@@ -296,12 +296,16 @@ def parsePlayDetails(details):
     fgKickerRE = r'(?P<fgKicker>{0})'.format(playerRE)
     fgBaseRE = (r' (?P<fgDist>\d+) yard field goal'
                 r' (?P<fgGood>good|no good)')
-    fgBlockRE = r'(?:, blocked by (?P<fgBlocker>{0}))?'.format(playerRE)
-    fgREstr = r'{}{}{}'.format(fgKickerRE, fgBaseRE, fgBlockRE)
+    fgBlockRE = (
+        r'(?:, (?P<blocked>blocked) by (?P<fgBlocker>{0}))?'.format(playerRE) +
+        r'(?:, recovered by (?P<fgBlockRecoverer>{0}))?'.format(playerRE) +
+        r'(?: and returned for (?:(?P<fgBlockRetYds>\-?\d+) yards?|no gain))?'
+        )
+    fgREstr = r'{}{}{}{}'.format(fgKickerRE, fgBaseRE, fgBlockRE, tdRE)
     fgRE = re.compile(fgREstr, re.IGNORECASE)
 
     # create punt regex
-    punterRE = r'(?P<punter>{0})'.format(playerRE)
+    punterRE = r'.*?(?P<punter>{0})'.format(playerRE)
     puntBlockRE = (
         (r' punts, (?P<blocked>blocked) by (?P<puntBlocker>{0})'
          r'(?:, recovered by (?P<puntBlockRecoverer>{0})').format(playerRE) +
@@ -390,6 +394,10 @@ def parsePlayDetails(details):
         struct['isFieldGoal'] = True
         struct['fgDist'] = int(struct.get('fgDist', 0))
         struct['fgGood'] = struct['fgGood'] == 'good'
+        struct['fgBlockRetYds'] = (int(struct.get('fgBlockRetYds', 0))
+                                   if struct.get('fgBlockRetYds') else np.nan)
+        for k in ('blocked', 'isTD'):
+            struct[k] = bool(struct.get(k, False))
         return struct
 
     # try parsing as a punt
@@ -400,7 +408,7 @@ def parsePlayDetails(details):
         struct['isPunt'] = True
         # change type to int when applicable
         for k in ('puntYds', 'puntRetYds', 'penYds', 'puntBlockRetYds'):
-            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
+            struct[k] = int(struct.get(k, 0)) if struct.get(k) else np.nan
         # change type to bool when applicable
         for k in ('isTD', 'oob', 'touchback', 'muffedCatch', 
                   'penDeclined', 'blocked', 'fairCatch'):
@@ -462,10 +470,8 @@ def parsePlayDetails(details):
         # parse as a pass
         struct.update(match.groupdict())
         struct['isPass'] = True
-        # if it was a sack, move sackYds to yds
-        if struct.get('sackYds'):
-            struct['yds'] = struct['sackYds']
-            del struct['sackYds']
+        struct['isSack'] = details.find('sack') > -1
+        struct['isInterception'] = details.find('intercepted') > -1
         # change type to int when applicable
         for k in ('yds','fumbRecYdLine','fumbRetYds','penYds'):
             struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
