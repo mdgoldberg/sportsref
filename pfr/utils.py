@@ -222,7 +222,7 @@ def parsePlayDetails(details):
     fumbleRE = (r"(?:"
                 r"\. (?P<fumbler>{0}) fumbles"
                 r"(?: \(forced by (?P<forcer>{0})\))?"
-                r"(?:, recovered by (?P<recoverer>{0}) at )?"
+                r"(?:, recovered by (?P<fumbRecoverer>{0}) at )?"
                 r"(?:, ball out of bounds at )?"
                 r"(?:(?P<fumbRecFieldside>[a-z]*)?\-?(?P<fumbRecYdLine>\-?\d*))?"
                 r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
