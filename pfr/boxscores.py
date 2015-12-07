@@ -24,6 +24,7 @@ class BoxScore:
         )
         self.doc = pq(pfr.utils.getHTML(self.mainURL))
 
+    @pfr.decorators.memoized
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
         for more.
@@ -33,6 +34,7 @@ class BoxScore:
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
+    @pfr.decorators.memoized
     def weekday(self):
         """Returns the day of the week on which the game occurred.
         :returns: String representation of the day of the week for the game.
@@ -44,12 +46,14 @@ class BoxScore:
         wd = date.weekday()
         return days[wd]
 
+    @pfr.decorators.memoized
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
         return self.bsID[-3:]
 
+    @pfr.decorators.memoized
     def away(self):
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
@@ -58,6 +62,7 @@ class BoxScore:
         away = pfr.utils.relURLToID(pq(table('tr')[1])('a').attr['href'])
         return away
 
+    @pfr.decorators.memoized
     def homeScore(self):
         """Returns score of the home team.
         :returns: int of the home score.
@@ -67,6 +72,7 @@ class BoxScore:
         homeScore = pq(table('tr')[2])('td')[-1].text_content()
         return int(homeScore)
 
+    @pfr.decorators.memoized
     def awayScore(self):
         """Returns score of the away team.
         :returns: int of the away score.
@@ -76,6 +82,7 @@ class BoxScore:
         awayScore = pq(table('tr')[1])('td')[-1].text_content()
         return int(awayScore)
 
+    @pfr.decorators.memoized
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
         from PFR. The columns are:
@@ -115,6 +122,7 @@ class BoxScore:
                 data.append(datum)
         return pd.DataFrame(data)
 
+    @pfr.decorators.memoized
     def gameInfo(self):
         """Gets a dictionary of basic information about the game.
         :returns: Dictionary of game information.
@@ -187,6 +195,7 @@ class BoxScore:
 
         return giDict
 
+    @pfr.decorators.memoized
     def pbp(self, keepErrors=False):
         """Returns a dataframe of the play-by-play data from the game.
 
@@ -197,6 +206,7 @@ class BoxScore:
         """
         table = self.doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
+        pbp['bsID'] = self.bsID
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
         return pbp
 
@@ -214,3 +224,19 @@ class BoxScore:
             val = pfr.utils._flattenLinks(td1)
             refDict[key] = val
         return refDict
+
+    @pfr.decorators.memoized
+    def playerStats(self):
+        """Gets the stats for offense, defense, returning, and kicking of
+        individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        tableIDs = ('skill_stats', 'def_stats', 'st_stats', 'kick_stats')
+        dfs = []
+        for tID in tableIDs:
+            table = self.doc('#{}'.format(tID))
+            dfs.append(pfr.utils.parseTable(table))
+        df = pd.concat(dfs)
+        df = df.reset_index(drop=True)
+        df['team'] = df['team'].str.lower()
+        return df
