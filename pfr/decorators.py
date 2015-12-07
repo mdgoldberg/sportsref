@@ -76,16 +76,21 @@ class memoized(object):
         self.cache = {}
 
     def __call__(self, *args, **kwargs):
-        if (not isinstance(args, collections.Hashable)
-                or not isinstance(kwargs, collections.Hashable)):
-            # cannot hash the arguments, so evaluate and return
+        try:
+            if kwargs:
+                return self.func(*args, **kwargs)
+            if not isinstance(args, collections.Hashable):
+                # cannot hash the arguments, so evaluate and return
+                print 'unhashable', self.func.__name__, args
+                return self.func(*args)
+            if args in self.cache:
+                return self.cache[args]
+            else:
+                value = self.func(*args)
+                self.cache[args] = value
+                return value
+        except Exception:
             return self.func(*args, **kwargs)
-        if (args, kwargs) in self.cache:
-            return self.cache[args, kwargs]
-        else:
-            value = self.func(*args, **kwargs)
-            self.cache[args, kwargs] = value
-            return value
 
     def __repr__(self):
         return self.func.__doc__
