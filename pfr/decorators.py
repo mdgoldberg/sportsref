@@ -49,7 +49,7 @@ def cacheHTML(func):
         # TODO: fix this problem?
         if len(fn) > 255:
             # filename is too long, just evaluate the function
-            return func(url).encode('ascii', 'replace')
+            return func(url)#.encode('ascii', 'replace')
         
         # set time variables
         if os.path.isfile(fn):
@@ -62,7 +62,7 @@ def cacheHTML(func):
             return text
         # otherwise, download html and cache it
         else:
-            text = func(url).encode('ascii', 'replace')
+            text = func(url)#.encode('ascii', 'replace')
             with open(fn, 'w+') as f:
                 f.write(text)
             return text

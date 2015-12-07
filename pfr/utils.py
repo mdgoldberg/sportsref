@@ -1,3 +1,5 @@
+import copy
+import multiprocessing as mp
 import operator as op
 import os
 import re
@@ -9,13 +11,6 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 import requests
-
-# import findspark
-# findspark.init()
-# findspark.find()
-# import pyspark
-# sc = pyspark.SparkContext('local', 'pfr')
-# sqlsc = pyspark.sql.SQLContext(sc)
 
 import pfr
 
@@ -43,7 +38,7 @@ def getHTML(url):
     while not html and numTries < 10:
         numTries += 1
         try:
-            html = requests.get(url).text
+            html = requests.get(url).content
         except requests.ConnectionError as e:
             errnum = e.args[0].args[1].errno
             if errnum == 61:
@@ -154,6 +149,16 @@ def parseTable(table):
 
     return df
 
+RUSH_OPTS = {
+    'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
+    'up the middle': 'M', 'middle': 'M',
+    'right end': 'RE', 'right tackle': 'RT', 'right guard': 'RG',
+}
+PASS_OPTS = {
+    'short left': 'SL', 'short middle': 'SM', 'short right': 'SR',
+    'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
+}
+
 def parsePlayDetails(details):
     """Parses play details from play-by-play string and returns structured
     data.
@@ -164,16 +169,6 @@ def parsePlayDetails(details):
     # if input isn't a string, return None
     if not isinstance(details, basestring):
         return None
-
-    RUSH_OPTS = {
-        'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
-        'up the middle': 'M', 'middle': 'M',
-        'right end': 'RE', 'right tackle': 'RT', 'right guard': 'RG',
-    }
-    PASS_OPTS = {
-        'short left': 'SL', 'short middle': 'SM', 'short right': 'SR',
-        'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
-    }
 
     rushOptRE = r'(?P<rushDir>{})'.format(
         r'|'.join(RUSH_OPTS.iterkeys())
@@ -197,19 +192,18 @@ def parsePlayDetails(details):
     )
     match = challengeRE.match(details)
     if match:
-        struct['challenged'] = True
+        struct['isChallenged'] = True
         struct.update(match.groupdict())
-        struct['challengeUpheld'] = struct['challengeUpheld'] == 'upheld'
         # if overturned, only record updated play
         if 'overturned' in details:
             overturnedIdx = details.index('overturned.')
             newStart = overturnedIdx + len('overturned.')
             details = details[newStart:].strip()
     else:
-        struct['challenged'] = False
+        struct['isChallenged'] = False
 
     # TODO: expand on laterals
-    struct['lateral'] = details.find('lateral') != -1
+    struct['isLateral'] = details.find('lateral') != -1
 
     # create rushing regex
     rusherRE = r"(?P<rusher>{0})".format(playerRE)
@@ -221,10 +215,10 @@ def parsePlayDetails(details):
                 .format(playerRE))
     fumbleRE = (r"(?:"
                 r"\. (?P<fumbler>{0}) fumbles"
-                r"(?: \(forced by (?P<forcer>{0})\))?"
+                r"(?: \(forced by (?P<fumbForcer>{0})\))?"
                 r"(?:, recovered by (?P<fumbRecoverer>{0}) at )?"
                 r"(?:, ball out of bounds at )?"
-                r"(?:(?P<fumbRecFieldside>[a-z]*)?\-?(?P<fumbRecYdLine>\-?\d*))?"
+                r"(?:(?P<fumbRecFieldside>[a-z]+)?\-?(?P<fumbRecYdLine>\-?\d+))?"
                 r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
                 r")?"
                 .format(playerRE))
@@ -255,8 +249,8 @@ def parsePlayDetails(details):
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
     passYardsRE = r"(?: for (?:(?P<yds>\-?\d+) yards?|no gain))"
     intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
-             r'(?P<intYdLine>\w{3}\-+?\d+) and returned for ' +
-             r'(?P<intRetYds>\-?\d+) yards?\.?)')
+             r'(?:(?P<intFieldside>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?' +
+             r'(?: and returned for (?P<intRetYds>\-?\d+) yards?\.?)?)?')
     throwRE = r'(?:{}{}{}(?:(?:{}|{}){})?)'.format(
         completeRE, passOptRE, targetedRE, passYardsRE, intRE, tackleRE
     )
@@ -269,17 +263,16 @@ def parsePlayDetails(details):
     koKickerRE = r'(?P<koKicker>{0})'.format(playerRE)
     koYardsRE = r' kicks (?:off|onside) (?P<koYds>\d{1,3}) yards'
     nextREs = []
-    nextREs.append(r'(?P<touchback>, touchback)')
+    nextREs.append(r'(?P<isTouchback>, touchback)')
     nextREs.append(r'(?P<oob>, out of bounds)')
     nextREs.append(
         r', returned by (?P<koReturner>{0}) for '.format(playerRE) +
         r'(?:(?P<koRetYds>\-?\d{1,3}) yards?|no gain)'
     )
-    # TODO: finish muffed KO features now stored in rawMuffRet
     nextREs.append(
         (r'(?P<muffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
         r' recovered by (?P<muffRecoverer>{0})').format(playerRE) +
-        r' and returned for (?P<rawMuffRet>[^\.]+?)'
+        r' and returned for (?:(?P<muffRetYds>\-?\d+) yards|no gain)'
     )
     nextRE = r'(?:{})?'.format('|'.join(nextREs))
     kickoffREstr = r'{}{}{}{}{}{}{}'.format(
@@ -297,30 +290,32 @@ def parsePlayDetails(details):
     fgBaseRE = (r' (?P<fgDist>\d+) yard field goal'
                 r' (?P<fgGood>good|no good)')
     fgBlockRE = (
-        r'(?:, (?P<blocked>blocked) by (?P<fgBlocker>{0}))?'.format(playerRE) +
+        r'(?:, (?P<isBlocked>blocked) by '
+        r'(?P<fgBlocker>{0}))?'.format(playerRE) +
         r'(?:, recovered by (?P<fgBlockRecoverer>{0}))?'.format(playerRE) +
         r'(?: and returned for (?:(?P<fgBlockRetYds>\-?\d+) yards?|no gain))?'
         )
-    fgREstr = r'{}{}{}{}'.format(fgKickerRE, fgBaseRE, fgBlockRE, tdRE)
+    fgREstr = r'{}{}{}{}{}'.format(fgKickerRE, fgBaseRE,
+                                   fgBlockRE, tdRE, penaltyRE)
     fgRE = re.compile(fgREstr, re.IGNORECASE)
 
     # create punt regex
     punterRE = r'.*?(?P<punter>{0})'.format(playerRE)
     puntBlockRE = (
-        (r' punts, (?P<blocked>blocked) by (?P<puntBlocker>{0})'
+        (r' punts, (?P<isBlocked>blocked) by (?P<puntBlocker>{0})'
          r'(?:, recovered by (?P<puntBlockRecoverer>{0})').format(playerRE) +
         r'(?: and returned (?:(?P<puntBlockRetYds>\-?\d+) yards|no gain))?)?'
     )
     puntYdsRE = r' punts (?P<puntYds>\d+) yards?'
     nextREs = []
-    nextREs.append(r', (?P<fairCatch>fair catch) by (?P<fairCatcher>{0})'
+    nextREs.append(r', (?P<isFairCatch>fair catch) by (?P<fairCatcher>{0})'
                    .format(playerRE))
     nextREs.append(r', (?P<oob>out of bounds)')
     nextREs.append(
-        (r'(?P<muffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
+        (r'(?P<isMuffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
         r' recovered by (?P<muffRecoverer>{0})').format(playerRE) +
         r' and returned for ' +
-        r'(?P<rawMuffRet>[^\.]+?)'
+        r'(?:(?P<muffRetYds>\d+) yards|no gain)'
     )
     nextREs.append(
         r', returned by (?P<puntReturner>{0}) for '.format(playerRE) +
@@ -343,7 +338,7 @@ def parsePlayDetails(details):
     spikeRE = re.compile(spikeREstr, re.IGNORECASE)
 
     # create XP regex
-    extraPointREstr = (r'(?:(?P<kicker>{0}) kicks)? ?extra point '
+    extraPointREstr = (r'(?:(?P<xpKicker>{0}) kicks)? ?extra point '
                        r'(?P<xpGood>good|no good)').format(playerRE)
     extraPointRE = re.compile(extraPointREstr, re.IGNORECASE)
 
@@ -366,80 +361,57 @@ def parsePlayDetails(details):
     match = kickoffRE.match(details)
     if match:
         # parse as a kickoff
-        struct.update(match.groupdict())
         struct['isKickoff'] = True
-        # change type to int when applicable
-        for k in ('koYds', 'koRetYds', 'penYds'):
-            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
-        # change type to bool when applicable
-        for k in ('isTD','oob','touchback','muffedCatch','penDeclined'):
-            struct[k] = bool(struct.get(k))
+        struct.update(match.groupdict())
         return struct
 
     # try parsing as a timeout
     match = timeoutRE.match(details)
     if match:
         # parse as timeout
-        struct.update(match.groupdict())
         struct['isTimeout'] = True
-        struct['timeoutTeam'] = pfr.teams.teamNames()[struct['timeoutTeam']]
-        struct['timeoutNum'] = int(struct.get('timeoutNum', 0))
+        struct.update(match.groupdict())
         return struct
     
     # try parsing as a field goal
     match = fgRE.match(details)
     if match:
         # parse as a field goal
-        struct.update(match.groupdict())
         struct['isFieldGoal'] = True
-        struct['fgDist'] = int(struct.get('fgDist', 0))
-        struct['fgGood'] = struct['fgGood'] == 'good'
-        struct['fgBlockRetYds'] = (int(struct.get('fgBlockRetYds', 0))
-                                   if struct.get('fgBlockRetYds') else np.nan)
-        for k in ('blocked', 'isTD'):
-            struct[k] = bool(struct.get(k, False))
+        struct.update(match.groupdict())
+        x = struct.get('fgBlocker')
         return struct
 
     # try parsing as a punt
     match = puntRE.match(details)
     if match:
         # parse as a punt
-        struct.update(match.groupdict())
         struct['isPunt'] = True
-        # change type to int when applicable
-        for k in ('puntYds', 'puntRetYds', 'penYds', 'puntBlockRetYds'):
-            struct[k] = int(struct.get(k, 0)) if struct.get(k) else np.nan
-        # change type to bool when applicable
-        for k in ('isTD', 'oob', 'touchback', 'muffedCatch', 
-                  'penDeclined', 'blocked', 'fairCatch'):
-            struct[k] = bool(struct.get(k))
+        struct.update(match.groupdict())
         return struct
     
     # try parsing as a kneel
     match = kneelRE.match(details)
     if match:
         # parse as a kneel
-        struct.update(match.groupdict())
         struct['isKneel'] = True
-        struct['kneelYds'] = (int(struct.get('kneelYds', 0))
-                              if struct.get('kneelYds') else 0)
+        struct.update(match.groupdict())
         return struct
     
     # try parsing as a spike
     match = spikeRE.match(details)
     if match:
         # parse as a spike
-        struct.update(match.groupdict())
         struct['isSpike'] = True
+        struct.update(match.groupdict())
         return struct
 
     # try parsing as an XP
     match = extraPointRE.match(details)
     if match:
         # parse as an XP
-        struct.update(match.groupdict())
         struct['isXP'] = True
-        struct['xpGood'] = struct['xpGood'] == 'good'
+        struct.update(match.groupdict())
         return struct
 
     # try parsing as a 2-point conversion
@@ -450,73 +422,143 @@ def parsePlayDetails(details):
         realPlay = pfr.utils.parsePlayDetails(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
-        struct['twoPointSuccess'] = match.group('twoPointSuccess')=='succeeds'
         return struct
 
-    # try parsing as a penalty
+    # try parsing as a pre-snap penalty
     match = psPenaltyRE.match(details)
     if match:
-        # parse as a penalty
-        struct.update(match.groupdict())
+        # parse as a pre-snap penalty
         struct['isPresnapPenalty'] = True
-        struct['penYds'] = (int(struct.get('penYds', 0))
-                            if struct.get('penYds') else 0)
-        struct['penDeclined'] = bool(struct['penDeclined'])
+        struct.update(match.groupdict())
         return struct
 
     # try parsing as a pass
     match = passRE.match(details)
     if match:
         # parse as a pass
-        struct.update(match.groupdict())
         struct['isPass'] = True
-        struct['isSack'] = details.find('sack') > -1
-        struct['isInterception'] = details.find('intercepted') > -1
-        # change type to int when applicable
-        for k in ('yds','fumbRecYdLine','fumbRetYds','penYds'):
-            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
-        # change type to bool when applicable
-        struct['isTD'] = bool(struct['isTD'])
-        struct['penDeclined'] = bool(struct['penDeclined'])
-        struct['isComplete'] = struct['isComplete'] == 'complete'
-        # convert pass type
-        struct['passLoc'] = PASS_OPTS.get(struct['passLoc'], None)
+        struct.update(match.groupdict())
         return struct
 
     # try parsing as a run
     match = rushRE.match(details)
     if match:
         # parse as a run
-        struct.update(match.groupdict())
         struct['isRun'] = True
-        # change type to int when applicable
-        for k in ('yds', 'fumbRecYdLine', 'fumbRetYds', 'penYds'):
-            struct[k] = int(struct.get(k, 0)) if struct.get(k) else 0
-        # change type to bool when applicable
-        struct['isTD'] = bool(struct['isTD'])
-        struct['penDeclined'] = bool(struct['penDeclined'])
-        # convert rush type
-        struct['rushDir'] = RUSH_OPTS.get(struct['rushDir'], None)
+        struct.update(match.groupdict())
         return struct
     
-    print details
     return None
         
+def cleanFeatures(struct):
+    """Cleans up the features collected in parsePlayDetails.
 
-def expandDetails(df, detail='detail', keepErrors=False):
+    :struct: dict of features parsed from details string.
+    :returns: the same dict, but with cleaner features (e.g., convert bools,
+    ints, etc.)
+    """
+    struct = dict(struct)
+    # First, clean up existing variables on a one-off basis
+    struct['challengeUpheld'] = struct.get('challengeUpheld') == 'upheld'
+    struct['fgGood'] = struct.get('fgGood') == 'good'
+    struct['isBlocked'] = struct.get('isBlocked') == 'blocked'
+    struct['isComplete'] = struct.get('isComplete') == 'complete'
+    struct['isFairCatch'] = struct.get('isFairCatch') == 'fair catch'
+    struct['isTD'] = struct.get('isTD') == ', touchdown'
+    struct['isTouchback'] = struct.get('touchback') == ', touchback'
+    struct['isMuffedCatch'] = pd.notnull(struct.get('isMuffedCatch'))
+    struct['oob'] = pd.notnull(struct.get('oob'))
+    struct['passLoc'] = PASS_OPTS.get(struct.get('passLoc'), np.nan)
+    struct['penDeclined'] = struct.get('penDeclined') == 'Declined'
+    if struct['quarter'] == 'OT': struct['quarter'] = 5
+    struct['rushDir'] = RUSH_OPTS.get(struct.get('rushDir'), np.nan)
+    struct['timeoutTeam'] = pfr.teams.teamIDs().get(struct.get('timeoutTeam'),
+                                                    np.nan)
+    struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
+    struct['xpGood'] = struct.get('xpGood') == 'good'
+    # Second, ensure types are correct
+    bool_vars = [
+        'fgGood', 'isBlocked', 'isChallenged', 'isComplete', 'isFairCatch',
+        'isFieldGoal', 'isKickoff', 'isKneel', 'isLateral', 'isPass',
+        'isPresnapPenalty', 'isPunt', 'isRun', 'isSpike', 'isTD',
+        'isTimeout', 'isTouchback', 'isTwoPoint', 'isXP', 'isMuffedCatch',
+        'oob', 'penDeclined', 'twoPointSuccess', 'xpGood'
+    ]
+    int_vars = [
+        'down', 'fgBlockRetYds', 'fgDist', 'fumbRecYdLine', 'fumbRetYds',
+        'intRetYds', 'intYdLine', 'koRetYds', 'koYds', 'muffRetYds',
+        'pbp_score_aw', 'pbp_score_hm', 'penYds', 'puntBlockRetYds',
+        'puntRetYds', 'puntYds', 'quarter', 'sackYds', 'timeoutNum', 'ydLine',
+        'yds', 'yds_to_go'
+    ]
+    float_vars = [
+        'exp_pts_after', 'exp_pts_before', 'home_wp'
+    ]
+    string_vars = [
+        'challenger', 'detail', 'fairCatcher', 'fgBlockRecoverer',
+        'fgBlocker', 'fgKicker', 'fieldside', 'fumbForcer',
+        'fumbRecFieldside', 'fumbRecoverer', 'fumbler', 'intFieldside',
+        'interceptor', 'kneelQB', 'koKicker', 'koReturner', 'muffRecoverer',
+        'muffedBy', 'passLoc', 'passer', 'penOn', 'penalty',
+        'puntBlockRecoverer', 'puntBlocker', 'puntReturner', 'punter',
+        'qtr_time_remain', 'rushDir', 'rusher', 'sacker1', 'sacker2',
+        'spikeQB', 'tackler1', 'tackler2', 'target', 'timeoutTeam',
+        'xpKicker'
+    ]
+    for var in bool_vars:
+        struct[var] = struct.get(var) == True
+    for var in int_vars:
+        try:
+            struct[var] = int(struct.get(var))
+        except (ValueError, TypeError) as e:
+            struct[var] = np.nan
+    for var in float_vars:
+        try:
+            struct[var] = float(struct.get(var))
+        except (ValueError, TypeError) as e:
+            struct[var] = np.nan
+    for var in string_vars:
+        if var not in struct or pd.isnull(struct[var]):
+            struct[var] = np.nan
+    # Third, create new helper variables based on parsed variables
+    # creating fieldside and ydline from location
+    fieldside, ydline = locToFeatures(struct['location'])
+    struct['fieldside'] = fieldside
+    struct['ydLine'] = ydline
+    # creating secsElapsedInGame from qtr_time_remain and quarter
+    if pd.notnull(struct.get('qtr_time_remain')):
+        qtr = struct['quarter']
+        mins, secs = map(int, struct['qtr_time_remain'].split(':'))
+        struct['secsElapsedInGame'] = qtr*900 - mins*60 - secs
+    else:
+        struct['secsElapsedInGame'] = np.nan
+    # create columns for offTeam, defTeam
+    
+    # creating columns for turnovers
+    struct['isInt'] = pd.notnull(struct.get('interceptor'))
+    struct['isFumble'] = pd.notnull(struct.get('fumbler'))
+    # create column for isPenalty
+    struct['isPenalty'] = pd.notnull(struct.get('penalty'))
+    # create column for distToGoal
+    if struct.get('ydLine'):
+        struct['distToGoal'] = struct['ydLine']
+    return struct
+
+def expandDetails(df, detailCol='detail', keepErrors=False):
     """Expands the details column of the given dataframe and returns the
     resulting DataFrame.
 
     :df: The input DataFrame.
-    :detail: The detail column name.
+    :detailCol: The detail column name.
     :keepErrors: If True, leave in rows with unmatched play details; if False,
     remove them from the resulting DataFrame.
     :returns: Returns DataFrame with new columns from pbp parsing.
     """
-    dicts = map(pfr.utils.parsePlayDetails, df[detail])
+    df = copy.deepcopy(df)
+    dicts = map(pfr.utils.parsePlayDetails, df[detailCol])
     if keepErrors:
-        cols = set(c for d in dicts if d for c in d.iterkeys())
-        blankEntry = {c: None for c in cols}
+        cols = {c for d in dicts if d for c in d.iterkeys()}
+        blankEntry = {c: np.nan for c in cols}
         dicts = [d if d else blankEntry for i, d in enumerate(dicts)]
     else:
         errors = [i for i, d in enumerate(dicts) if d is None]
@@ -525,13 +567,33 @@ def expandDetails(df, detail='detail', keepErrors=False):
     # get details dataframe and merge it with original
     details = pd.DataFrame(dicts)
     df = pd.merge(df, details, left_index=True, right_index=True)
-    # enforce bool types when applicable, filling in False for nulls
-    for col in details.columns:
-        if all(pd.isnull(item) or item in (True, False)
-               for item in df[col]):
-            df[col] = df[col].fillna(False)
-            df[col] = df[col].astype(bool)
+    # use cleanFeatures to clean up and add columns
+    start = time.time()
+    df = pd.DataFrame(list(df.apply(cleanFeatures, axis=1)))
+    print time.time() - start, 'seconds'
     return df
+
+
+def locToFeatures(l):
+    """Converts a location string "{Half}, {YardLine}" into a tuple of those
+    values, the second being an int.
+
+    :l: The string from the play by play table representing location.
+    :returns: A tuple that separates out the values, making them missing
+    (np.nan) when necessary.
+
+    """
+    if l:
+        l = l.strip()
+        if ' ' in l:
+            r = l.split()
+            r[0] = r[0].lower()
+            r[1] = int(r[1])
+        else:
+            r = (np.nan, int(l))
+    else:
+        r = (np.nan, np.nan)
+    return r
 
 def _flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns

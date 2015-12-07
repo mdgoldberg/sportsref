@@ -36,7 +36,7 @@ def GamePlayFinder(**kwargs):
         plays = plays.rename({'game_date': 'bsID'})
     # add pbp
     if 'description' in plays.columns:
-        plays = pfr.utils.expandDetails(plays, detail='description')
+        plays = pfr.utils.expandDetails(plays, detailCol='description')
 
     return plays
 
