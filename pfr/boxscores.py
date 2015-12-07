@@ -213,6 +213,8 @@ class BoxScore:
         table = self.doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
         pbp['bsID'] = self.bsID
+        pbp['home'] = self.home()
+        pbp['away'] = self.away()
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
         return pbp
 
