@@ -22,6 +22,7 @@ __all__ = [
     'expandDetails'
 ]
 
+@pfr.decorators.memoized
 @pfr.decorators.cacheHTML
 def getHTML(url):
     """Gets the HTML for the given URL using a GET request.
@@ -59,6 +60,7 @@ def getHTML(url):
     time.sleep(1.5)
     return html
 
+@pfr.decorators.memoized
 def relURLToID(url):
     """Converts relative PFR URL to ID.
 
@@ -77,7 +79,7 @@ def relURLToID(url):
 
     :returns: ID associated with the given relative URL.
     """
-    playerRegex = re.compile(r'/players/[A-Z]/(.+?)\.html?')
+    playerRegex = re.compile(r'/players/[A-Z]/(.+?)(?:/|\.html?)')
     boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')
     teamRegex = re.compile(r'/teams/(\w{3})/.*')
     yearRegex = re.compile(r'/years/(\d{4})/')
@@ -159,6 +161,7 @@ PASS_OPTS = {
     'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
 }
 
+@pfr.decorators.memoized
 def parsePlayDetails(details):
     """Parses play details from play-by-play string and returns structured
     data.
@@ -450,6 +453,7 @@ def parsePlayDetails(details):
     
     return None
         
+@pfr.decorators.memoized
 def cleanFeatures(struct):
     """Cleans up the features collected in parsePlayDetails.
 
@@ -532,18 +536,41 @@ def cleanFeatures(struct):
         struct['secsElapsedInGame'] = qtr*900 - mins*60 - secs
     else:
         struct['secsElapsedInGame'] = np.nan
-    # create columns for offTeam, defTeam
-    
+    # TODO: include care of non-plays-from-scrimmage like kickoffs and XPs
+    # TODO: get offense and defense teams even when penalty -> no play
+    # if given a bsID and it's a play from scrimmage,
+    # create columns for tm (offense), opp (defense)
+    if ('bsID' in struct and
+            any(struct[k] for k in ('isRun','isPass','isFieldGoal','isPunt'))):
+        bs = pfr.boxscores.BoxScore(struct['bsID'])
+        if struct['isRun']:
+            pID = struct['rusher']
+        elif struct['isPass']:
+            pID = (struct['passer'] if pd.notnull(struct['passer'])
+                   else struct['sackQB'])
+        elif struct['isFieldGoal']:
+            pID = struct['fgKicker']
+        elif struct['isPunt']:
+            pID = struct['punter']
+        pstats = bs.playerStats()
+        narrowed = pstats.loc[pstats.player == pID, 'team']
+        if not narrowed.empty:
+            struct['tm'] = narrowed.iloc[0]
+            struct['opp'] = (bs.home() if bs.home() != struct['tm']
+                             else bs.away())
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
     struct['isFumble'] = pd.notnull(struct.get('fumbler'))
     # create column for isPenalty
     struct['isPenalty'] = pd.notnull(struct.get('penalty'))
     # create column for distToGoal
-    if struct.get('ydLine'):
-        struct['distToGoal'] = struct['ydLine']
+    if all(pd.notnull(struct.get(k)) for k in ('tm', 'opp', 'ydLine')):
+        struct['distToGoal'] = (
+            struct['ydLine'] if struct['tm'] != struct['fieldside']
+            else 100 - struct['ydLine'])
     return struct
 
+@pfr.decorators.memoized
 def expandDetails(df, detailCol='detail', keepErrors=False):
     """Expands the details column of the given dataframe and returns the
     resulting DataFrame.
@@ -573,7 +600,7 @@ def expandDetails(df, detailCol='detail', keepErrors=False):
     print time.time() - start, 'seconds'
     return df
 
-
+@pfr.decorators.memoized
 def locToFeatures(l):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
