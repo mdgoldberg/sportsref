@@ -22,6 +22,12 @@ class Player:
             pfr.BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
 
+    def __eq__(self, other):
+        return self.pID == other.pID
+
+    def __hash__(self):
+        return hash(self.pID)
+
     def age(self, year=yr):
         doc = pq(pfr.utils.getHTML(self.mainURL))
         span = doc('div#info_box span#necro-birth')

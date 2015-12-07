@@ -24,6 +24,12 @@ class BoxScore:
         )
         self.doc = pq(pfr.utils.getHTML(self.mainURL))
 
+    def __eq__(self, other):
+        return self.bsID == other.bsID
+
+    def __hash__(self):
+        return hash(self.bsID)
+
     @pfr.decorators.memoized
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
