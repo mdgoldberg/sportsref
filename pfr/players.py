@@ -51,3 +51,15 @@ class Player:
         # otherwise, return NaN
         else:
             return np.nan
+
+    def gamelog(self):
+        """Gets the career gamelog of the given player.
+        :returns: A DataFrame with the player's career gamelog.
+        """
+        url = urlparse.urljoin(
+            pfr.BASE_URL, '/players/{0[0]}/{0}/gamelog'
+        ).format(self.pID)
+        doc = pq(pfr.utils.getHTML(url))
+        table = doc('#stats')
+        df = pfr.utils.parseTable(table)
+        return df
