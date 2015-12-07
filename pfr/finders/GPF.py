@@ -33,11 +33,9 @@ def GamePlayFinder(**kwargs):
         plays['year'] = plays.game_date.str[:4].astype(int)
         plays['month'] = plays.game_date.str[4:6].astype(int)
         plays['day'] = plays.game_date.str[6:8].astype(int)
-        plays = plays.rename({'game_date': 'bsID'})
     # add pbp
     if 'description' in plays.columns:
         plays = pfr.utils.expandDetails(plays, detailCol='description')
-
     return plays
 
 def kwArgsToQS(**kwargs):
