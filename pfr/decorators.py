@@ -1,4 +1,5 @@
-from functools import wraps
+import collections
+import functools
 import os
 import time
 import urlparse
@@ -17,7 +18,7 @@ def switchToDir(dirPath):
     """
 
     def decorator(func):
-        @wraps(func)
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             orig_cwd = os.getcwd()
             os.chdir(dirPath)
@@ -37,7 +38,7 @@ def cacheHTML(func):
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
 
-    @wraps(func)
+    @functools.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
         relURL = parsed.path
@@ -68,3 +69,26 @@ def cacheHTML(func):
             return text
     
     return wrapper
+
+class memoized(object):
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+
+    def __call__(self, *args, **kwargs):
+        if (not isinstance(args, collections.Hashable)
+                or not isinstance(kwargs, collections.Hashable)):
+            # cannot hash the arguments, so evaluate and return
+            return self.func(*args, **kwargs)
+        if (args, kwargs) in self.cache:
+            return self.cache[args, kwargs]
+        else:
+            value = self.func(*args, **kwargs)
+            self.cache[args, kwargs] = value
+            return value
+
+    def __repr__(self):
+        return self.func.__doc__
+
+    def __get__(self, obj, objtype):
+        return functools.partial(self.__call__, obj)
