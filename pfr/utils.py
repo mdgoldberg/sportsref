@@ -595,9 +595,7 @@ def expandDetails(df, detailCol='detail', keepErrors=False):
     details = pd.DataFrame(dicts)
     df = pd.merge(df, details, left_index=True, right_index=True)
     # use cleanFeatures to clean up and add columns
-    start = time.time()
     df = pd.DataFrame(list(df.apply(cleanFeatures, axis=1)))
-    print time.time() - start, 'seconds'
     return df
 
 @pfr.decorators.memoized
