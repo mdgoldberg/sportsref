@@ -29,6 +29,11 @@ def teamNames():
     d.update(dict(zip(teamNames, ids)))
     return d
 
+def teamIDs():
+    names = teamNames()
+    ids = {v: k for k, v in names.iteritems()}
+    return ids
+
 def listTeams():
     tmNames = teamNames()
     return filter(lambda k: len(k) == 3, tmNames.keys())
@@ -71,9 +76,9 @@ class Team:
 
         :year: The year for which we want the boxscores; defaults to current
         year.
-        :returns: list of BoxScore objects
+        :returns: np.array of strings representing boxscore IDs.
         """
         doc = pq(self.teamYearURL(year))
         table = doc('table#team_gamelogs')
         df = pfr.utils.parseTable(table)
-        return df.boxscore_word.dropna().apply(pfr.boxscores.BoxScore).values
+        return df.boxscore_word.dropna().values
