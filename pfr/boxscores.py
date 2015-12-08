@@ -217,7 +217,7 @@ class BoxScore:
 
         """
         doc = pq(pfr.utils.getHTML(self.mainURL))
-        table = self.doc('table#pbp_data')
+        table = doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
         pbp['bsID'] = self.bsID
         pbp['home'] = self.home()
