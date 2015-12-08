@@ -57,7 +57,9 @@ class BoxScore:
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        return self.bsID[-3:]
+        table = self.doc('table#linescore')
+        home = pfr.utils.relURLToID(pq(table('tr')[0])('a').attr['href'])
+        return home
 
     @pfr.decorators.memoized
     def away(self):
