@@ -536,10 +536,10 @@ def cleanFeatures(struct):
         struct['secsElapsedInGame'] = qtr*900 - mins*60 - secs
     else:
         struct['secsElapsedInGame'] = np.nan
-    # TODO: include care of non-plays-from-scrimmage like kickoffs and XPs
-    # TODO: get offense and defense teams even when penalty -> no play
     # if given a bsID and it's a play from scrimmage,
     # create columns for tm (offense), opp (defense)
+    # TODO: include care of non-plays-from-scrimmage like kickoffs and XPs
+    # TODO: get offense and defense teams even when penalty -> no play
     if ('bsID' in struct and
             any(struct[k] for k in ('isRun','isPass','isFieldGoal','isPunt'))):
         bs = pfr.boxscores.BoxScore(struct['bsID'])
@@ -555,8 +555,8 @@ def cleanFeatures(struct):
         pstats = bs.playerStats()
         narrowed = pstats.loc[pstats.player == pID, 'team']
         if not narrowed.empty:
-            struct['tm'] = narrowed.iloc[0]
-            struct['opp'] = (bs.home() if bs.home() != struct['tm']
+            struct['team'] = narrowed.iloc[0]
+            struct['opp'] = (bs.home() if bs.home() != struct['team']
                              else bs.away())
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
@@ -564,10 +564,24 @@ def cleanFeatures(struct):
     # create column for isPenalty
     struct['isPenalty'] = pd.notnull(struct.get('penalty'))
     # create column for distToGoal
-    if all(pd.notnull(struct.get(k)) for k in ('tm', 'opp', 'ydLine')):
+    if all(pd.notnull(struct.get(k)) for k in ('team', 'ydLine')):
         struct['distToGoal'] = (
-            struct['ydLine'] if struct['tm'] != struct['fieldside']
+            struct['ydLine'] if struct['team'] != struct['fieldside']
             else 100 - struct['ydLine'])
+    # create column for offense's WP (if WP and team in dataset)
+    if (pd.notnull(struct.get('home_wp')) and pd.notnull(struct.get('team'))):
+        struct['team_wp'] = (struct['home_wp']
+                             if struct['team'] == struct['home']
+                             else 100. - struct['home_wp'])
+    # create column for offense and defense scores if not already there
+    if pd.notnull(struct.get('team')) and 'teamScore' not in struct:
+        bs = pfr.boxscores.BoxScore(struct['bsID'])
+        if bs.home() == struct['team']:
+            struct['teamScore'] = bs.homeScore()
+            struct['oppScore'] = bs.awayScore()
+        else:
+            struct['teamScore'] = bs.awayScore()
+            struct['oppScore'] = bs.homeScore()
     return struct
 
 @pfr.decorators.memoized

@@ -33,9 +33,18 @@ def GamePlayFinder(**kwargs):
         plays['year'] = plays.game_date.str[:4].astype(int)
         plays['month'] = plays.game_date.str[4:6].astype(int)
         plays['day'] = plays.game_date.str[6:8].astype(int)
-    # add pbp
+    # rename game_date to bsID
+    if 'game_date' in plays.columns:
+        plays = plays.rename(columns={'game_date': 'bsID'})
+    # parse score column
+    if 'score' in plays.columns:
+        oScore, dScore = zip(*plays.score.apply(lambda s: s.split('-')))
+        plays.loc[:, 'teamScore'] = oScore
+        plays.loc[:, 'oppScore'] = dScore
+    # add parsed pbp info
     if 'description' in plays.columns:
         plays = pfr.utils.expandDetails(plays, detailCol='description')
+
     return plays
 
 def kwArgsToQS(**kwargs):
