@@ -69,3 +69,15 @@ class Player:
         table = doc('#stats')
         df = pfr.utils.parseTable(table)
         return df
+
+    def passing(self):
+        doc = pq(self.mainURL)
+        table = doc('#passing')
+        df = pfr.utils.parseTable(table)
+        return df
+
+    def rushing_and_receiving(self):
+        doc = pq(self.mainURL)
+        table = doc('#rushing_and_receiving')
+        df = pfr.utils.parseTable(table)
+        return df
