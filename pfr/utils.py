@@ -146,6 +146,10 @@ def parseTable(table):
             lambda y: int(y[:4]) if isinstance(y, basestring) else y
         )
 
+    # game_date -> bsID
+    if 'game_date' in df.columns:
+        df = df.rename(columns={'game_date': 'bsID'})
+
     # ignore * and + to note things
     df.replace(re.compile(r'[\*\+]'), '', inplace=True)
 
@@ -553,7 +557,9 @@ def cleanFeatures(struct):
         elif struct['isPunt']:
             pID = struct['punter']
         pstats = bs.playerStats()
-        narrowed = pstats.loc[pstats.player == pID, 'team']
+        player = pfr.players.Player(pID)
+        glog = player.gamelog()
+        narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
         if not narrowed.empty:
             struct['team'] = narrowed.iloc[0]
             struct['opp'] = (bs.home() if bs.home() != struct['team']
