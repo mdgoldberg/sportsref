@@ -78,19 +78,19 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        doc = pq(self.teamYearURL(year))
+        doc = pq(pfr.utils.getHTML(self.teamYearURL(year)))
         table = doc('table#team_gamelogs')
         df = pfr.utils.parseTable(table)
         return df.boxscore_word.dropna().values
 
     def passing(self, year=yr):
-        doc = pq(self.teamYearURL(year))
+        doc = pq(pfr.utils.getHTML(self.teamYearURL(year)))
         table = doc('#passing')
         df = pfr.utils.parseTable(table)
         return df
 
     def rushing_and_receiving(self, year=yr):
-        doc = pq(self.teamYearURL(year))
+        doc = pq(pfr.utils.getHTML(self.teamYearURL(year)))
         table = doc('#rushing_and_receiving')
         df = pfr.utils.parseTable(table)
         return df
