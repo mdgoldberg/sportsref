@@ -57,7 +57,7 @@ def getHTML(url):
             else:
                 # Some other error code
                 raise e
-    time.sleep(1.5)
+    time.sleep(2)
     return html
 
 @pfr.decorators.memoized
