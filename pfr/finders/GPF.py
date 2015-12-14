@@ -171,7 +171,7 @@ def getInputsOptionsDefaults():
     # otherwise, we must regenerate the dict and rewrite it
     else:
 
-        print 'Regenerating constants file'
+        print 'Regenerating GPFConstants file'
 
         html = pfr.utils.getHTML(GAME_PLAY_URL)
         doc = pq(html)
@@ -202,8 +202,8 @@ def getInputsOptionsDefaults():
 
 
         # for dropdowns (select elements)
-        for sel in doc('form#play_finder select[name]'):
-            name = sel.attrib['name']
+        for sel in doc.items('form#play_finder select[name]'):
+            name = sel.attr['name']
             # add blank dict if not present
             if name not in def_dict:
                 def_dict[name] = {
@@ -213,18 +213,18 @@ def getInputsOptionsDefaults():
                 }
             
             # deal with default value
-            defaultOpt = pq(sel)('option[selected]')
+            defaultOpt = sel('option[selected]')
             if len(defaultOpt):
                 defaultOpt = defaultOpt[0]
                 def_dict[name]['value'].add(defaultOpt.attrib.get('value', ''))
             else:
                 def_dict[name]['value'].add(
-                    pq(sel)('option')[0].attrib.get('value', '')
+                    sel('option')[0].attrib.get('value', '')
                 )
 
             # deal with options
             def_dict[name]['options'] = {
-                opt.attrib['value'] for opt in pq(sel)('option')
+                opt.attrib['value'] for opt in sel('option')
                 if opt.attrib.get('value')
             }
         

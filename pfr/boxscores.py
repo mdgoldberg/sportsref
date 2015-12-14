@@ -29,6 +29,13 @@ class BoxScore:
     def __hash__(self):
         return hash(self.bsID)
 
+    def getDoc(self):
+        if self.doc:
+            return self.doc
+        else:
+            self.doc = pq(pfr.utils.getHTML(self.mainURL))
+            return self.doc
+
     @pfr.decorators.memoized
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
@@ -56,9 +63,9 @@ class BoxScore:
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         table = doc('table#linescore')
-        home = pfr.utils.relURLToID(pq(table('tr')[2])('a').attr['href'])
+        home = pfr.utils.relURLToID(table('tr').eq(2)('a').attr['href'])
         return home
 
     @pfr.decorators.memoized
@@ -66,9 +73,9 @@ class BoxScore:
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         table = doc('table#linescore')
-        away = pfr.utils.relURLToID(pq(table('tr')[1])('a').attr['href'])
+        away = pfr.utils.relURLToID(table('tr').eq(1)('a').attr['href'])
         return away
 
     @pfr.decorators.memoized
@@ -77,9 +84,9 @@ class BoxScore:
         :returns: int of the home score.
 
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         table = doc('table#linescore')
-        homeScore = pq(table('tr')[2])('td')[-1].text_content()
+        homeScore = table('tr').get(2)('td')[-1].text_content()
         return int(homeScore)
 
     @pfr.decorators.memoized
@@ -88,9 +95,9 @@ class BoxScore:
         :returns: int of the away score.
 
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         table = doc('table#linescore')
-        awayScore = pq(table('tr')[1])('td')[-1].text_content()
+        awayScore = table('tr').get(1)('td')[-1].text_content()
         return int(awayScore)
 
     @pfr.decorators.memoized
@@ -110,7 +117,7 @@ class BoxScore:
 
         :returns: A pandas DataFrame. See the description for details.
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         pretable = next(div for div in map(pq, doc('div.table_heading')) 
                         if div('h2:contains("Starting Lineups")'))
         tableCont = map(pq, pretable.nextAll('div.table_container')[:2])
@@ -147,7 +154,7 @@ class BoxScore:
             'awayScore': self.awayScore(),
             'weekday': self.weekday(),
         }
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         giTable = doc('table#game_info')
         for tr in map(pq, giTable('tr[class=""]')):
             td0, td1 = tr('td')
@@ -216,7 +223,7 @@ class BoxScore:
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
 
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         table = doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
         pbp['bsID'] = self.bsID
@@ -225,13 +232,14 @@ class BoxScore:
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
         return pbp
 
+    @pfr.decorators.memoized
     def refInfo(self):
         """Gets a dictionary of ref positions and the ref IDs of the refs for
         that game.
         :returns: A dictionary of ref positions and IDs.
 
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         refDict = {}
         refTable = doc('table#ref_info')
         for tr in map(pq, refTable('tr[class=""]')):
@@ -247,7 +255,7 @@ class BoxScore:
         individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc
         tableIDs = ('skill_stats', 'def_stats', 'st_stats', 'kick_stats')
         dfs = []
         for tID in tableIDs:

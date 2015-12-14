@@ -21,6 +21,7 @@ class Player:
         self.mainURL = urlparse.urljoin(
             pfr.BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
+        self.doc = None # filled in when necessary
 
     def __eq__(self, other):
         return self.pID == other.pID
@@ -28,8 +29,15 @@ class Player:
     def __hash__(self):
         return hash(self.pID)
 
+    def doc(self):
+        if self.doc:
+            return self.doc
+        else:
+            self.doc = pq(pfr.utils.getHTML(self.mainURL))
+            return self.doc
+
     def age(self, year=yr):
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc()
         span = doc('div#info_box span#necro-birth')
         birthstring = span.attr('data-birth')
         dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})', birthstring).groups()
@@ -40,7 +48,7 @@ class Player:
         return age
 
     def av(self, year=yr):
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = self.doc()
         tables = doc('table[id]').filter(
             lambda i,e: 'AV' in e.text_content()
         )
@@ -48,7 +56,7 @@ class Player:
         if not tables:
             return np.nan
         # otherwise, extract the AV
-        table = pq(tables[0])
+        table = tables.eq(0)
         df = pfr.utils.parseTable(table)
         df = df.query('year_id == @year')
         # if the player has an AV for that year, return it
@@ -71,13 +79,13 @@ class Player:
         return df
 
     def passing(self):
-        doc = pq(self.mainURL)
+        doc = self.doc()
         table = doc('#passing')
         df = pfr.utils.parseTable(table)
         return df
 
     def rushing_and_receiving(self):
-        doc = pq(self.mainURL)
+        doc = self.doc()
         table = doc('#rushing_and_receiving')
         df = pfr.utils.parseTable(table)
         return df

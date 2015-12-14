@@ -46,6 +46,22 @@ class Team:
         self.teamURL = urlparse.urljoin(pfr.BASE_URL, self.relURL)
         self.teamYearURL = lambda yr: urlparse.urljoin(
             pfr.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+        self.mainDoc = None # will be filled in when necessary
+        self.yearDocs = {} # will be filled in as necessary
+
+    def getMainDoc(self):
+        if self.mainDoc:
+            return self.mainDoc
+        else:
+            self.mainDoc = pq(self.teamURL)
+            return self.mainDoc
+
+    def getYearDoc(self, year=yr):
+        try:
+            return self.yearDocs[year]
+        except KeyError:
+            self.yearDocs[year] = pq(pfr.utils.getHTML(self.teamYearURL(year)))
+        return self.yearDocs[year]
 
     def name(self):
         """Returns the real name of the franchise given a team ID.
@@ -56,7 +72,7 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        doc = pq(pfr.utils.getHTML(pfr.BASE_URL + '/teams/{}/'.format(self.teamID)))
+        doc = self.getMainDoc()
         headerwords = doc('div#info_box h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
@@ -78,19 +94,19 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        doc = pq(pfr.utils.getHTML(self.teamYearURL(year)))
+        doc = self.getYearDoc(year)
         table = doc('table#team_gamelogs')
         df = pfr.utils.parseTable(table)
         return df.boxscore_word.dropna().values
 
     def passing(self, year=yr):
-        doc = pq(pfr.utils.getHTML(self.teamYearURL(year)))
+        doc = self.getYearDoc(year)
         table = doc('#passing')
         df = pfr.utils.parseTable(table)
         return df
 
     def rushing_and_receiving(self, year=yr):
-        doc = pq(pfr.utils.getHTML(self.teamYearURL(year)))
+        doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
         df = pfr.utils.parseTable(table)
         return df
