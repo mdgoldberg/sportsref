@@ -75,5 +75,6 @@ def memoized(fun):
         except KeyError:
             ret = cache[key] = fun(*args, **kwargs)
         return ret
-        cache = {}
-        return wrapper
+
+    cache = {}
+    return wrapper

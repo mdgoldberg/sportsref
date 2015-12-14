@@ -22,6 +22,7 @@ class BoxScore:
         self.mainURL = urlparse.urljoin(
             pfr.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
         )
+        self.doc = None
 
     def __eq__(self, other):
         return self.bsID == other.bsID
@@ -63,7 +64,7 @@ class BoxScore:
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        doc = self.doc
+        doc = self.getDoc()
         table = doc('table#linescore')
         home = pfr.utils.relURLToID(table('tr').eq(2)('a').attr['href'])
         return home
@@ -73,7 +74,7 @@ class BoxScore:
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        doc = self.doc
+        doc = self.getDoc()
         table = doc('table#linescore')
         away = pfr.utils.relURLToID(table('tr').eq(1)('a').attr['href'])
         return away
@@ -84,7 +85,7 @@ class BoxScore:
         :returns: int of the home score.
 
         """
-        doc = self.doc
+        doc = self.getDoc()
         table = doc('table#linescore')
         homeScore = table('tr').get(2)('td')[-1].text_content()
         return int(homeScore)
@@ -95,7 +96,7 @@ class BoxScore:
         :returns: int of the away score.
 
         """
-        doc = self.doc
+        doc = self.getDoc()
         table = doc('table#linescore')
         awayScore = table('tr').get(1)('td')[-1].text_content()
         return int(awayScore)
@@ -117,7 +118,7 @@ class BoxScore:
 
         :returns: A pandas DataFrame. See the description for details.
         """
-        doc = self.doc
+        doc = self.getDoc()
         pretable = next(div for div in map(pq, doc('div.table_heading')) 
                         if div('h2:contains("Starting Lineups")'))
         tableCont = map(pq, pretable.nextAll('div.table_container')[:2])
@@ -154,7 +155,7 @@ class BoxScore:
             'awayScore': self.awayScore(),
             'weekday': self.weekday(),
         }
-        doc = self.doc
+        doc = self.getDoc()
         giTable = doc('table#game_info')
         for tr in map(pq, giTable('tr[class=""]')):
             td0, td1 = tr('td')
@@ -223,7 +224,7 @@ class BoxScore:
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
 
         """
-        doc = self.doc
+        doc = self.getDoc()
         table = doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
         pbp['bsID'] = self.bsID
@@ -239,7 +240,7 @@ class BoxScore:
         :returns: A dictionary of ref positions and IDs.
 
         """
-        doc = self.doc
+        doc = self.getDoc()
         refDict = {}
         refTable = doc('table#ref_info')
         for tr in map(pq, refTable('tr[class=""]')):
@@ -255,7 +256,7 @@ class BoxScore:
         individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.doc
+        doc = self.getDoc()
         tableIDs = ('skill_stats', 'def_stats', 'st_stats', 'kick_stats')
         dfs = []
         for tID in tableIDs:
