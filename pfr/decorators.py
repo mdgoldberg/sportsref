@@ -6,11 +6,6 @@ import urlparse
 
 import appdirs
 
-__all__ = [
-    'switchToDir',
-    'cacheHTML',
-]
-
 def switchToDir(dirPath):
     """
     Decorator that switches to given directory before executing function, and
@@ -70,30 +65,15 @@ def cacheHTML(func):
     
     return wrapper
 
-class memoized(object):
-    def __init__(self, func):
-        self.func = func
-        self.cache = {}
-
-    def __call__(self, *args, **kwargs):
+def memoize(fun):
+    """A simple memoize decorator for functions supporting positional args."""
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        key = (args, frozenset(sorted(kwargs.items())))
         try:
-            if kwargs:
-                return self.func(*args, **kwargs)
-            if not isinstance(args, collections.Hashable):
-                # cannot hash the arguments, so evaluate and return
-                print 'unhashable', self.func.__name__, args
-                return self.func(*args)
-            if args in self.cache:
-                return self.cache[args]
-            else:
-                value = self.func(*args)
-                self.cache[args] = value
-                return value
-        except Exception:
-            return self.func(*args, **kwargs)
-
-    def __repr__(self):
-        return self.func.__doc__
-
-    def __get__(self, obj, objtype):
-        return functools.partial(self.__call__, obj)
+            return cache[key]
+        except KeyError:
+            ret = cache[key] = fun(*args, **kwargs)
+        return ret
+        cache = {}
+        return wrapper
