@@ -535,7 +535,7 @@ def cleanFeatures(struct):
         struct['secsElapsedInGame'] = np.nan
     # if given a bsID and it's a play from scrimmage,
     # create columns for tm (offense), opp (defense)
-    # TODO: include care of non-plays-from-scrimmage like kickoffs and XPs
+    # TODO: include non-plays-from-scrimmage like kickoffs and XPs
     # TODO: get offense and defense teams even when penalty -> no play
     if ('bsID' in struct and
             any(struct[k] for k in ('isRun','isPass','isFieldGoal','isPunt'))):
@@ -576,11 +576,11 @@ def cleanFeatures(struct):
     if pd.notnull(struct.get('team')) and 'teamScore' not in struct:
         bs = pfr.boxscores.BoxScore(struct['bsID'])
         if bs.home() == struct['team']:
-            struct['teamScore'] = bs.homeScore()
-            struct['oppScore'] = bs.awayScore()
+            struct['teamScore'] = struct['pbp_score_hm']
+            struct['oppScore'] = struct['pbp_score_aw']
         else:
-            struct['teamScore'] = bs.awayScore()
-            struct['oppScore'] = bs.homeScore()
+            struct['teamScore'] = struct['pbp_score_aw']
+            struct['oppScore'] = struct['pbp_score_hm']
     return struct
 
 @pfr.decorators.memoized
