@@ -87,7 +87,7 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table#linescore')
-        homeScore = table('tr').get(2)('td')[-1].text_content()
+        homeScore = table('tr').eq(2)('td')[-1].text_content()
         return int(homeScore)
 
     @pfr.decorators.memoized
@@ -98,7 +98,7 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table#linescore')
-        awayScore = table('tr').get(1)('td')[-1].text_content()
+        awayScore = table('tr').eq(1)('td')[-1].text_content()
         return int(awayScore)
 
     @pfr.decorators.memoized
