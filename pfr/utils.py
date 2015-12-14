@@ -111,14 +111,8 @@ def parseTable(table):
     :table: the PyQuery, HtmlElement, or raw HTML of the table
     :returns: Pandas dataframe
     """
-    if isinstance(table, pq):
-        pass
-    elif isinstance(table, lxml.html.HtmlElement):
-        table = pq(table.text_content())
-    elif isinstance(table, basestring):
+    if not isinstance(table, pq):
         table = pq(table)
-    else:
-        raise 'UNKNOWN TYPE PASSED TO parseTable'
 
     # get columns
     columns = [c.attrib['data-stat']
@@ -126,7 +120,7 @@ def parseTable(table):
     
     # get data
     data = [
-        [_flattenLinks(td) for td in row('td')]
+        [_flattenLinks(td) for td in row.items('td')]
         for row in map(pq, table('tbody tr').not_('.thead'))
     ]
 
@@ -142,9 +136,7 @@ def parseTable(table):
 
     if 'year_id' in df.columns:
         df = df.query('year_id != "AFL"')
-        df.year_id = df.year_id.apply(
-            lambda y: int(y[:4]) if isinstance(y, basestring) else y
-        )
+        df.year_id = df.year_id.astype(int)
 
     # game_date -> bsID
     if 'game_date' in df.columns:
@@ -649,7 +641,7 @@ def _flattenLinks(td):
 
     """
     # ensure it's a PyQuery object
-    if isinstance(td, basestring) or isinstance(td, lxml.html.HtmlElement):
+    if not isinstance(td, pq):
         td = pq(td)
 
     # if there's no text, just return None
@@ -661,8 +653,8 @@ def _flattenLinks(td):
             return c
         elif 'href' in c.attrib:
             cID = relURLToID(c.attrib['href'])
-            return cID if cID else pq(c).text()
+            return cID if cID else c.text_content()
         else:
-            return pq(c).text()
+            return c.text_content()
 
     return ''.join(_flattenC(c) for c in td.contents())
