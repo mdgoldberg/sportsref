@@ -136,7 +136,8 @@ def parseTable(table):
 
     if 'year_id' in df.columns:
         df = df.query('year_id != "AFL"')
-        df.year_id = df.year_id.astype(int)
+        df.loc[:, 'year_id'] = df.year_id.fillna(method='ffill')
+        df.loc[:, 'year_id'] = df.year_id.apply(lambda y: int(str(y)[:4]))
 
     # game_date -> bsID
     if 'game_date' in df.columns:

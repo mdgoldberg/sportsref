@@ -29,7 +29,7 @@ class Player:
     def __hash__(self):
         return hash(self.pID)
 
-    def doc(self):
+    def getDoc(self):
         if self.doc:
             return self.doc
         else:
@@ -37,7 +37,7 @@ class Player:
             return self.doc
 
     def age(self, year=yr):
-        doc = self.doc()
+        doc = self.getDoc()
         span = doc('div#info_box span#necro-birth')
         birthstring = span.attr('data-birth')
         dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})', birthstring).groups()
@@ -48,7 +48,7 @@ class Player:
         return age
 
     def av(self, year=yr):
-        doc = self.doc()
+        doc = self.getDoc()
         tables = doc('table[id]').filter(
             lambda i,e: 'AV' in e.text_content()
         )
@@ -79,13 +79,13 @@ class Player:
         return df
 
     def passing(self):
-        doc = self.doc()
+        doc = self.getDoc()
         table = doc('#passing')
         df = pfr.utils.parseTable(table)
         return df
 
     def rushing_and_receiving(self):
-        doc = self.doc()
+        doc = self.getDoc()
         table = doc('#rushing_and_receiving')
         df = pfr.utils.parseTable(table)
         return df
