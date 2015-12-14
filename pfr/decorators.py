@@ -65,9 +65,9 @@ def cacheHTML(func):
     
     return wrapper
 
-def memoize(fun):
+def memoized(fun):
     """A simple memoize decorator for functions supporting positional args."""
-    @wraps(fun)
+    @functools.wraps(fun)
     def wrapper(*args, **kwargs):
         key = (args, frozenset(sorted(kwargs.items())))
         try:
