@@ -231,6 +231,8 @@ class BoxScore:
         pbp['home'] = self.home()
         pbp['away'] = self.away()
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
+        for col in ('teamScore', 'oppScore', 'pbp_score_hm', 'pbp_score_aw'):
+            pbp.loc[:, col] = pbp[col].shift(1)
         return pbp
 
     @pfr.decorators.memoized
