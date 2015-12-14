@@ -537,8 +537,7 @@ def cleanFeatures(struct):
     # create columns for tm (offense), opp (defense)
     # TODO: include non-plays-from-scrimmage like kickoffs and XPs
     # TODO: get offense and defense teams even when penalty -> no play
-    if ('bsID' in struct and
-            any(struct[k] for k in ('isRun','isPass','isFieldGoal','isPunt'))):
+    if 'bsID' in struct and not struct['isTimeout']:
         bs = pfr.boxscores.BoxScore(struct['bsID'])
         if struct['isRun']:
             pID = struct['rusher']
@@ -549,14 +548,29 @@ def cleanFeatures(struct):
             pID = struct['fgKicker']
         elif struct['isPunt']:
             pID = struct['punter']
-        pstats = bs.playerStats()
-        player = pfr.players.Player(pID)
-        glog = player.gamelog()
-        narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
-        if not narrowed.empty:
-            struct['team'] = narrowed.iloc[0]
-            struct['opp'] = (bs.home() if bs.home() != struct['team']
-                             else bs.away())
+        elif struct['isXP']:
+            pID = struct['xpKicker']
+        elif struct['isPresnapPenalty']:
+            pID = struct['penOn']
+        elif struct['isKickoff']:
+            pID = struct['koKicker']
+        elif struct['isSpike']:
+            pID = struct['spikeQB']
+        elif struct['isKneel']:
+            pID = struct['kneelQB']
+        else:
+            pID = None
+        if pID and len(pID) == 3:
+            struct['team'] = pID
+            struct['opp'] = bs.away() if bs.home() == pID else bs.home()
+        elif pID:
+            player = pfr.players.Player(pID)
+            glog = player.gamelog()
+            narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
+            if not narrowed.empty:
+                struct['team'] = narrowed.iloc[0]
+                struct['opp'] = (bs.home() if bs.home() != struct['team']
+                                 else bs.away())
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
     struct['isFumble'] = pd.notnull(struct.get('fumbler'))
