@@ -71,7 +71,8 @@ def memoized(fun):
     def wrapper(*args, **kwargs):
         key = (args, frozenset(sorted(kwargs.items())))
         try:
-            return cache[key]
+            ret = cache[key]
+            return ret
         except KeyError:
             ret = cache[key] = fun(*args, **kwargs)
             return ret
