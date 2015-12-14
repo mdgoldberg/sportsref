@@ -9,10 +9,11 @@ setup(name='pfr',
       license='Apache License 2.0',
       packages=find_packages(),
       install_requires=[
-          'pandas',
-          'numpy',
-          'requests',
-          'pyquery',
           'appdirs',
+          'numexpr',
+          'numpy',
+          'pandas',
+          'pyquery',
+          'requests',
       ]
       )
