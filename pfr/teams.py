@@ -113,6 +113,12 @@ class Team:
 
     def teamInfo(self, year=yr):
         doc = self.getYearDoc(year)
+        teamDict = {}
         table = doc('#all_team_stats table.stats_table').eq(0)
-        df = pfr.utils.parseTable(table)
-        return df
+        for tr in table('tbody tr').items():
+            td0, td1 = tr('td')[:2]
+            key = td0.text_content().lower()
+            key = re.sub(r'\W', '_', key)
+            val = pfr.utils._flattenLinks(td1)
+            teamDict[key] = val
+        return teamDict

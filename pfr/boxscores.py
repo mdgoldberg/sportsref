@@ -245,9 +245,10 @@ class BoxScore:
         doc = self.getDoc()
         refDict = {}
         refTable = doc('table#ref_info')
-        for tr in map(pq, refTable('tr[class=""]')):
+        for tr in refTable('tr[class=""]').items():
             td0, td1 = tr('td')
-            key = td0.text_content().lower().replace(' ', '_')
+            key = td0.text_content().lower()
+            key = re.sub(r'\W', '_', key)
             val = pfr.utils._flattenLinks(td1)
             refDict[key] = val
         return refDict
