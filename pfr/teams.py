@@ -105,8 +105,14 @@ class Team:
         df = pfr.utils.parseTable(table)
         return df
 
-    def rushing_and_receiving(self, year=yr):
+    def rushingAndReceiving(self, year=yr):
         doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
+        df = pfr.utils.parseTable(table)
+        return df
+
+    def teamInfo(self, year=yr):
+        doc = self.getYearDoc(year)
+        table = doc('#all_team_stats table.stats_table').eq(0)
         df = pfr.utils.parseTable(table)
         return df
