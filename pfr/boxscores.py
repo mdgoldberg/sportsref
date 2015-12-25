@@ -165,7 +165,7 @@ class BoxScore:
                 continue
             # small adjustments
             elif key == 'Stadium':
-                val = pfr.utils._flattenLinks(td1).strip()
+                val = pfr.utils.flattenLinks(td1).strip()
             elif key == 'Attendance':
                 val = int(td1.text_content().replace(',',''))
             elif key == 'Over/Under':
@@ -249,7 +249,7 @@ class BoxScore:
             td0, td1 = tr('td')
             key = td0.text_content().lower()
             key = re.sub(r'\W', '_', key)
-            val = pfr.utils._flattenLinks(td1)
+            val = pfr.utils.flattenLinks(td1)
             refDict[key] = val
         return refDict
 

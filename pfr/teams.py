@@ -119,6 +119,6 @@ class Team:
             td0, td1 = tr('td')[:2]
             key = td0.text_content().lower()
             key = re.sub(r'\W', '_', key)
-            val = pfr.utils._flattenLinks(td1)
+            val = pfr.utils.flattenLinks(td1)
             teamDict[key] = val
         return teamDict
