@@ -222,7 +222,6 @@ class BoxScore:
         :keepErrors: See pfr.utils.expandDetails.
 
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
-
         """
         doc = self.getDoc()
         table = doc('table#pbp_data')
@@ -232,7 +231,8 @@ class BoxScore:
         pbp['away'] = self.away()
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
         for col in ('teamScore', 'oppScore', 'pbp_score_hm', 'pbp_score_aw'):
-            pbp.loc[:, col] = pbp[col].shift(1)
+            if col in pbp.columns:
+                pbp.loc[:, col] = pbp[col].shift(1)
         return pbp
 
     @pfr.decorators.memoized
