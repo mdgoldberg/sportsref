@@ -17,26 +17,27 @@ __all__ = [
 
 yr = datetime.datetime.now().year
 
+@pfr.decorators.memoized
 def teamNames():
     doc = pq(pfr.utils.getHTML(pfr.BASE_URL + '/teams/'))
     table = doc('table#teams_active')
     df = pfr.utils.parseTable(table)
     ids = df.team_name.str[:3].values
-    teamNames = [tr('td a') for tr in map(pq, table('tr'))]
+    teamNames = [tr('td a') for tr in table('tr').items()]
     teamNames = filter(None, teamNames)
     teamNames = [lst[0].text_content() for lst in teamNames]
     d = dict(zip(ids, teamNames))
-    d.update(dict(zip(teamNames, ids)))
     return d
 
+@pfr.decorators.memoized
 def teamIDs():
     names = teamNames()
     ids = {v: k for k, v in names.iteritems()}
     return ids
 
+@pfr.decorators.memoized
 def listTeams():
-    tmNames = teamNames()
-    return filter(lambda k: len(k) == 3, tmNames.keys())
+    return teamNames().keys()
 
 class Team:
 
@@ -49,6 +50,7 @@ class Team:
         self.mainDoc = None # will be filled in when necessary
         self.yearDocs = {} # will be filled in as necessary
 
+    @pfr.decorators.memoized
     def getMainDoc(self):
         if self.mainDoc:
             return self.mainDoc
@@ -56,6 +58,7 @@ class Team:
             self.mainDoc = pq(self.teamURL)
             return self.mainDoc
 
+    @pfr.decorators.memoized
     def getYearDoc(self, year=yr):
         try:
             return self.yearDocs[year]
@@ -63,6 +66,7 @@ class Team:
             self.yearDocs[year] = pq(pfr.utils.getHTML(self.teamYearURL(year)))
         return self.yearDocs[year]
 
+    @pfr.decorators.memoized
     def name(self):
         """Returns the real name of the franchise given a team ID.
 
@@ -78,6 +82,7 @@ class Team:
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
+    @pfr.decorators.memoized
     def roster(self, year=yr):
         """Returns the roster table for the given year.
 
@@ -86,6 +91,7 @@ class Team:
         """
         raise "not yet implemented"
 
+    @pfr.decorators.memoized
     def boxscores(self, year=yr):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
@@ -99,18 +105,21 @@ class Team:
         df = pfr.utils.parseTable(table)
         return df.boxscore_word.dropna().values
 
+    @pfr.decorators.memoized
     def passing(self, year=yr):
         doc = self.getYearDoc(year)
         table = doc('#passing')
         df = pfr.utils.parseTable(table)
         return df
 
+    @pfr.decorators.memoized
     def rushingAndReceiving(self, year=yr):
         doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
         df = pfr.utils.parseTable(table)
         return df
 
+    @pfr.decorators.memoized
     def teamInfo(self, year=yr):
         doc = self.getYearDoc(year)
         teamDict = {}

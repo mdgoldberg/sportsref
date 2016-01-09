@@ -119,14 +119,14 @@ class BoxScore:
         :returns: A pandas DataFrame. See the description for details.
         """
         doc = self.getDoc()
-        pretable = next(div for div in map(pq, doc('div.table_heading')) 
+        pretable = next(div for div in doc('div.table_heading').items()
                         if div('h2:contains("Starting Lineups")'))
-        tableCont = map(pq, pretable.nextAll('div.table_container')[:2])
+        tableCont = pretable.nextAll('div.table_container')[:2].items()
         a, h = (tc('table.stats_table') for tc in tableCont)
         data = []
         for h, table in enumerate((a, h)):
             team = self.home() if h else self.away()
-            for i, row in enumerate(map(pq, table('tr[class=""]'))):
+            for i, row in enumerate(table('tr[class=""]').items()):
                 datum = {}
                 datum['playerID'] = pfr.utils.relURLToID(
                     row('a')[0].attrib['href']
@@ -157,7 +157,7 @@ class BoxScore:
         }
         doc = self.getDoc()
         giTable = doc('table#game_info')
-        for tr in map(pq, giTable('tr[class=""]')):
+        for tr in giTable('tr[class=""]').items():
             td0, td1 = tr('td')
             key = td0.text_content()
             # keys to skip

@@ -105,10 +105,10 @@ def parseTable(table):
                for c in table('thead tr[class=""] th[data-stat]')]
     
     # get data
-    rows = table('tbody tr').not_('.thead')
+    rows = list(table('tbody tr').not_('.thead').items())
     data = [
         [flattenLinks(td) for td in row.items('td')]
-        for row in rows.items()
+        for row in rows
     ]
 
     # make DataFrame
@@ -117,13 +117,13 @@ def parseTable(table):
     # add hasClass columns
     allClasses = set(
         cls
-        for row in rows.items()
+        for row in rows
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
         df.loc[:, 'hasClass_' + cls] = [
             cls in row.attr['class'].split()
-            for row in rows.items()
+            for row in rows
         ]
     
     # small fixes to DataFrame
@@ -147,6 +147,15 @@ def parseTable(table):
 
     return df
 
+def _flattenC(c):
+    if isinstance(c, basestring):
+        return c
+    elif 'href' in c.attrib:
+        cID = relURLToID(c.attrib['href'])
+        return cID if cID else c.text_content()
+    else:
+        return c.text_content()
+
 def flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns
     the result.
@@ -162,14 +171,5 @@ def flattenLinks(td):
     # if there's no text, just return None
     if not td.text():
         return None
-
-    def _flattenC(c):
-        if isinstance(c, basestring):
-            return c
-        elif 'href' in c.attrib:
-            cID = relURLToID(c.attrib['href'])
-            return cID if cID else c.text_content()
-        else:
-            return c.text_content()
 
     return ''.join(_flattenC(c) for c in td.contents())

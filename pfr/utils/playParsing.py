@@ -1,7 +1,6 @@
 import copy
 import re
 import sys
-import time
 
 import numpy as np
 import pandas as pd
@@ -30,13 +29,12 @@ def expandDetails(df, detailCol='detail', keepErrors=False):
     """
     df = copy.deepcopy(df)
     df.loc[:, 'detail'] = df[detailCol]
-    start = time.time()
     dicts = map(pfr.utils.parsePlayDetails, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
     newDicts = [d if d else blankEntry for i, d in enumerate(dicts)]
-    # get details dataframe and merge it with original
+    # get details DataFrame and merge it with original to create main DataFrame
     details = pd.DataFrame(newDicts)
     df = pd.merge(df, details, left_index=True, right_index=True)
     # add isError column
@@ -44,13 +42,14 @@ def expandDetails(df, detailCol='detail', keepErrors=False):
     df.loc[:, 'isError'] = False
     df.loc[errors, 'isError'] = True
     # use cleanFeatures to clean up and add columns
-    features = df.apply(cleanFeatures, axis=1).tolist()
+    features = df.apply(cleanFeatures, axis=1).to_dict('records')
     # add team and opp columns by iterating through rows
-    features = addTeamColumns(features)
-    # generate new features with team features
-    features = map(addTeamFeatures, features)
-    # create dataframe, get rid of errors if requested, then return
-    df = pd.DataFrame(features)
+    df = pd.DataFrame(addTeamColumns(features))
+    # add WPA column (requires diff, so can't be done row-wise)
+    df.ix[:, 'home_wpa'] = df.home_wp.diff()
+    # add team-related features to DataFrame
+    df = df.apply(addTeamFeatures, axis=1)
+    # get rid of errors if requested, then return
     if not keepErrors:
         df = df.drop(errors).reset_index(drop=True)
     return df
@@ -105,7 +104,7 @@ def parsePlayDetails(details):
     # create rushing regex
     rusherRE = r"(?P<rusher>{0})".format(playerRE)
     rushOptRE = r"(?: {})?".format(rushOptRE)
-    rushYardsRE = r"(?:(?:(?P<yds>\-?\d+) yards?)|(?:no gain))"
+    rushYardsRE = r"(?:(?:(?P<rushYds>\-?\d+) yards?)|(?:no gain))"
     # cases: tackle, fumble, td, penalty
     tackleRE = (r"(?: \(tackle by (?P<tackler1>{0})"
                 r"(?: and (?P<tackler2>{0}))?\))?"
@@ -148,7 +147,7 @@ def parsePlayDetails(details):
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
-    passYardsRE = r"(?: for (?:(?P<yds>\-?\d+) yards?|no gain))"
+    passYardsRE = r"(?: for (?:(?P<passYds>\-?\d+) yards?|no gain))"
     intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
              r'(?:(?P<intFieldside>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?' +
              r'(?: and returned for (?P<intRetYds>\-?\d+) yards?\.?)?)?')
@@ -176,11 +175,11 @@ def parsePlayDetails(details):
     nextREs.append(
         r', recovered by (?P<onsideRecoverer>{0})'.format(playerRE)
     )
-    nextREs.append(r'(?P<isTouchback>, touchback)')
     nextREs.append(r'(?P<oob>, out of bounds)')
+    nextREs.append(r'(?P<isTouchback>, touchback)')
     # TODO: test the following line to fix a small subset of cases (ex: muff -> oob)
-    # nextRE = ''.join(r'(?:{})?'.format(nre) for nre in nextREs)
-    nextRE = r'(?:{})?'.format('|'.join(nextREs))
+    nextRE = ''.join(r'(?:{})?'.format(nre) for nre in nextREs)
+    # nextRE = r'(?:{})?'.format('|'.join(nextREs))
     kickoffREstr = r'{}{}{}{}{}{}{}'.format(
         koKickerRE, koYardsRE, nextRE,
         tackleRE, fumbleRE, tdSafetyRE, penaltyRE
@@ -236,7 +235,7 @@ def parsePlayDetails(details):
 
     # create kneel regex
     kneelREstr = (r'(?P<kneelQB>{0}) kneels for '.format(playerRE) +
-                  r'(?:(?P<yds>\-?\d+) yards?|no gain)')
+                  r'(?:(?P<kneelYds>\-?\d+) yards?|no gain)')
     kneelRE = re.compile(kneelREstr, re.IGNORECASE)
 
     # create spike regex
@@ -363,7 +362,6 @@ def cleanFeatures(struct):
     :returns: the same dict, but with cleaner features (e.g., convert bools,
     ints, etc.)
     """
-    struct = dict(struct)
     # First, clean up existing variables on a one-off basis
     struct['callUpheld'] = struct.get('callUpheld') == 'upheld'
     struct['fgGood'] = struct.get('fgGood') == 'good'
@@ -378,18 +376,18 @@ def cleanFeatures(struct):
     struct['isSafety'] = struct.get('isSafety') == ', safety'
     struct['isTD'] = struct.get('isTD') == ', touchdown'
     struct['isTouchback'] = struct.get('isTouchback') == ', touchback'
+    struct['kneelYds'] = struct.get('kneelYds', 0)
     struct['oob'] = pd.notnull(struct.get('oob'))
     struct['passLoc'] = PASS_OPTS.get(struct.get('passLoc'), np.nan)
+    struct['passYds'] = struct.get('passYds', 0)
     struct['penDeclined'] = struct.get('penDeclined') == 'Declined'
     if struct['quarter'] == 'OT': struct['quarter'] = 5
     struct['rushDir'] = RUSH_OPTS.get(struct.get('rushDir'), np.nan)
-    if pd.notnull(struct['sackYds']): struct['yds'] = struct['sackYds']
+    struct['rushYds'] = struct.get('rushYds', 0)
     struct['timeoutTeam'] = pfr.teams.teamIDs().get(struct.get('timeoutTeam'),
                                                     np.nan)
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
-    if pd.isnull(struct['yds']) and True in (struct['isRun'], struct['isPass']):
-        struct['yds'] = 0
 
     # Second, ensure types are correct
     bool_vars = [
@@ -402,9 +400,9 @@ def cleanFeatures(struct):
     int_vars = [
         'down', 'fgBlockRetYds', 'fgDist', 'fumbRecYdLine', 'fumbRetYds',
         'intRetYds', 'intYdLine', 'koRetYds', 'koYds', 'muffRetYds',
-        'pbp_score_aw', 'pbp_score_hm', 'penYds', 'puntBlockRetYds',
-        'puntRetYds', 'puntYds', 'quarter', 'sackYds', 'timeoutNum', 'ydLine',
-        'yds', 'yds_to_go'
+        'pbp_score_aw', 'pbp_score_hm', 'passYds', 'penYds', 'puntBlockRetYds',
+        'puntRetYds', 'puntYds', 'quarter', 'rushYds', 'sackYds', 'timeoutNum',
+        'ydLine', 'yds_to_go'
     ]
     float_vars = [
         'exp_pts_after', 'exp_pts_before', 'home_wp'
@@ -455,6 +453,9 @@ def cleanFeatures(struct):
     struct['isPenalty'] = pd.notnull(struct.get('penalty'))
     # create column for scoring plays
     struct['isScoringPlay'] = struct['hasClass_is_scoring']
+    # create columns for EPA
+    struct['team_epa'] = struct['exp_pts_after'] - struct['exp_pts_before']
+    struct['opp_epa'] = struct['exp_pts_before'] - struct['exp_pts_after']
     return struct
 
 @pfr.decorators.memoized
@@ -576,25 +577,26 @@ def addTeamFeatures(row):
     'team' and 'opp' have been added.
     :returns: A dict with new features in addition to previous features.
     """
-    row = dict(row)
+    # if team and opp haven't been added, return as is
+    if pd.isnull(row.get('team')):
+        print 'ERROR: team is null', row['bsID'], row['detail']
+        return row
+    homeOnOff = row['team'] == row['home']
     # create column for distToGoal
-    if all(pd.notnull(row.get(k)) for k in ('team', 'ydLine')):
-        row['distToGoal'] = (
-            row['ydLine'] if row['team'] != row['fieldside']
-            else 100 - row['ydLine'])
-    # create column for offense's WP (if WP and team in dataset)
-    if (pd.notnull(row.get('home_wp')) and pd.notnull(row.get('team'))):
-        row['team_wp'] = (row['home_wp']
-                             if row['team'] == row['home']
-                             else 100. - row['home_wp'])
-        row['opp_wp'] = 100. - row['team_wp']
+    row['distToGoal'] = (row['ydLine'] if row['team'] != row['fieldside']
+                         else 100 - row['ydLine'])
+    # create column for each team's WP
+    row['team_wp'] = row['home_wp'] if homeOnOff else 100. - row['home_wp']
+    row['opp_wp'] = 100. - row['team_wp']
+    # create columns for each team's WPA
+    row['team_wpa'] = row['home_wpa'] if homeOnOff else 100. - row['home_wpa']
+    row['opp_wpa'] = 100. - row['team_wpa']
     # create column for offense and defense scores if not already there
-    if pd.notnull(row.get('team')) and 'teamScore' not in row:
-        bs = pfr.boxscores.BoxScore(row['bsID'])
-        if bs.home() == row['team']:
-            row['teamScore'] = row['pbp_score_hm']
-            row['oppScore'] = row['pbp_score_aw']
-        else:
-            row['teamScore'] = row['pbp_score_aw']
-            row['oppScore'] = row['pbp_score_hm']
+    bs = pfr.boxscores.BoxScore(row['bsID'])
+    if bs.home() == row['team']:
+        row['team_score'] = row['pbp_score_hm']
+        row['opp_score'] = row['pbp_score_aw']
+    else:
+        row['team_score'] = row['pbp_score_aw']
+        row['opp_score'] = row['pbp_score_hm']
     return row

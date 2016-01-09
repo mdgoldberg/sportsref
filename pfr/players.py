@@ -29,6 +29,7 @@ class Player:
     def __hash__(self):
         return hash(self.pID)
 
+    @pfr.decorators.memoized
     def getDoc(self):
         if self.doc:
             return self.doc
@@ -36,6 +37,7 @@ class Player:
             self.doc = pq(pfr.utils.getHTML(self.mainURL))
             return self.doc
 
+    @pfr.decorators.memoized
     def age(self, year=yr):
         doc = self.getDoc()
         span = doc('div#info_box span#necro-birth')
@@ -47,6 +49,7 @@ class Player:
         age = delta.days / 365.
         return age
 
+    @pfr.decorators.memoized
     def av(self, year=yr):
         doc = self.getDoc()
         tables = doc('table[id]').filter(
@@ -66,6 +69,7 @@ class Player:
         else:
             return np.nan
 
+    @pfr.decorators.memoized
     def gamelog(self):
         """Gets the career gamelog of the given player.
         :returns: A DataFrame with the player's career gamelog.
@@ -78,12 +82,14 @@ class Player:
         df = pfr.utils.parseTable(table)
         return df
 
+    @pfr.decorators.memoized
     def passing(self):
         doc = self.getDoc()
         table = doc('#passing')
         df = pfr.utils.parseTable(table)
         return df
 
+    @pfr.decorators.memoized
     def rushing_and_receiving(self):
         doc = self.getDoc()
         table = doc('#rushing_and_receiving')

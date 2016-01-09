@@ -30,7 +30,7 @@ def PlayerSeasonFinder(**kwargs):
         table = doc('table#stats')
         yearTh = table('thead tr[class=""] th[data-stat="year_id"]')[0]
         yearIdx = table('thead tr[class=""] th').index(yearTh)
-        for row in map(pq, table('tbody tr[class=""]')):
+        for row in table('tbody tr[class=""]').items():
             player_url = row('a[href*="/players/"]').attr.href
             year = int(row('td')[yearIdx].text)
             playerseasons.append((player_url, year))
