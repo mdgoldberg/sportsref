@@ -589,8 +589,8 @@ def addTeamFeatures(row):
     row['team_wp'] = row['home_wp'] if homeOnOff else 100. - row['home_wp']
     row['opp_wp'] = 100. - row['team_wp']
     # create columns for each team's WPA
-    row['team_wpa'] = row['home_wpa'] if homeOnOff else 100. - row['home_wpa']
-    row['opp_wpa'] = 100. - row['team_wpa']
+    row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
+    row['opp_wpa'] = -row['team_wpa']
     # create column for offense and defense scores if not already there
     bs = pfr.boxscores.BoxScore(row['bsID'])
     if bs.home() == row['team']:
