@@ -30,6 +30,7 @@ class BoxScore:
     def __hash__(self):
         return hash(self.bsID)
 
+    @pfr.decorators.memoized
     def getDoc(self):
         if self.doc:
             return self.doc
@@ -230,7 +231,9 @@ class BoxScore:
         pbp['home'] = self.home()
         pbp['away'] = self.away()
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
-        for col in ('teamScore', 'oppScore', 'pbp_score_hm', 'pbp_score_aw'):
+        for col in ('team_score', 'opp_score', 'pbp_score_hm', 'pbp_score_aw',
+                    'team_wp', 'opp_wp', 'home_wp',
+                    ):
             if col in pbp.columns:
                 pbp.loc[:, col] = pbp[col].shift(1)
         return pbp
