@@ -53,7 +53,12 @@ def cacheHTML(func):
             modtime = int(os.path.getmtime(fn))
             curtime = int(time.time())
 
-        def cacheValid(ct, mt):
+        def cacheValid(ct, mt, fn):
+            # first, if the filetype is a boxscore, then we're safe caching it
+            if any(kw in fn for kw in ('boxscore',)):
+                return True
+
+            # otherwise, check if it's currently the offseason
             today = datetime.date.today()
             endOfSeason = datetime.date(today.year, 2, 10)
             startOfSeason = datetime.date(today.year, 9, 1)
@@ -61,7 +66,7 @@ def cacheHTML(func):
             if endOfSeason < today < startOfSeason:
                 return True
 
-            # otherwise, check if new data could have been updated
+            # otherwise, check if new data could have been updated since mod
             # (assumed that new game data is added the day after that game)
             modDay = today - datetime.timedelta(seconds=ct-mt)
             lastGameDay = today
@@ -69,8 +74,8 @@ def cacheHTML(func):
                 lastGameDay = lastGameDay - datetime.timedelta(days=1)
             return modDay >= lastGameDay
 
-        # if file found and it's been <= a month, read from file
-        if os.path.isfile(fn) and cacheValid(curtime, modtime):
+        # if file found and caching is valid, read from file
+        if os.path.isfile(fn) and cacheValid(curtime, modtime, fn):
             with open(fn, 'r') as f:
                 text = f.read()
             return text
