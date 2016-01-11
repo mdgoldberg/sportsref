@@ -88,8 +88,11 @@ Options for the inputs:
 # clean up namespace
 del IOD, paramStr, optsStr
 
+from pfr.finders.PSF import PlayerSeasonFinder
+from pfr.finders.GPF import GamePlayFinder
+
 # modules/variables to expose
 __all__ = [
-    'PSF',
-    'GPF',
+    'PlayerSeasonFinder',
+    'GamePlayFinder',
 ]
