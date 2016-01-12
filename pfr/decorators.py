@@ -46,7 +46,7 @@ def cacheHTML(func):
         # TODO: fix this problem?
         if len(noPathFN) > 255:
             # filename is too long, just evaluate the function
-            return func(url).encode('ascii', 'replace')
+            return func(url).decode('utf-8', 'ignore')
         
         # set time variables (in seconds)
         if os.path.isfile(fn):
