@@ -122,7 +122,8 @@ class BoxScore:
         doc = self.getDoc()
         pretable = next(div for div in doc('div.table_heading').items()
                         if div('h2:contains("Starting Lineups")'))
-        tableCont = pretable.nextAll('div.table_container')[:2].items()
+        tableCont = pretable.nextAll('div.table_container')
+        tableCont = [tableCont.eq(0), tableCont.eq(1)]
         a, h = (tc('table.stats_table') for tc in tableCont)
         data = []
         for h, table in enumerate((a, h)):
