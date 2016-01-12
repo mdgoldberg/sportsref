@@ -31,9 +31,10 @@ def PlayerSeasonFinder(**kwargs):
         yearTh = table('thead tr[class=""] th[data-stat="year_id"]')[0]
         yearIdx = table('thead tr[class=""] th').index(yearTh)
         for row in table('tbody tr[class=""]').items():
-            player_url = row('a[href*="/players/"]').attr.href
+            relURL = row('a[href*="/players/"]').attr.href
+            playerID = pfr.utils.relURLToID(relURL)
             year = int(row('td')[yearIdx].text)
-            playerseasons.append((player_url, year))
+            playerseasons.append((playerID, year))
 
         if doc('*:contains("Next page")'):
             kwargs['offset'] += 100
