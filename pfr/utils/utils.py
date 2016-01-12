@@ -20,10 +20,12 @@ def getHTML(url):
 
     """
     K = 60*3 # K is length of next backoff (in seconds)
+    TOTAL_TIME = 0.4 # num of secs we we wait between last request & return
     html = None
     numTries = 0
     while not html and numTries < 10:
         numTries += 1
+        start = time.time()
         try:
             html = requests.get(url).content
         except requests.ConnectionError as e:
@@ -43,7 +45,11 @@ def getHTML(url):
             else:
                 # Some other error code
                 raise e
-    time.sleep(1.5)
+    timeOnRequest = time.time() - start
+    timeRemaining = int(1000*(TOTAL_TIME - timeOnRequest)) # in milliseconds
+    for _ in xrange(timeRemaining):
+        # wait one millisecond
+        time.sleep(0.001)
     return html
 
 @pfr.decorators.memoized
@@ -94,12 +100,9 @@ def relURLToID(url):
 def parseTable(table):
     """Parses a table from PFR into a pandas dataframe.
 
-    :table: the PyQuery, HtmlElement, or raw HTML of the table
+    :table: the PyQuery object representing the HTML table
     :returns: Pandas dataframe
     """
-    if not isinstance(table, pq):
-        table = pq(table)
-
     # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr[class=""] th[data-stat]')]
@@ -160,14 +163,10 @@ def flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns
     the result.
 
-    :td: the PQ object, HtmlElement, or string of raw HTML to convert
+    :td: the PyQuery object for the HTML to convert
     :returns: the string with the links flattened to IDs
 
     """
-    # ensure it's a PyQuery object
-    if not isinstance(td, pq):
-        td = pq(td)
-
     # if there's no text, just return None
     if not td.text():
         return None
