@@ -161,8 +161,8 @@ def getInputsOptionsDefaults():
     if os.path.isfile(CONSTANTS_FN):
         modtime = int(os.path.getmtime(CONSTANTS_FN))
         curtime = int(time.time())
-    # if file found and it's been <= a day
-    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 24*60*60:
+    # if file found and it's been <= a week
+    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 7*24*60*60:
 
         # just read the dict from the cached file
         with open(CONSTANTS_FN, 'r') as const_f:
