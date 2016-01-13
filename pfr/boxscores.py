@@ -22,7 +22,6 @@ class BoxScore:
         self.mainURL = urlparse.urljoin(
             pfr.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
         )
-        self.doc = None
 
     def __eq__(self, other):
         return self.bsID == other.bsID
@@ -32,11 +31,8 @@ class BoxScore:
 
     @pfr.decorators.memoized
     def getDoc(self):
-        if self.doc:
-            return self.doc
-        else:
-            self.doc = pq(pfr.utils.getHTML(self.mainURL))
-            return self.doc
+        doc = pq(pfr.utils.getHTML(self.mainURL))
+        return doc
 
     @pfr.decorators.memoized
     def date(self):

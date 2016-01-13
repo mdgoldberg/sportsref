@@ -43,28 +43,28 @@ class Team:
 
     def __init__(self, teamID):
         self.teamID = teamID
-        self.relURL = '/teams/{}'.format(self.teamID)
-        self.teamURL = urlparse.urljoin(pfr.BASE_URL, self.relURL)
-        self.teamYearURL = lambda yr: urlparse.urljoin(
+
+    def __eq__(self, other):
+        return (self.teamID == other.teamID)
+
+    def __hash__(self):
+        return hash(self.teamID)
+
+    @pfr.decorators.memoized
+    def teamYearURL(self, yr):
+        return urlparse.urljoin(
             pfr.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
-        self.mainDoc = None # will be filled in when necessary
-        self.yearDocs = {} # will be filled in as necessary
 
     @pfr.decorators.memoized
     def getMainDoc(self):
-        if self.mainDoc:
-            return self.mainDoc
-        else:
-            self.mainDoc = pq(self.teamURL)
-            return self.mainDoc
+        relURL = '/teams/{}'.format(self.teamID)
+        teamURL = urlparse.urljoin(pfr.BASE_URL, relURL)
+        mainDoc = pq(teamURL)
+        return mainDoc
 
     @pfr.decorators.memoized
     def getYearDoc(self, year=yr):
-        try:
-            return self.yearDocs[year]
-        except KeyError:
-            self.yearDocs[year] = pq(pfr.utils.getHTML(self.teamYearURL(year)))
-        return self.yearDocs[year]
+        return pq(pfr.utils.getHTML(self.teamYearURL(year)))
 
     @pfr.decorators.memoized
     def name(self):

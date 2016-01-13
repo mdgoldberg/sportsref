@@ -21,7 +21,6 @@ class Player:
         self.mainURL = urlparse.urljoin(
             pfr.BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
-        self.doc = None # filled in when necessary
 
     def __eq__(self, other):
         return self.pID == other.pID
@@ -31,23 +30,93 @@ class Player:
 
     @pfr.decorators.memoized
     def getDoc(self):
-        if self.doc:
-            return self.doc
-        else:
-            self.doc = pq(pfr.utils.getHTML(self.mainURL))
-            return self.doc
+        doc = pq(pfr.utils.getHTML(self.mainURL))
+        return doc
 
     @pfr.decorators.memoized
-    def age(self, year=yr):
+    def age(self, year=yr, month=9, day=1):
         doc = self.getDoc()
         span = doc('div#info_box span#necro-birth')
         birthstring = span.attr('data-birth')
         dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})', birthstring).groups()
         dateargs = map(int, dateargs)
-        birthdate = datetime.date(*dateargs)
-        delta = datetime.date(year=year, month=9, day=1) - birthdate
+        birthDate = datetime.date(*dateargs)
+        delta = datetime.date(year=year, month=month, day=day) - birthdate
         age = delta.days / 365.
         return age
+
+    @pfr.decorators.memoized
+    def position(self):
+        doc = self.getDoc()
+        rawText = (doc('div#info_box p')
+                   .filter(lambda i,e: 'Position' in e.text_content())
+                   .text())
+        rawPos = re.search(r'Position: (\S+)', rawText, re.I).group(1)
+        allPositions = rawPos.split('-')
+        # right now, returning just the primary position for those with
+        # multiple positions
+        return allPositions[0]
+
+    @pfr.decorators.memoized
+    def height(self):
+        doc = self.getDoc()
+        rawText = (doc('div#info_box p')
+                   .filter(lambda i,e: 'Position' in e.text_content())
+                   .text())
+        rawHeight = re.search(r'Height: (\S+)', rawText, re.I).group(1)
+        feet, inches = map(int, rawHeight.split('-'))
+        return feet*12 + inches
+
+    @pfr.decorators.memoized
+    def weight(self):
+        doc = self.getDoc()
+        rawText = (doc('div#info_box p')
+                   .filter(lambda i,e: 'Position' in e.text_content())
+                   .text())
+        rawWeight = re.search(r'Weight: (\S+)', rawText, re.I).group(1)
+        return int(rawWeight)
+
+    @pfr.decorators.memoized
+    def hand(self):
+        doc = self.getDoc()
+        rawText = (doc('div#info_box p')
+                   .filter(lambda i,e: 'Position' in e.text_content())
+                   .text())
+        rawHand = re.search(r'Throws: (\S+)', rawText, re.I).group(1)
+        return rawHand[0] # 'L' or 'R'
+
+    @pfr.decorators.memoized
+    def pick(self):
+        doc = self.getDoc()
+        rawDraft = doc('div#info_box > p:first').text()
+        m = re.search(r'Drafted .*? round \((\d+).*?overall\)', rawDraft, re.I)
+        # if not drafted or taken in supplemental draft, return NaN
+        if not m or 'Supplemental' in rawDraft:
+            return np.nan
+        else:
+            return int(m.group(1))
+
+    @pfr.decorators.memoized
+    def draftClass(self):
+        doc = self.getDoc()
+        rawDraft = doc('div#info_box > p:first').text()
+        m = re.search(r'Drafted.*?of the (\d{4}) NFL', rawDraft, re.I)
+        if not m:
+            return np.nan
+        else:
+            return int(m.group(1))
+
+    @pfr.decorators.memoized
+    def draftTeam(self):
+        doc = self.getDoc()
+        rawDraft = doc('div#info_box > p:first')
+        draftStr = pfr.utils.flattenLinks(rawDraft)
+        m = re.search(r'Drafted by the (\w{3})', draftStr)
+        if not m:
+            return np.nan
+        else:
+            return m.group(1)
+        
 
     @pfr.decorators.memoized
     def av(self, year=yr):
