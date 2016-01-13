@@ -68,16 +68,25 @@ def relURLToID(url):
     * years/...
     * coaches/...
     * officials/...
+    * schools/...
+    * schools/high_schools.cgi?id=...
+    * http://sports-reference.com/... (no unique ID returned)
 
     :returns: ID associated with the given relative URL.
     """
+    sportsReferenceRegex = re.compile(r'http://www\.sports-reference\.com/.*')
+    if sportsReferenceRegex.search(url):
+        return 'SRlink00'
+
     playerRegex = re.compile(r'/players/[A-Z]/(.+?)(?:/|\.html?)')
     boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')
     teamRegex = re.compile(r'/teams/(\w{3})/.*')
-    yearRegex = re.compile(r'/years/(\d{4})/')
+    yearRegex = re.compile(r'/years/(\d{4})(?:_AFL)?/.*')
     coachRegex = re.compile(r'/coaches/(.+?)\.html?')
     stadiumRegex = re.compile(r'/stadiums/(.+?)\.html?')
     refRegex = re.compile(r'/officials/(.+?r)\.html?')
+    collegeRegex = re.compile(r'/schools/(\S+?)/.*')
+    hsRegex = re.compile(r'/schools/high_schools\.cgi\?id=([^\&]+)')
 
     regexes = [
         playerRegex,
@@ -87,14 +96,16 @@ def relURLToID(url):
         coachRegex,
         stadiumRegex,
         refRegex,
+        collegeRegex,
+        hsRegex,
     ]
 
     for regex in regexes:
-        match = regex.match(url)
+        match = regex.search(url)
         if match:
             return match.group(1)
 
-    print 'WARNING. NO MATCH WAS FOUND FOR {}'.format(url)
+    print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
     return 'noIDer00'
 
 def parseTable(table):
