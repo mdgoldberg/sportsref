@@ -156,8 +156,8 @@ class BoxScore:
         doc = self.getDoc()
         giTable = doc('table#game_info')
         for tr in giTable('tr[class=""]').items():
-            td0, td1 = tr('td')
-            key = td0.text_content()
+            td0, td1 = tr('td').items()
+            key = td0.text()
             # keys to skip
             if key in ('Tickets'):
                 continue
@@ -165,11 +165,11 @@ class BoxScore:
             elif key == 'Stadium':
                 val = pfr.utils.flattenLinks(td1).strip()
             elif key == 'Attendance':
-                val = int(td1.text_content().replace(',',''))
+                val = int(td1.text().replace(',',''))
             elif key == 'Over/Under':
-                val = float(td1.text_content().split()[0])
+                val = float(td1.text().split()[0])
             elif key == 'Won Toss':
-                txt = td1.text_content()
+                txt = td1.text()
                 if 'deferred' in txt:
                     giDict['deferred'] = True
                     defIdx = txt.index('deferred')
@@ -186,7 +186,7 @@ class BoxScore:
                 continue
             # create datetime.time object for start time
             elif key == 'Start Time (ET)':
-                txt = td1.text_content()
+                txt = td1.text()
                 colon = txt.index(':')
                 hour = int(txt[:colon])
                 mins = int(txt[colon+1:colon+3])
@@ -195,20 +195,25 @@ class BoxScore:
                 continue
             # give duration in minutes
             elif key == 'Duration':
-                hrs, mins = td1.text_content().split(':')
+                hrs, mins = td1.text().split(':')
                 val = int(hrs)*60 + int(mins)
             elif key == 'Vegas Line':
-                favorite, line = re.match(r'(.+?) ([\-\.\d]+)',
-                                          td1.text_content()).groups()
-                line = float(line)
-                # given in terms of the home team
-                if favorite != pfr.teams.Team(self.home()).name():
-                    line = -line
-                giDict['line'] = line 
-                giDict['favorite'] = self.home() if line < 0 else self.away()
+                m = re.match(r'(.+?) ([\-\.\d]+)', td1.text())
+                if m:
+                    favorite, line = m.groups()
+                    line = float(line)
+                    # given in terms of the home team
+                    if favorite != pfr.teams.Team(self.home()).name():
+                        line = -line
+                    giDict['line'] = line 
+                    giDict['favorite'] = (self.home() if line < 0
+                                          else self.away())
+                else:
+                    giDict['line'] = 0
+                    giDict['favorite'] = self.home()
                 continue
             else:
-                val = td1.text_content().strip()
+                val = td1.text().strip()
             giDict[key] = val
 
         return giDict
@@ -246,8 +251,8 @@ class BoxScore:
         refDict = {}
         refTable = doc('table#ref_info')
         for tr in refTable('tr[class=""]').items():
-            td0, td1 = tr('td')
-            key = td0.text_content().lower()
+            td0, td1 = tr('td').items()
+            key = td0.text().lower()
             key = re.sub(r'\W', '_', key)
             val = pfr.utils.flattenLinks(td1)
             refDict[key] = val
