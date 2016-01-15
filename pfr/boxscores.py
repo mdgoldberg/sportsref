@@ -99,6 +99,34 @@ class BoxScore:
         return int(awayScore)
 
     @pfr.decorators.memoized
+    def week(self):
+        """Returns the week in which this game took place. 18 is WC round, 19
+        is Div round, 20 is CC round, 21 is SB.
+        :returns: Integer from 1 to 21.
+        """
+        doc = self.getDoc()
+        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
+        match = re.search(r'Week (\d+)', rawTxt)
+        if match:
+            return int(match.group(1))
+        else:
+            return 21 # super bowl is week 21
+
+    @pfr.decorators.memoized
+    def season(self):
+        """Returns the year ID of the season in which this game took place. Useful for week 17 January games.
+        :returns: An int representing the year of the season.
+        """
+        doc = self.getDoc()
+        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
+        match = re.search(r'Week \d+ (\d{4})', rawTxt)
+        if match:
+            return int(match.group(1))
+        else:
+            # super bowl happens in calendar year after the season's year
+            return self.date().year - 1 
+
+    @pfr.decorators.memoized
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
         from PFR. The columns are:
@@ -162,8 +190,6 @@ class BoxScore:
             if key in ('Tickets'):
                 continue
             # small adjustments
-            elif key == 'Stadium':
-                val = pfr.utils.flattenLinks(td1).strip()
             elif key == 'Attendance':
                 val = int(td1.text().replace(',',''))
             elif key == 'Over/Under':
@@ -213,7 +239,7 @@ class BoxScore:
                     giDict['favorite'] = self.home()
                 continue
             else:
-                val = td1.text().strip()
+                val = pfr.utils.flattenLinks(td1).strip()
             giDict[key] = val
 
         return giDict
@@ -232,6 +258,8 @@ class BoxScore:
         pbp['bsID'] = self.bsID
         pbp['home'] = self.home()
         pbp['away'] = self.away()
+        pbp['season'] = self.season()
+        pbp['week'] = self.week()
         pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
         for col in ('team_score', 'opp_score', 'pbp_score_hm', 'pbp_score_aw',
                     'team_wp', 'opp_wp', 'home_wp',
