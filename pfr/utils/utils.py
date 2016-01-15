@@ -86,7 +86,7 @@ def relURLToID(url):
     stadiumRegex = re.compile(r'/stadiums/(.+?)\.html?')
     refRegex = re.compile(r'/officials/(.+?r)\.html?')
     collegeRegex = re.compile(r'/schools/(\S+?)/.*')
-    hsRegex = re.compile(r'/schools/high_schools\.cgi\?id=([^\&]+)')
+    hsRegex = re.compile(r'/schools/high_schools\.cgi\?id=([^\&]{8})')
 
     regexes = [
         playerRegex,

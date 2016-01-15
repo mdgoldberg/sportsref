@@ -34,6 +34,12 @@ class Player:
         return doc
 
     @pfr.decorators.memoized
+    def name(self):
+        doc = self.getDoc()
+        name = doc('div#info_box h1:first').text()
+        return name
+
+    @pfr.decorators.memoized
     def age(self, year=yr, month=9, day=1):
         doc = self.getDoc()
         span = doc('div#info_box span#necro-birth')
@@ -60,10 +66,15 @@ class Player:
     @pfr.decorators.memoized
     def height(self):
         doc = self.getDoc()
-        rawText = (doc('div#info_box p')
-                   .filter(lambda i,e: 'Position' in e.text_content())
-                   .text())
-        rawHeight = re.search(r'Height: (\S+)', rawText, re.I).group(1)
+        try:
+            rawText = (doc('div#info_box p')
+                       .filter(
+                           lambda i,e: 'height:' in e.text_content().lower()
+                       ).text())
+            rawHeight = (re.search(r'Height: (\d\-\d{1,2})', rawText, re.I)
+                         .group(1))
+        except AttributeError:
+            return np.nan
         feet, inches = map(int, rawHeight.split('-'))
         return feet*12 + inches
 
@@ -71,7 +82,7 @@ class Player:
     def weight(self):
         doc = self.getDoc()
         rawText = (doc('div#info_box p')
-                   .filter(lambda i,e: 'Position' in e.text_content())
+                   .filter(lambda i,e: 'Weight:' in e.text_content())
                    .text())
         rawWeight = re.search(r'Weight: (\S+)', rawText, re.I).group(1)
         return int(rawWeight)
@@ -116,7 +127,22 @@ class Player:
             return np.nan
         else:
             return m.group(1)
-        
+
+    @pfr.decorators.memoized
+    def college(self):
+        doc = self.getDoc()
+        rawText = doc('div#info_box > p:first')
+        cleanedText = pfr.utils.flattenLinks(rawText)
+        college = re.search(r'College: (\S+)', cleanedText).group(1)
+        return college
+
+    @pfr.decorators.memoized
+    def highSchool(self):
+        doc = self.getDoc()
+        rawText = doc('div#info_box > p:first')
+        cleanedText = pfr.utils.flattenLinks(rawText)
+        hs = re.search(r'High School: (\S{8})', cleanedText).group(1)
+        return hs
 
     @pfr.decorators.memoized
     def av(self, year=yr):
