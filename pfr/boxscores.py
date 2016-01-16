@@ -245,28 +245,38 @@ class BoxScore:
         return giDict
 
     @pfr.decorators.memoized
-    def pbp(self, keepErrors=False):
+    def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
-
-        :keepErrors: See pfr.utils.expandDetails.
 
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
         doc = self.getDoc()
         table = doc('table#pbp_data')
         pbp = pfr.utils.parseTable(table)
+        # make the following features conveniently available on each row
         pbp['bsID'] = self.bsID
         pbp['home'] = self.home()
         pbp['away'] = self.away()
         pbp['season'] = self.season()
         pbp['week'] = self.week()
-        pbp = pfr.utils.expandDetails(pbp, keepErrors=keepErrors)
+        feats = pfr.utils.expandDetails(pbp).to_dict('records')
+
+        # add team and opp columns by iterating through rows
+        df = pd.DataFrame(pfr.utils.addTeamColumns(feats))
+        # fix WP NaN's & add WPA column (requires diff, can't be done row-wise)
+        df.home_wp.fillna(method='bfill', inplace=True)
+        df.ix[:, 'home_wpa'] = df.home_wp.diff()
+        # add team-related features to DataFrame
+        df = df.apply(pfr.utils.addTeamFeatures, axis=1)
+    
+        # lag relevant variables (e.g. score and WP variables)
+        # this way, all features represent the state before the play
         for col in ('team_score', 'opp_score', 'pbp_score_hm', 'pbp_score_aw',
                     'team_wp', 'opp_wp', 'home_wp',
                     ):
             if col in pbp.columns:
-                pbp.loc[:, col] = pbp[col].shift(1)
-        return pbp
+                df.loc[:, col] = df[col].shift(1)
+        return df
 
     @pfr.decorators.memoized
     def refInfo(self):

@@ -17,14 +17,12 @@ PASS_OPTS = {
     'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
 }
 
-def expandDetails(df, detailCol='detail', keepErrors=False):
+def expandDetails(df, detailCol='detail'):
     """Expands the details column of the given dataframe and returns the
     resulting DataFrame.
 
     :df: The input DataFrame.
     :detailCol: The detail column name.
-    :keepErrors: If True, leave in rows with unmatched play details; if False,
-    remove them from the resulting DataFrame.
     :returns: Returns DataFrame with new columns from pbp parsing.
     """
     df = copy.deepcopy(df)
@@ -42,17 +40,8 @@ def expandDetails(df, detailCol='detail', keepErrors=False):
     df.loc[:, 'isError'] = False
     df.loc[errors, 'isError'] = True
     # use cleanFeatures to clean up and add columns
-    features = df.apply(cleanFeatures, axis=1).to_dict('records')
-    # add team and opp columns by iterating through rows
-    df = pd.DataFrame(addTeamColumns(features))
-    # add WPA column (requires diff, so can't be done row-wise)
-    df.ix[:, 'home_wpa'] = df.home_wp.diff()
-    # add team-related features to DataFrame
-    df = df.apply(addTeamFeatures, axis=1)
-    # get rid of errors if requested, then return
-    if not keepErrors:
-        df = df.drop(errors).reset_index(drop=True)
-    return df
+    new_df = df.apply(cleanFeatures, axis=1)
+    return new_df
 
 @pfr.decorators.memoized
 def parsePlayDetails(details):
@@ -451,8 +440,6 @@ def cleanFeatures(struct):
     struct['isFumble'] = pd.notnull(struct.get('fumbler'))
     # create column for isPenalty
     struct['isPenalty'] = pd.notnull(struct.get('penalty'))
-    # create column for scoring plays
-    struct['isScoringPlay'] = struct['hasClass_is_scoring']
     # create columns for EPA
     struct['team_epa'] = struct['exp_pts_after'] - struct['exp_pts_before']
     struct['opp_epa'] = struct['exp_pts_before'] - struct['exp_pts_after']
@@ -483,12 +470,11 @@ def locToFeatures(l):
 def addTeamColumns(features):
     """Function that adds 'team' and 'opp' columns to the features by iterating
     through the rows in order. A precondition is that the features dicts are in
-    order in a continuous game sense.
+    order in a continuous game sense and that all rows are from the same game.
 
     :features: A list of dictionaries representing each play (in order).
     :returns: A list of new features with 'team' and 'opp' entries added in
     each.
-
     """
     curTm = curOpp = None
     playAfterKickoff = False
