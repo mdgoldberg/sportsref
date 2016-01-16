@@ -26,7 +26,7 @@ def expandDetails(df, detailCol='detail'):
     :returns: Returns DataFrame with new columns from pbp parsing.
     """
     df = copy.deepcopy(df)
-    df.loc[:, 'detail'] = df[detailCol]
+    df['detail'] = df[detailCol]
     dicts = map(pfr.utils.parsePlayDetails, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
@@ -37,7 +37,7 @@ def expandDetails(df, detailCol='detail'):
     df = pd.merge(df, details, left_index=True, right_index=True)
     # add isError column
     errors = [i for i, d in enumerate(dicts) if d is None]
-    df.loc[:, 'isError'] = False
+    df['isError'] = False
     df.loc[errors, 'isError'] = True
     # use cleanFeatures to clean up and add columns
     new_df = df.apply(cleanFeatures, axis=1)
@@ -347,11 +347,12 @@ def parsePlayDetails(details):
 def cleanFeatures(struct):
     """Cleans up the features collected in parsePlayDetails.
 
-    :struct: dict of features parsed from details string.
+    :struct: Pandas Series of features parsed from details string.
     :returns: the same dict, but with cleaner features (e.g., convert bools,
     ints, etc.)
     """
     # First, clean up existing variables on a one-off basis
+    struct = {k: v for k, v in struct.iteritems() if pd.notnull(v)}
     struct['callUpheld'] = struct.get('callUpheld') == 'upheld'
     struct['fgGood'] = struct.get('fgGood') == 'good'
     struct['isBlocked'] = struct.get('isBlocked') == 'blocked'
@@ -359,9 +360,9 @@ def cleanFeatures(struct):
     struct['isFairCatch'] = struct.get('isFairCatch') == 'fair catch'
     struct['isMuffedCatch'] = pd.notnull(struct.get('isMuffedCatch'))
     struct['isNoPlay'] = (' (no play)' in struct['detail']
-                          if struct['detail'] else False)
+                          if struct.get('detail') else False)
     struct['isOnside'] = struct.get('isOnside') == 'onside'
-    struct['isSack'] = pd.notnull(struct['sackYds'])
+    struct['isSack'] = pd.notnull(struct.get('sackYds'))
     struct['isSafety'] = struct.get('isSafety') == ', safety'
     struct['isTD'] = struct.get('isTD') == ', touchdown'
     struct['isTouchback'] = struct.get('isTouchback') == ', touchback'
@@ -425,7 +426,7 @@ def cleanFeatures(struct):
 
     # Third, create new helper variables based on parsed variables
     # creating fieldside and ydline from location
-    fieldside, ydline = locToFeatures(struct['location'])
+    fieldside, ydline = locToFeatures(struct.get('location'))
     struct['fieldside'] = fieldside
     struct['ydLine'] = ydline
     # creating secsElapsedInGame from qtr_time_remain and quarter
@@ -443,7 +444,7 @@ def cleanFeatures(struct):
     # create columns for EPA
     struct['team_epa'] = struct['exp_pts_after'] - struct['exp_pts_before']
     struct['opp_epa'] = struct['exp_pts_before'] - struct['exp_pts_after']
-    return struct
+    return pd.Series(struct)
 
 @pfr.decorators.memoized
 def locToFeatures(l):
@@ -539,7 +540,7 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
             player = pfr.players.Player(pID)
-            glog = player.gamelog()
+            glog = player.gamelog(kind='B')
             if 'bsID' in glog.columns:
                 narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
                 if not narrowed.empty:

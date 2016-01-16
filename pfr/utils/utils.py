@@ -114,6 +114,8 @@ def parseTable(table):
     :table: the PyQuery object representing the HTML table
     :returns: Pandas dataframe
     """
+    if not len(table):
+        return pd.DataFrame()
     # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr[class=""] th[data-stat]')]
@@ -135,7 +137,7 @@ def parseTable(table):
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
-        df.loc[:, 'hasClass_' + cls] = [
+        df['hasClass_' + cls] = [
             cls in row.attr['class'].split()
             for row in rows
         ]
@@ -147,9 +149,8 @@ def parseTable(table):
         del df['league_id']
 
     if 'year_id' in df.columns:
-        df = df.query('year_id != "AFL"')
-        df.loc[:, 'year_id'] = df.year_id.fillna(method='ffill')
-        df.loc[:, 'year_id'] = df.year_id.apply(lambda y: int(str(y)[:4]))
+        df['year_id'] = df.year_id.fillna(method='ffill')
+        df['year_id'] = df.year_id.astype(str).str[:4].astype(int)
         df.rename(columns={'year_id': 'year'}, inplace=True)
 
     # game_date -> bsID
