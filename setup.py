@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='pfr',
-      version='0.5.4',
+      version='0.5.5',
       description='Scraping data from pro-football-reference.com',
       url='https://github.com/mdgoldberg/pfr',
       author='Matt Goldberg',
