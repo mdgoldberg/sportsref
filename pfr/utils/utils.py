@@ -142,7 +142,6 @@ def parseTable(table):
     
     # small fixes to DataFrame
 
-    # team_index table (and others?) fix
     if 'year_id' in df.columns and 'league_id' in df.columns:
         df['year_id'] = df['league_id']
         del df['league_id']
@@ -151,10 +150,11 @@ def parseTable(table):
         df = df.query('year_id != "AFL"')
         df.loc[:, 'year_id'] = df.year_id.fillna(method='ffill')
         df.loc[:, 'year_id'] = df.year_id.apply(lambda y: int(str(y)[:4]))
+        df.rename(columns={'year_id': 'year'}, inplace=True)
 
     # game_date -> bsID
     if 'game_date' in df.columns:
-        df = df.rename(columns={'game_date': 'bsID'})
+        df.rename(columns={'game_date': 'bsID'}, inplace=True)
 
     # ignore * and + to note things
     df.replace(re.compile(r'[\*\+]'), '', inplace=True)

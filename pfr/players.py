@@ -156,7 +156,7 @@ class Player:
         # otherwise, extract the AV
         table = tables.eq(0)
         df = pfr.utils.parseTable(table)
-        df = df.query('year_id == @year')
+        df = df.query('year == @year')
         # if the player has an AV for that year, return it
         if not df.empty:
             return df['av'].iloc[0]
@@ -165,16 +165,28 @@ class Player:
             return np.nan
 
     @pfr.decorators.memoized
-    def gamelog(self):
+    def gamelog(self, kind='B', year=None):
         """Gets the career gamelog of the given player.
+        :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
+        Case-insensitive; defaults to 'B'.
+        :year: The year for which the gamelog should be returned; if None,
+        return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
+        kind = kind.upper()
+        if kind == 'B':
+            reg = self.gamelog(kind='R', year=year)
+            poff = self.gamelog(kind='P', year=year)
+            both = pd.concat((reg, poff))
+            return both
         url = urlparse.urljoin(
             pfr.BASE_URL, '/players/{0[0]}/{0}/gamelog'
         ).format(self.pID)
         doc = pq(pfr.utils.getHTML(url))
-        table = doc('#stats')
+        table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
         df = pfr.utils.parseTable(table)
+        if year is not None:
+            df = df.query('year == @year')
         return df
 
     @pfr.decorators.memoized
