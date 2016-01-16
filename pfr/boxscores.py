@@ -265,7 +265,7 @@ class BoxScore:
         df = pd.DataFrame(pfr.utils.addTeamColumns(feats))
         # fix WP NaN's & add WPA column (requires diff, can't be done row-wise)
         df.home_wp.fillna(method='bfill', inplace=True)
-        df.ix[:, 'home_wpa'] = df.home_wp.diff()
+        df['home_wpa'] = df.home_wp.diff()
         # add team-related features to DataFrame
         df = df.apply(pfr.utils.addTeamFeatures, axis=1)
     
@@ -275,7 +275,7 @@ class BoxScore:
                     'team_wp', 'opp_wp', 'home_wp',
                     ):
             if col in pbp.columns:
-                df.loc[:, col] = df[col].shift(1)
+                df[col] = df[col].shift(1)
         return df
 
     @pfr.decorators.memoized
@@ -308,7 +308,7 @@ class BoxScore:
         for tID in tableIDs:
             table = doc('#{}'.format(tID))
             dfs.append(pfr.utils.parseTable(table))
-        df = pd.concat(dfs)
+        df = pd.concat(dfs, ignore_index=True)
         df = df.reset_index(drop=True)
         df['team'] = df['team'].str.lower()
         return df

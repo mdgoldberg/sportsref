@@ -39,8 +39,8 @@ def GamePlayFinder(**kwargs):
     # parse score column
     if 'score' in plays.columns:
         oScore, dScore = zip(*plays.score.apply(lambda s: s.split('-')))
-        plays.loc[:, 'teamScore'] = oScore
-        plays.loc[:, 'oppScore'] = dScore
+        plays['teamScore'] = oScore
+        plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
         plays = pfr.utils.expandDetails(plays, detailCol='description')
