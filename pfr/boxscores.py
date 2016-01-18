@@ -169,32 +169,35 @@ class BoxScore:
 
     @pfr.decorators.memoized
     def gameInfo(self):
-        """Gets a dictionary of basic information about the game.
+        """Gets a dictionary of basic information about the game. Note: line
+        is given in terms of the home team (if the home team is favored, the
+        line will be negative).
         :returns: Dictionary of game information.
 
         """
         # starting values
         giDict = {
             'home': self.home(),
-            'homeScore': self.homeScore(),
+            'home_score': self.homeScore(),
             'away': self.away(),
-            'awayScore': self.awayScore(),
+            'away_score': self.awayScore(),
             'weekday': self.weekday(),
         }
         doc = self.getDoc()
         giTable = doc('table#game_info')
         for tr in giTable('tr[class=""]').items():
             td0, td1 = tr('td').items()
-            key = td0.text()
+            key = td0.text().lower()
+            key = re.sub(r'\W+', '_', key).strip('_')
             # keys to skip
-            if key in ('Tickets'):
+            if key in ['tickets']:
                 continue
-            # small adjustments
-            elif key == 'Attendance':
+            # adjustments
+            elif key == 'attendance':
                 val = int(td1.text().replace(',',''))
-            elif key == 'Over/Under':
+            elif key == 'over_under':
                 val = float(td1.text().split()[0])
-            elif key == 'Won Toss':
+            elif key == 'won_toss':
                 txt = td1.text()
                 if 'deferred' in txt:
                     giDict['deferred'] = True
@@ -205,44 +208,47 @@ class BoxScore:
                     tm = txt
 
                 if tm in pfr.teams.Team(self.home()).name():
-                    giDict['wonToss'] = self.home()
+                    val = self.home()
                 else:
-                    giDict['wonToss'] = self.away()
+                    val = self.away()
 
-                continue
             # create datetime.time object for start time
-            elif key == 'Start Time (ET)':
+            elif key == 'start_time_et':
                 txt = td1.text()
                 colon = txt.index(':')
                 hour = int(txt[:colon])
                 mins = int(txt[colon+1:colon+3])
-                hour += (0 if txt[colon+3] == 'a' else 12)
-                giDict['startTimeET'] = datetime.time(hour=hour, minute=mins)
-                continue
+                hour += (0 if txt[colon+3] == 'a' or hour == 12 else 12)
+                val = datetime.time(hour=hour, minute=mins)
             # give duration in minutes
-            elif key == 'Duration':
+            elif key == 'duration':
                 hrs, mins = td1.text().split(':')
                 val = int(hrs)*60 + int(mins)
-            elif key == 'Vegas Line':
-                m = re.match(r'(.+?) ([\-\.\d]+)', td1.text())
-                if m:
-                    favorite, line = m.groups()
-                    line = float(line)
-                    # given in terms of the home team
-                    if favorite != pfr.teams.Team(self.home()).name():
-                        line = -line
-                    giDict['line'] = line 
-                    giDict['favorite'] = (self.home() if line < 0
-                                          else self.away())
-                else:
-                    giDict['line'] = 0
-                    giDict['favorite'] = self.home()
-                continue
+            elif key == 'vegas_line':
+                key = 'line'
+                val = self.line()
             else:
                 val = pfr.utils.flattenLinks(td1).strip()
             giDict[key] = val
 
         return giDict
+
+    @pfr.decorators.memoized
+    def line(self):
+        doc = self.getDoc()
+        table = doc('table#game_info tr')
+        tr = table.filter(lambda i: 'Vegas Line' in this.text_content())
+        td0, td1 = tr('td').items()
+        m = re.match(r'(.+?) ([\-\.\d]+)', td1.text())
+        if m:
+            favorite, line = m.groups()
+            line = float(line)
+            # give in terms of the home team
+            if favorite != pfr.teams.Team(self.home()).name():
+                line = -line
+        else:
+            line = 0
+        return line
 
     @pfr.decorators.memoized
     def pbp(self):
@@ -264,18 +270,18 @@ class BoxScore:
         # add team and opp columns by iterating through rows
         df = pd.DataFrame(pfr.utils.addTeamColumns(feats))
         # fix WP NaN's & add WPA column (requires diff, can't be done row-wise)
-        df.home_wp.fillna(method='bfill', inplace=True)
+        # TODO: fix problem when home_wp is null (just compute myself)
+        df.ix[df.isXP | df.isKickoff, 'home_wp'] = np.nan
+        df.home_wp.fillna(method='ffill', inplace=True)
         df['home_wpa'] = df.home_wp.diff()
+        # lag score columns
+        for col in ('home_wp', 'pbp_score_hm', 'pbp_score_aw'):
+            if col in df.columns:
+                df[col] = df[col].shift(1)
+                df.ix[0, col] = 0
         # add team-related features to DataFrame
         df = df.apply(pfr.utils.addTeamFeatures, axis=1)
-    
-        # lag relevant variables (e.g. score and WP variables)
-        # this way, all features represent the state before the play
-        for col in ('team_score', 'opp_score', 'pbp_score_hm', 'pbp_score_aw',
-                    'team_wp', 'opp_wp', 'home_wp',
-                    ):
-            if col in pbp.columns:
-                df[col] = df[col].shift(1)
+
         return df
 
     @pfr.decorators.memoized
