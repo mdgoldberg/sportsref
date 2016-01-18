@@ -14,6 +14,7 @@ __all__ = [
 
 yr = datetime.datetime.now().year
 
+@pfr.decorators.memoized
 class Player:
 
     def __init__(self, playerID):

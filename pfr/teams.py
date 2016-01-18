@@ -39,6 +39,7 @@ def teamIDs():
 def listTeams():
     return teamNames().keys()
 
+@pfr.decorators.memoized
 class Team:
 
     def __init__(self, teamID):

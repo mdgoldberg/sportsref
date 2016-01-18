@@ -15,6 +15,7 @@ __all__ = [
 
 yr = datetime.datetime.now().year
 
+@pfr.decorators.memoized
 class BoxScore:
 
     def __init__(self, bsID):
