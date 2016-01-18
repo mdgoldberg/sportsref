@@ -82,7 +82,7 @@ def cacheHTML(func):
             return text
         # otherwise, download html and cache it
         else:
-            text = func(url)#.encode('ascii', 'replace')
+            text = func(url)
             with open(fn, 'w+') as f:
                 f.write(text)
             return text
