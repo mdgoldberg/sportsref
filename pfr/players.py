@@ -158,6 +158,7 @@ class Player:
         df = pfr.utils.parseTable(table)
         df = df.query('year == @year')
         # if the player has an AV for that year, return it
+        # TODO: does this work when player played on two teams? how?
         if not df.empty:
             return df['av'].iloc[0]
         # otherwise, return NaN
@@ -165,20 +166,15 @@ class Player:
             return np.nan
 
     @pfr.decorators.memoized
-    def gamelog(self, kind='B', year=None):
+    @pfr.decorators.kindRPB
+    def gamelog(self, kind='R', year=None):
         """Gets the career gamelog of the given player.
         :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
-        Case-insensitive; defaults to 'B'.
+        Case-insensitive; defaults to 'R'.
         :year: The year for which the gamelog should be returned; if None,
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        kind = kind.upper()
-        if kind == 'B':
-            reg = self.gamelog(kind='R', year=year)
-            poff = self.gamelog(kind='P', year=year)
-            both = pd.concat((reg, poff))
-            return both
         url = urlparse.urljoin(
             pfr.BASE_URL, '/players/{0[0]}/{0}/gamelog'
         ).format(self.pID)
@@ -190,9 +186,15 @@ class Player:
         return df
 
     @pfr.decorators.memoized
-    def passing(self):
+    @pfr.decorators.kindRPB
+    def passing(self, kind='R'):
+        """Gets yearly passing stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with passing stats.
+        """
         doc = self.getDoc()
-        table = doc('#passing')
+        table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
         df = pfr.utils.parseTable(table)
         return df
 
