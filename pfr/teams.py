@@ -11,6 +11,7 @@ import pfr
 
 __all__ = [
     'teamNames',
+    'teamIDs',
     'listTeams',
     'Team',
 ]
@@ -60,7 +61,7 @@ class Team:
     def getMainDoc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = urlparse.urljoin(pfr.BASE_URL, relURL)
-        mainDoc = pq(teamURL)
+        mainDoc = pq(pfr.utils.getHTML(teamURL))
         return mainDoc
 
     @pfr.decorators.memoized
