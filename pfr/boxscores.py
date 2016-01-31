@@ -100,6 +100,19 @@ class BoxScore:
         return int(awayScore)
 
     @pfr.decorators.memoized
+    def winner(self):
+        """Returns the team ID of the winning team. Returns NaN if a tie.
+        """
+        hmScore = self.homeScore()
+        awScore = self.awayScore()
+        if hmScore > awScore:
+            return self.home()
+        elif hmScore < awScore:
+            return self.away()
+        else:
+            return np.nan
+
+    @pfr.decorators.memoized
     def week(self):
         """Returns the week in which this game took place. 18 is WC round, 19
         is Div round, 20 is CC round, 21 is SB.
