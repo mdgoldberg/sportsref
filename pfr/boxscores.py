@@ -283,18 +283,31 @@ class BoxScore:
 
         # add team and opp columns by iterating through rows
         df = pd.DataFrame(pfr.utils.addTeamColumns(feats))
-        # fix WP NaN's & add WPA column (requires diff, can't be done row-wise)
-        # TODO: fix problem when home_wp is null (just compute myself)
-        df.ix[df.isXP | df.isKickoff, 'home_wp'] = np.nan
-        df.home_wp.fillna(method='ffill', inplace=True)
+        # add WPA column (requires diff, can't be done row-wise)
         df['home_wpa'] = df.home_wp.diff()
-        # lag score columns
+        # lag score columns, fill in 0-0 to start
         for col in ('home_wp', 'pbp_score_hm', 'pbp_score_aw'):
             if col in df.columns:
                 df[col] = df[col].shift(1)
-                df.ix[0, col] = 0
+        df.ix[0, ['pbp_score_hm', 'pbp_score_aw']] = 0
+        # fill in WP NaN's
+        df.home_wp.fillna(method='ffill', inplace=True)
+        firstPlaysOfGame = df[df.secsElapsed == 0].index
+        for i in firstPlaysOfGame:
+            bsID = df.ix[i, 'bsID']
+            line = pfr.boxscores.BoxScore(bsID).line()
+            df.ix[i, 'home_wp'] = pfr.utils.initialWinProb(line)
         # add team-related features to DataFrame
         df = df.apply(pfr.utils.addTeamFeatures, axis=1)
+        df['home_wp2'] = df.apply(
+            lambda r: pfr.utils.winProb(
+                pfr.boxscores.BoxScore(r.bsID).line(),
+                r.pbp_score_hm - r.pbp_score_aw,
+                r.secsElapsed,
+                r.exp_pts_before * (1 if r.team == r.home else -1)
+            ),
+            axis=1
+        )
 
         return df
 
