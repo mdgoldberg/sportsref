@@ -41,6 +41,10 @@ def expandDetails(df, detailCol='detail'):
     df.loc[errors, 'isError'] = True
     # fill in some NaN's necessary for cleanFeatures
     df.qtr_time_remain.fillna(method='bfill', inplace=True)
+    df.qtr_time_remain.fillna(
+        df.quarter.apply(lambda q: '0:00' if q == 4 else '15:00'),
+        inplace=True
+    )
     # use cleanFeatures to clean up and add columns
     new_df = df.apply(cleanFeatures, axis=1)
     return new_df
@@ -374,6 +378,8 @@ def cleanFeatures(struct):
     if pd.notnull(struct['isPass']):
         pyds = struct['passYds']
         struct['passYds'] = pyds if pd.notnull(pyds) else 0
+    if pd.notnull(struct['penalty']):
+        struct['penalty'] = struct['penalty'].strip()
     struct['penDeclined'] = struct.get('penDeclined') == 'Declined'
     if struct['quarter'] == 'OT': struct['quarter'] = 5
     struct['rushDir'] = RUSH_OPTS.get(struct.get('rushDir'), np.nan)
@@ -438,13 +444,11 @@ def cleanFeatures(struct):
         fieldSide, ydline = locToFeatures(struct.get('location'))
         struct['fieldSide'] = fieldSide
         struct['ydLine'] = ydline
-    # creating secsElapsedInGame from qtr_time_remain and quarter
+    # creating secsElapsed (in entire game) from qtr_time_remain and quarter
     if pd.notnull(struct.get('qtr_time_remain')):
         qtr = struct['quarter']
         mins, secs = map(int, struct['qtr_time_remain'].split(':'))
-        struct['secsElapsedInGame'] = qtr*900 - mins*60 - secs
-    else:
-        struct['secsElapsedInGame'] = np.nan
+        struct['secsElapsed'] = qtr*900 - mins*60 - secs
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
     struct['isFumble'] = pd.notnull(struct.get('fumbler'))
