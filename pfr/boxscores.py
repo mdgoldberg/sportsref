@@ -253,12 +253,12 @@ class BoxScore:
         table = doc('table#game_info tr')
         tr = table.filter(lambda i: 'Vegas Line' in this.text_content())
         td0, td1 = tr('td').items()
-        m = re.match(r'(.+?) ([\-\.\d]+)', td1.text())
+        m = re.match(r'(.+?) ([\-\.\d]+)$', td1.text())
         if m:
             favorite, line = m.groups()
             line = float(line)
             # give in terms of the home team
-            if favorite != pfr.teams.Team(self.home()).name():
+            if favorite != pfr.teams.teamNames()[self.home()]:
                 line = -line
         else:
             line = 0
