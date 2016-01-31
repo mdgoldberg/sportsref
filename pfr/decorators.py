@@ -2,6 +2,7 @@ import collections
 import datetime
 import functools
 import os
+import re
 import time
 import urlparse
 
@@ -55,9 +56,17 @@ def cacheHTML(func):
             curtime = int(time.time())
 
         def cacheValid(ct, mt, fn):
-            # first, if the filetype is a boxscore, then we're safe caching it
-            if any(kw in fn for kw in ('boxscore',)):
+            # first, if we can ensure that the file won't change,
+            # then we're safe caching it
+            if 'boxscore' in fn:
                 return True
+            m = re.search(r'(\d{4})', fn)
+            if m:
+                year = int(m.group(1))
+                now = datetime.datetime.now()
+                curSeason = now.year - (1 if now.month <= 2 else 0)
+                if year < curSeason:
+                    return True
 
             # otherwise, check if it's currently the offseason
             today = datetime.date.today()
