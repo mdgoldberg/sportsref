@@ -40,9 +40,10 @@ def expandDetails(df, detailCol='detail'):
     df['isError'] = False
     df.loc[errors, 'isError'] = True
     # fill in some NaN's necessary for cleanFeatures
+    df.ix[0, 'qtr_time_remain'] = '15:00'
     df.qtr_time_remain.fillna(method='bfill', inplace=True)
     df.qtr_time_remain.fillna(
-        df.quarter.apply(lambda q: '0:00' if q == 4 else '15:00'),
+        pd.Series(np.where(df.quarter == 4, '0:00', '15:00')),
         inplace=True
     )
     # use cleanFeatures to clean up and add columns
@@ -54,6 +55,7 @@ def parsePlayDetails(details):
     """Parses play details from play-by-play string and returns structured
     data.
     
+    :details: detail string for play
     :returns: dictionary of play attributes
     """
 
@@ -351,6 +353,7 @@ def parsePlayDetails(details):
     
     return None
         
+@pfr.decorators.memoized
 def cleanFeatures(struct):
     """Cleans up the features collected in parsePlayDetails.
 
@@ -513,6 +516,7 @@ def addTeamColumns(features):
 
     return features
 
+@pfr.decorators.memoized
 def teamAndOpp(struct, curTm=None, curOpp=None):
     """Given a dict representing a play and the current team with the ball,
     returns (team, opp) where team is the team with the ball and opp is the
