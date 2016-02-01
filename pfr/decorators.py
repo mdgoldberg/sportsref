@@ -7,6 +7,7 @@ import time
 import urlparse
 
 import appdirs
+import numpy as np
 import pandas as pd
 
 def switchToDir(dirPath):
@@ -102,8 +103,30 @@ def memoized(fun):
     """A simple memoize decorator."""
     @functools.wraps(fun)
     def wrapper(*args, **kwargs):
-        # TODO: deal with dicts in args
-        key = (args, frozenset(sorted(kwargs.items())))
+
+        # deal with lists in args
+        isList = lambda a: isinstance(a, list) or isinstance(a, np.ndarray)
+        def deListify(arg):
+            if isList(arg):
+                return tuple(map(deListify, arg))
+            else:
+                return arg
+
+        # deal with dicts in args
+        isDict = lambda d: isinstance(d, dict) or isinstance(d, pd.Series)
+        def deDictify(arg):
+            if isDict(arg):
+                items = dict(arg).items()
+                items = [(k, deListify(deDictify(v))) for k, v in items]
+                return frozenset(sorted(items))
+            else:
+                return arg
+        
+        clean_args = tuple(map(deListify, args))
+        clean_args = tuple(map(deDictify, clean_args))
+        clean_kwargs = deDictify(kwargs)
+
+        key = (clean_args, clean_kwargs)
         try:
             ret = cache[key]
             return ret
