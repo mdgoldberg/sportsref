@@ -292,22 +292,31 @@ class BoxScore:
         df.ix[0, ['pbp_score_hm', 'pbp_score_aw']] = 0
         # fill in WP NaN's
         df.home_wp.fillna(method='ffill', inplace=True)
+        # fix first play border after diffing/shifting for WP and WPA
         firstPlaysOfGame = df[df.secsElapsed == 0].index
+        line = self.line()
         for i in firstPlaysOfGame:
-            bsID = df.ix[i, 'bsID']
-            line = pfr.boxscores.BoxScore(bsID).line()
-            df.ix[i, 'home_wp'] = pfr.utils.initialWinProb(line)
+            initwp = pfr.utils.initialWinProb(line)
+            df.ix[i, 'home_wp'] = initwp
+            df.ix[i, 'home_wpa'] = df.ix[i+1, 'home_wp'] - initwp
+        # fix last play border after diffing/shifting for WP and WPA
+        lastPlayIdx = df.iloc[-1].name
+        lastPlayWP = df.ix[lastPlayIdx, 'home_wp']
+        # if a tie, final WP is 50%; otherwise, determined by winner
+        winner = self.winner()
+        finalWP = 50. if pd.isnull(winner) else (winner == self.home()) * 100.
+        df.ix[lastPlayIdx, 'home_wpa'] = finalWP - lastPlayWP
+        # fix WPA for timeouts and plays after timeouts
+        timeouts = df[df.isTimeout].index
+        for to in timeouts:
+            df.ix[to, 'home_wpa'] = 0.
+            if to + 2 in df.index:
+                wpa = df.ix[to+2, 'home_wp'] - df.ix[to+1, 'home_wp']
+            else:
+                wpa = finalWP - df.ix[to+1, 'home_wp']
+            df.ix[to+1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
         df = df.apply(pfr.utils.addTeamFeatures, axis=1)
-        df['home_wp2'] = df.apply(
-            lambda r: pfr.utils.winProb(
-                pfr.boxscores.BoxScore(r.bsID).line(),
-                r.pbp_score_hm - r.pbp_score_aw,
-                r.secsElapsed,
-                r.exp_pts_before * (1 if r.team == r.home else -1)
-            ),
-            axis=1
-        )
 
         return df
 
