@@ -60,7 +60,6 @@ target/
 **/.DS_Store
 **/*.swp
 **/*.json
-**/TODO
 **/.R*
 **/*.csv
 **/*test*.py
