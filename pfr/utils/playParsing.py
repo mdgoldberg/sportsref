@@ -585,6 +585,7 @@ def addTeamFeatures(row):
     # create column for distToGoal
     row['distToGoal'] = (row['ydLine'] if row['team'] != row['fieldSide']
                          else 100 - row['ydLine'])
+    row['distToGoal'] = 2 if row.isXP or row.isTwoPoint else row['distToGoal']
     # create column for each team's WP
     row['team_wp'] = row['home_wp'] if homeOnOff else 100. - row['home_wp']
     row['opp_wp'] = 100. - row['team_wp']

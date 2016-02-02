@@ -317,6 +317,9 @@ class BoxScore:
             df.ix[to+1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
         df = df.apply(pfr.utils.addTeamFeatures, axis=1)
+        # fill distToGoal NaN's
+        df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
+        df.distToGoal.fillna(method='bfill', inplace=True)
 
         return df
 
