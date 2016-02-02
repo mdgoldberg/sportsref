@@ -489,10 +489,10 @@ def addTeamColumns(features):
     through the rows in order. A precondition is that the features dicts are in
     order in a continuous game sense and that all rows are from the same game.
 
-    :features: A list of dictionaries representing each play (in order).
-    :returns: A list of new features with 'team' and 'opp' entries added in
-    each.
+    :features: A DataFrame with each row representing each play (in order).
+    :returns: A similar DataFrame but with 'team' and 'opp' columns added.
     """
+    features = features.to_dict('records')
     curTm = curOpp = None
     playAfterKickoff = False
     # fill in team and opp columns
@@ -507,13 +507,9 @@ def addTeamColumns(features):
         # set playAfterKickoff
         playAfterKickoff = row['isKickoff']
 
-    # own backfill for nan's
-    for row in reversed(features):
-        if pd.isnull(row['team']):
-            row['team'], row['opp'] = curTm, curOpp
-        else:
-            curTm, curOpp = row['team'], row['opp']
-
+    features = pd.DataFrame(features)
+    features.team.fillna(method='bfill', inplace=True)
+    features.opp.fillna(method='bfill', inplace=True)
     return features
 
 @pfr.decorators.memoized

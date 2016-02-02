@@ -279,10 +279,10 @@ class BoxScore:
         pbp['away'] = self.away()
         pbp['season'] = self.season()
         pbp['week'] = self.week()
-        feats = pfr.utils.expandDetails(pbp).to_dict('records')
+        feats = pfr.utils.expandDetails(pbp)
 
         # add team and opp columns by iterating through rows
-        df = pd.DataFrame(pfr.utils.addTeamColumns(feats))
+        df = pfr.utils.addTeamColumns(feats)
         # add WPA column (requires diff, can't be done row-wise)
         df['home_wpa'] = df.home_wp.diff()
         # lag score columns, fill in 0-0 to start
