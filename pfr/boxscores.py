@@ -225,7 +225,6 @@ class BoxScore:
                     val = self.home()
                 else:
                     val = self.away()
-
             # create datetime.time object for start time
             elif key == 'start_time_et':
                 txt = td1.text()
@@ -241,6 +240,8 @@ class BoxScore:
             elif key == 'vegas_line':
                 key = 'line'
                 val = self.line()
+            elif key == 'weather':
+                val = self.weather()
             else:
                 val = pfr.utils.flattenLinks(td1).strip()
             giDict[key] = val
@@ -263,6 +264,25 @@ class BoxScore:
         else:
             line = 0
         return line
+
+    @pfr.decorators.memoized
+    def weather(self):
+        """Returns a dictionary of weather-related info.
+
+        :returns: Dict of weather data.
+        """
+        doc = self.getDoc()
+        table = doc('table#game_info tr')
+        tr = table.filter(lambda i: 'Weather' in this.text_content())
+        td0, td1 = tr('td').items()
+        regex = (
+            r'(?:(?P<temp>\-?\d+) degrees )?'
+            r'(?:relative humidity (?P<relHumid>\d+)%, )?'
+            r'(?:wind (?P<windMPH>\d+) mph, )?'
+            r'(?:wind chill (?P<windChill>\-?\d+))?'
+        )
+        m = re.match(regex, td1.text())
+        return {k: int(v) for k, v in m.groupdict().iteritems()}
 
     @pfr.decorators.memoized
     def pbp(self):
