@@ -269,11 +269,13 @@ class BoxScore:
     def weather(self):
         """Returns a dictionary of weather-related info.
 
-        :returns: Dict of weather data.
+        :returns: Dict of weather data; None if weather data not available.
         """
         doc = self.getDoc()
         table = doc('table#game_info tr')
         tr = table.filter(lambda i: 'Weather' in this.text_content())
+        if len(tr) != 2:
+            return None
         td0, td1 = tr('td').items()
         regex = (
             r'(?:(?P<temp>\-?\d+) degrees )?'
