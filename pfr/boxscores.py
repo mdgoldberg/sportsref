@@ -282,7 +282,20 @@ class BoxScore:
             r'(?:wind chill (?P<windChill>\-?\d+))?'
         )
         m = re.match(regex, td1.text())
-        return {k: int(v) for k, v in m.groupdict().iteritems()}
+        d = m.groupdict()
+
+        # cast values to int
+        for k in d:
+            try:
+                d[k] = int(d[k])
+            except TypeError:
+                pass
+
+        # one-off fixes
+        d['windChill'] = (d['windChill'] if pd.notnull(d['windChill'])
+                          else d['temp'])
+        d['windMPH'] = d['windMPH'] if pd.notnull(d['windMPH']) else 0
+        return d
 
     @pfr.decorators.memoized
     def pbp(self):
