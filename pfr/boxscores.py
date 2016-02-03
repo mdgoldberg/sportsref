@@ -274,7 +274,7 @@ class BoxScore:
         doc = self.getDoc()
         table = doc('table#game_info tr')
         tr = table.filter(lambda i: 'Weather' in this.text_content())
-        if len(tr) != 2:
+        if len(tr) == 0:
             return None
         td0, td1 = tr('td').items()
         regex = (
