@@ -510,6 +510,9 @@ def addTeamColumns(features):
     features = pd.DataFrame(features)
     features.team.fillna(method='bfill', inplace=True)
     features.opp.fillna(method='bfill', inplace=True)
+    # ffill for last row
+    features.team.fillna(method='ffill', inplace=True)
+    features.opp.fillna(method='ffill', inplace=True)
     return features
 
 @pfr.decorators.memoized
