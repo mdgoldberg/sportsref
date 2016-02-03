@@ -196,6 +196,8 @@ class BoxScore:
             'away': self.away(),
             'away_score': self.awayScore(),
             'weekday': self.weekday(),
+            'line': self.line(),
+            'weather': self.weather()
         }
         doc = self.getDoc()
         giTable = doc('table#game_info')
@@ -237,11 +239,9 @@ class BoxScore:
             elif key == 'duration':
                 hrs, mins = td1.text().split(':')
                 val = int(hrs)*60 + int(mins)
-            elif key == 'vegas_line':
-                key = 'line'
-                val = self.line()
-            elif key == 'weather':
-                val = self.weather()
+            # keys to skip since they're already added
+            elif key in ('vegas_line', 'weather'):
+                continue
             else:
                 val = pfr.utils.flattenLinks(td1).strip()
             giDict[key] = val
@@ -275,7 +275,11 @@ class BoxScore:
         table = doc('table#game_info tr')
         tr = table.filter(lambda i: 'Weather' in this.text_content())
         if len(tr) == 0:
-            return None
+            # no weather because it's a dome
+            # TODO: what's relative humidity in a dome?
+            return {
+                'temp': 70, 'windChill': 70, 'relHumid': None, 'windMPH': 0
+            }
         td0, td1 = tr('td').items()
         regex = (
             r'(?:(?P<temp>\-?\d+) degrees )?'
