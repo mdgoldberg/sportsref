@@ -320,6 +320,7 @@ class BoxScore:
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)
+        df.distToGoal.fillna(method='ffill', inplace=True) # for last play of game
 
         return df
 
