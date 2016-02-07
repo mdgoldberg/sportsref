@@ -369,11 +369,15 @@ def cleanFeatures(struct):
     struct['isComplete'] = struct.get('isComplete') == 'complete'
     struct['isFairCatch'] = struct.get('isFairCatch') == 'fair catch'
     struct['isMuffedCatch'] = pd.notnull(struct.get('isMuffedCatch'))
-    struct['isNoPlay'] = (' (no play)' in struct['detail']
-                          if struct.get('detail') else False)
+    struct['isNoPlay'] = (
+        ' (no play)' in struct['detail'] and
+        'penalty enforced in end zone' not in struct['detail']
+        if struct.get('detail') else False)
     struct['isOnside'] = struct.get('isOnside') == 'onside'
     struct['isSack'] = pd.notnull(struct.get('sackYds'))
-    struct['isSafety'] = struct.get('isSafety') == ', safety'
+    struct['isSafety'] = (struct.get('isSafety') == ', safety' or
+                          (struct.get('detail') and
+                          'enforced in end zone, safety' in struct['detail']))
     struct['isTD'] = struct.get('isTD') == ', touchdown'
     struct['isTouchback'] = struct.get('isTouchback') == ', touchback'
     struct['oob'] = pd.notnull(struct.get('oob'))
