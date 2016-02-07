@@ -83,7 +83,7 @@ def parsePlayDetails(details):
         '(?P<callUpheld>upheld|overturned)\.',
         re.IGNORECASE
     )
-    match = challengeRE.match(details)
+    match = challengeRE.search(details)
     if match:
         struct['isChallenge'] = True
         struct.update(match.groupdict())
@@ -260,7 +260,7 @@ def parsePlayDetails(details):
     psPenaltyRE = re.compile(psPenaltyREstr, re.IGNORECASE)
 
     # try parsing as a kickoff
-    match = kickoffRE.match(details)
+    match = kickoffRE.search(details)
     if match:
         # parse as a kickoff
         struct['isKickoff'] = True
@@ -268,7 +268,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as a timeout
-    match = timeoutRE.match(details)
+    match = timeoutRE.search(details)
     if match:
         # parse as timeout
         struct['isTimeout'] = True
@@ -276,7 +276,7 @@ def parsePlayDetails(details):
         return struct
     
     # try parsing as a field goal
-    match = fgRE.match(details)
+    match = fgRE.search(details)
     if match:
         # parse as a field goal
         struct['isFieldGoal'] = True
@@ -285,7 +285,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as a punt
-    match = puntRE.match(details)
+    match = puntRE.search(details)
     if match:
         # parse as a punt
         struct['isPunt'] = True
@@ -293,7 +293,7 @@ def parsePlayDetails(details):
         return struct
     
     # try parsing as a kneel
-    match = kneelRE.match(details)
+    match = kneelRE.search(details)
     if match:
         # parse as a kneel
         struct['isKneel'] = True
@@ -301,7 +301,7 @@ def parsePlayDetails(details):
         return struct
     
     # try parsing as a spike
-    match = spikeRE.match(details)
+    match = spikeRE.search(details)
     if match:
         # parse as a spike
         struct['isSpike'] = True
@@ -309,7 +309,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as an XP
-    match = extraPointRE.match(details)
+    match = extraPointRE.search(details)
     if match:
         # parse as an XP
         struct['isXP'] = True
@@ -317,7 +317,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as a 2-point conversion
-    match = twoPointRE.match(details)
+    match = twoPointRE.search(details)
     if match:
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
@@ -328,7 +328,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as a pre-snap penalty
-    match = psPenaltyRE.match(details)
+    match = psPenaltyRE.search(details)
     if match:
         # parse as a pre-snap penalty
         struct['isPresnapPenalty'] = True
@@ -336,7 +336,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as a pass
-    match = passRE.match(details)
+    match = passRE.search(details)
     if match:
         # parse as a pass
         struct['isPass'] = True
@@ -344,7 +344,7 @@ def parsePlayDetails(details):
         return struct
 
     # try parsing as a run
-    match = rushRE.match(details)
+    match = rushRE.search(details)
     if match:
         # parse as a run
         struct['isRun'] = True
