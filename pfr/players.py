@@ -98,7 +98,7 @@ class Player:
         return rawHand[0] # 'L' or 'R'
 
     @pfr.decorators.memoized
-    def pick(self):
+    def draftPick(self):
         doc = self.getDoc()
         rawDraft = doc('div#info_box > p:first').text()
         m = re.search(r'Drafted .*? round \((\d+).*?overall\)', rawDraft, re.I)
