@@ -105,6 +105,8 @@ class Team:
         doc = self.getYearDoc(year)
         table = doc('table#team_gamelogs')
         df = pfr.utils.parseTable(table)
+        if df.empty:
+            return np.array([])
         return df.boxscore_word.dropna().values
 
     @pfr.decorators.memoized
