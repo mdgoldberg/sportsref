@@ -122,7 +122,7 @@ def parseTable(table):
                for c in table('thead tr[class=""] th[data-stat]')]
     
     # get data
-    rows = list(table('tbody tr').not_('.thead').items())
+    rows = list(table('tbody tr').not_('.thead, .stat_total').items())
     data = [
         [flattenLinks(td) for td in row.items('td')]
         for row in rows
@@ -135,10 +135,12 @@ def parseTable(table):
     allClasses = set(
         cls
         for row in rows
+        if row.attr['class']
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
         df['hasClass_' + cls] = [
+            row.attr['class'] and
             cls in row.attr['class'].split()
             for row in rows
         ]
