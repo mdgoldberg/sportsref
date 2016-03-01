@@ -158,8 +158,10 @@ class Player:
         table = tables.eq(0)
         df = pfr.utils.parseTable(table)
         df = df.query('year == @year')
+
         # if the player has an AV for that year, return it
-        # TODO: does this work when player played on two teams? how?
+        # note: when players play for multiple teams in a season, this returns
+        # total AV for the season
         if not df.empty:
             return df['av'].iloc[0]
         # otherwise, return NaN
