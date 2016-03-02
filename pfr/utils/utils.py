@@ -77,7 +77,8 @@ def relURLToID(url):
     """
     sportsReferenceRegex = re.compile(r'http://www\.sports-reference\.com/.*')
     if sportsReferenceRegex.search(url):
-        return 'SRlink00'
+        print 'SPORTS-REFERENCE LINK: {}'.format(url)
+        return url
 
     playerRegex = re.compile(r'/players/[A-Z]/(.+?)(?:/|\.html?)')
     boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')

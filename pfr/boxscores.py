@@ -275,7 +275,7 @@ class BoxScore:
         table = doc('table#game_info tr')
         tr = table.filter(lambda i: 'Weather' in this.text_content())
         if len(tr) == 0:
-            # no weather because it's a dome
+            # no weather found, because it's a dome
             # TODO: what's relative humidity in a dome?
             return {
                 'temp': 70, 'windChill': 70, 'relHumid': None, 'windMPH': 0
