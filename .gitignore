@@ -61,5 +61,5 @@ target/
 **/*.swp
 **/*.json
 **/.R*
-**/*.csv
-**/*test*.py
+scripts/
+csv/
