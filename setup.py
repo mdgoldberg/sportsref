@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
-setup(name='pfr',
+setup(name='sportsref',
       version='0.5.14',
-      description='Scraping data from pro-football-reference.com',
-      url='https://github.com/mdgoldberg/pfr',
+      description='Scraping data from sports-reference.com and related sites',
+      url='https://github.com/mdgoldberg/sportsref',
       author='Matt Goldberg',
       author_email='mgoldberg@college.harvard.edu',
       license='Apache License 2.0',
