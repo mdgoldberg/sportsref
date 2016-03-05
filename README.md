@@ -1,2 +1,2 @@
-# pfr
-Pro-Football-Reference scraping in Python
+# sportsref
+Scraping sports data from sports-reference.com and related sites
