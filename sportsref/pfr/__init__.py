@@ -7,13 +7,18 @@ import boxscores
 import winProb
 import pbp
 
+from players import Player
+from teams import Team
+from boxscores import BoxScore
+from finders import GamePlayFinder, PlayerSeasonFinder
+
 # modules/variables to expose
 __all__ = [
     'BASE_URL',
-    'finders',
-    'boxscores',
-    'players',
-    'teams',
+    'finders', 'GamePlayFinder', 'PlayerSeasonFinder',
+    'boxscores', 'BoxScore',
+    'players', 'Player',
+    'teams', 'Team',
     'winProb',
     'pbp',
 ]
