@@ -6,7 +6,7 @@ import time
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import pfr
+import sportsref
 
 GAME_PLAY_URL = ('http://www.pro-football-reference.com/'
                  'play-index/play_finder.cgi')
@@ -21,12 +21,12 @@ def GamePlayFinder(**kwargs):
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
-    html = pfr.utils.getHTML(url)
+    html = sportsref.utils.getHTML(url)
     doc = pq(html)
     
     # parse
     table = doc('#div_ table.stats_table')
-    plays = pfr.utils.parseTable(table)
+    plays = sportsref.utils.parseTable(table)
 
     # clean game date
     if 'game_date' in plays.columns:
@@ -43,7 +43,7 @@ def GamePlayFinder(**kwargs):
         plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
-        plays = pfr.utils.expandDetails(plays, detailCol='description')
+        plays = sportsref.pfr.pbp.expandDetails(plays, detailCol='description')
 
     return plays
 
@@ -68,7 +68,7 @@ def kwArgsToQS(**kwargs):
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
-                kwargs[k] = pfr.utils.relURLToID(v)
+                kwargs[k] = sportsref.utils.relURLToID(v)
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
@@ -150,7 +150,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@pfr.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@sportsref.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for play finder form.
 
@@ -173,7 +173,7 @@ def getInputsOptionsDefaults():
 
         print 'Regenerating GPFConstants file'
 
-        html = pfr.utils.getHTML(GAME_PLAY_URL)
+        html = sportsref.utils.getHTML(GAME_PLAY_URL)
         doc = pq(html)
         
         def_dict = {}

@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-import pfr
+import sportsref
 
 RUSH_OPTS = {
     'left end': 'LE', 'left tackle': 'LT', 'left guard': 'LG',
@@ -27,7 +27,7 @@ def expandDetails(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(pfr.utils.parsePlayDetails, df['detail'])
+    dicts = map(sportsref.pfr.pbp.parsePlayDetails, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
@@ -50,11 +50,11 @@ def expandDetails(df, detailCol='detail'):
     new_df = df.apply(cleanFeatures, axis=1)
     return new_df
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 def parsePlayDetails(details):
     """Parses play details from play-by-play string and returns structured
     data.
-    
+
     :details: detail string for play
     :returns: dictionary of play attributes
     """
@@ -274,7 +274,7 @@ def parsePlayDetails(details):
         struct['isTimeout'] = True
         struct.update(match.groupdict())
         return struct
-    
+
     # try parsing as a field goal
     match = fgRE.search(details)
     if match:
@@ -291,7 +291,7 @@ def parsePlayDetails(details):
         struct['isPunt'] = True
         struct.update(match.groupdict())
         return struct
-    
+
     # try parsing as a kneel
     match = kneelRE.search(details)
     if match:
@@ -299,7 +299,7 @@ def parsePlayDetails(details):
         struct['isKneel'] = True
         struct.update(match.groupdict())
         return struct
-    
+
     # try parsing as a spike
     match = spikeRE.search(details)
     if match:
@@ -322,17 +322,9 @@ def parsePlayDetails(details):
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
         struct['twoPointSuccess'] = match.group('twoPointSuccess')
-        realPlay = pfr.utils.parsePlayDetails(match.group('twoPoint'))
+        realPlay = sportsref.pfr.pbp.parsePlayDetails(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
-        return struct
-
-    # try parsing as a pre-snap penalty
-    match = psPenaltyRE.search(details)
-    if match:
-        # parse as a pre-snap penalty
-        struct['isPresnapPenalty'] = True
-        struct.update(match.groupdict())
         return struct
 
     # try parsing as a pass
@@ -350,10 +342,19 @@ def parsePlayDetails(details):
         struct['isRun'] = True
         struct.update(match.groupdict())
         return struct
-    
+
+    # try parsing as a pre-snap penalty
+    match = psPenaltyRE.search(details)
+    if match:
+        # parse as a pre-snap penalty
+        struct['isPresnapPenalty'] = True
+        struct.update(match.groupdict())
+        return struct
+
+
     return None
-        
-@pfr.decorators.memoized
+
+@sportsref.decorators.memoized
 def cleanFeatures(struct):
     """Cleans up the features collected in parsePlayDetails.
 
@@ -361,8 +362,14 @@ def cleanFeatures(struct):
     :returns: the same dict, but with cleaner features (e.g., convert bools,
     ints, etc.)
     """
-    # First, clean up existing variables on a one-off basis
     struct = dict(struct)
+    # First, clean up play type bools
+    ptypes = ['isKickoff', 'isTimeout', 'isFieldGoal', 'isPunt', 'isKneel',
+              'isSpike', 'isXP', 'isTwoPoint', 'isPresnapPenalty', 'isPass',
+              'isRun']
+    for pt in ptypes:
+        struct[pt] = struct[pt] if pd.notnull(struct.get(pt)) else False
+    # Second, clean up other existing variables on a one-off basis
     struct['callUpheld'] = struct.get('callUpheld') == 'upheld'
     struct['fgGood'] = struct.get('fgGood') == 'good'
     struct['isBlocked'] = struct.get('isBlocked') == 'blocked'
@@ -382,7 +389,7 @@ def cleanFeatures(struct):
     struct['isTouchback'] = struct.get('isTouchback') == ', touchback'
     struct['oob'] = pd.notnull(struct.get('oob'))
     struct['passLoc'] = PASS_OPTS.get(struct.get('passLoc'), np.nan)
-    if pd.notnull(struct['isPass']):
+    if struct['isPass']:
         pyds = struct['passYds']
         struct['passYds'] = pyds if pd.notnull(pyds) else 0
     if pd.notnull(struct['penalty']):
@@ -390,15 +397,15 @@ def cleanFeatures(struct):
     struct['penDeclined'] = struct.get('penDeclined') == 'Declined'
     if struct['quarter'] == 'OT': struct['quarter'] = 5
     struct['rushDir'] = RUSH_OPTS.get(struct.get('rushDir'), np.nan)
-    if pd.notnull(struct['isRun']):
+    if struct['isRun']:
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
-    struct['timeoutTeam'] = pfr.teams.teamIDs().get(struct.get('timeoutTeam'),
+    struct['timeoutTeam'] = sportsref.pfr.teams.teamIDs().get(struct.get('timeoutTeam'),
                                                     np.nan)
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
 
-    # Second, ensure types are correct
+    # Third, ensure types are correct
     bool_vars = [
         'fgGood', 'isBlocked', 'isChallenge', 'isComplete', 'isFairCatch',
         'isFieldGoal', 'isKickoff', 'isKneel', 'isLateral', 'isNoPlay',
@@ -443,7 +450,7 @@ def cleanFeatures(struct):
         if var not in struct or pd.isnull(struct[var]) or var == '':
             struct[var] = np.nan
 
-    # Third, create new helper variables based on parsed variables
+    # Fourth, create new helper variables based on parsed variables
     # creating fieldSide and ydline from location
     if struct['isXP']:
         struct['fieldSide'] = struct['ydLine'] = np.nan
@@ -466,7 +473,7 @@ def cleanFeatures(struct):
     struct['opp_epa'] = struct['exp_pts_before'] - struct['exp_pts_after']
     return pd.Series(struct)
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 def locToFeatures(l):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
@@ -519,7 +526,7 @@ def addTeamColumns(features):
     features.opp.fillna(method='ffill', inplace=True)
     return features
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 def teamAndOpp(struct, curTm=None, curOpp=None):
     """Given a dict representing a play and the current team with the ball,
     returns (team, opp) where team is the team with the ball and opp is the
@@ -554,12 +561,12 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
         else:
             pID = None
         curTm = curOpp = np.nan
-        bs = pfr.boxscores.BoxScore(struct['bsID'])
+        bs = sportsref.pfr.boxscores.BoxScore(struct['bsID'])
         if pID and len(pID) == 3:
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
-            player = pfr.players.Player(pID)
+            player = sportsref.pfr.players.Player(pID)
             glog = player.gamelog(kind='B')
             if 'bsID' in glog.columns:
                 narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
@@ -600,7 +607,7 @@ def addTeamFeatures(row):
     row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
     row['opp_wpa'] = -row['team_wpa']
     # create column for offense and defense scores if not already there
-    bs = pfr.boxscores.BoxScore(row['bsID'])
+    bs = sportsref.pfr.boxscores.BoxScore(row['bsID'])
     if bs.home() == row['team']:
         row['team_score'] = row['pbp_score_hm']
         row['opp_score'] = row['pbp_score_aw']

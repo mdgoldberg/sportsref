@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import pfr
+import sportsref
 
 __all__ = [
     'teamNames',
@@ -18,11 +18,11 @@ __all__ = [
 
 yr = datetime.datetime.now().year
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 def teamNames():
-    doc = pq(pfr.utils.getHTML(pfr.BASE_URL + '/teams/'))
+    doc = pq(sportsref.utils.getHTML(sportsref.pfr.BASE_URL + '/teams/'))
     table = doc('table#teams_active')
-    df = pfr.utils.parseTable(table)
+    df = sportsref.utils.parseTable(table)
     ids = df.team_name.str[:3].values
     teamNames = [tr('td a') for tr in table('tr').items()]
     teamNames = filter(None, teamNames)
@@ -30,17 +30,17 @@ def teamNames():
     d = dict(zip(ids, teamNames))
     return d
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 def teamIDs():
     names = teamNames()
     ids = {v: k for k, v in names.iteritems()}
     return ids
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 def listTeams():
     return teamNames().keys()
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 class Team:
 
     def __init__(self, teamID):
@@ -52,23 +52,23 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def teamYearURL(self, yr):
         return urlparse.urljoin(
-            pfr.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+            sportsref.pfr.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def getMainDoc(self):
         relURL = '/teams/{}'.format(self.teamID)
-        teamURL = urlparse.urljoin(pfr.BASE_URL, relURL)
-        mainDoc = pq(pfr.utils.getHTML(teamURL))
+        teamURL = urlparse.urljoin(sportsref.pfr.BASE_URL, relURL)
+        mainDoc = pq(sportsref.utils.getHTML(teamURL))
         return mainDoc
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def getYearDoc(self, year=yr):
-        return pq(pfr.utils.getHTML(self.teamYearURL(year)))
+        return pq(sportsref.utils.getHTML(self.teamYearURL(year)))
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def name(self):
         """Returns the real name of the franchise given a team ID.
 
@@ -84,7 +84,7 @@ class Team:
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def roster(self, year=yr):
         """Returns the roster table for the given year.
 
@@ -93,7 +93,7 @@ class Team:
         """
         raise "not yet implemented"
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def boxscores(self, year=yr):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
@@ -104,26 +104,26 @@ class Team:
         """
         doc = self.getYearDoc(year)
         table = doc('table#team_gamelogs')
-        df = pfr.utils.parseTable(table)
+        df = sportsref.utils.parseTable(table)
         if df.empty:
             return np.array([])
         return df.boxscore_word.dropna().values
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def passing(self, year=yr):
         doc = self.getYearDoc(year)
         table = doc('#passing')
-        df = pfr.utils.parseTable(table)
+        df = sportsref.utils.parseTable(table)
         return df
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def rushingAndReceiving(self, year=yr):
         doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
-        df = pfr.utils.parseTable(table)
+        df = sportsref.utils.parseTable(table)
         return df
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def teamInfo(self, year=yr):
         doc = self.getYearDoc(year)
         teamDict = {}
@@ -132,6 +132,6 @@ class Team:
             td0, td1 = tr('td')[:2]
             key = td0.text_content().lower()
             key = re.sub(r'\W', '_', key)
-            val = pfr.utils.flattenLinks(td1)
+            val = sportsref.utils.flattenLinks(td1)
             teamDict[key] = val
         return teamDict

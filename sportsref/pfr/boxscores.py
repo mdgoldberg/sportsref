@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import pfr
+import sportsref
 
 __all__ = [
     'BoxScore',
@@ -15,13 +15,13 @@ __all__ = [
 
 yr = datetime.datetime.now().year
 
-@pfr.decorators.memoized
+@sportsref.decorators.memoized
 class BoxScore:
 
     def __init__(self, bsID):
         self.bsID = bsID
         self.mainURL = urlparse.urljoin(
-            pfr.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
+            sportsref.pfr.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
         )
 
     def __eq__(self, other):
@@ -30,12 +30,12 @@ class BoxScore:
     def __hash__(self):
         return hash(self.bsID)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def getDoc(self):
-        doc = pq(pfr.utils.getHTML(self.mainURL))
+        doc = pq(sportsref.utils.getHTML(self.mainURL))
         return doc
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
         for more.
@@ -45,7 +45,7 @@ class BoxScore:
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def weekday(self):
         """Returns the day of the week on which the game occurred.
         :returns: String representation of the day of the week for the game.
@@ -57,27 +57,27 @@ class BoxScore:
         wd = date.weekday()
         return days[wd]
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
         doc = self.getDoc()
         table = doc('table#linescore')
-        home = pfr.utils.relURLToID(table('tr').eq(2)('a').attr['href'])
+        home = sportsref.utils.relURLToID(table('tr').eq(2)('a').attr['href'])
         return home
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def away(self):
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
         doc = self.getDoc()
         table = doc('table#linescore')
-        away = pfr.utils.relURLToID(table('tr').eq(1)('a').attr['href'])
+        away = sportsref.utils.relURLToID(table('tr').eq(1)('a').attr['href'])
         return away
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def homeScore(self):
         """Returns score of the home team.
         :returns: int of the home score.
@@ -88,7 +88,7 @@ class BoxScore:
         homeScore = table('tr').eq(2)('td')[-1].text_content()
         return int(homeScore)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def awayScore(self):
         """Returns score of the away team.
         :returns: int of the away score.
@@ -99,7 +99,7 @@ class BoxScore:
         awayScore = table('tr').eq(1)('td')[-1].text_content()
         return int(awayScore)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def winner(self):
         """Returns the team ID of the winning team. Returns NaN if a tie.
         """
@@ -112,7 +112,7 @@ class BoxScore:
         else:
             return np.nan
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def week(self):
         """Returns the week in which this game took place. 18 is WC round, 19
         is Div round, 20 is CC round, 21 is SB.
@@ -126,7 +126,7 @@ class BoxScore:
         else:
             return 21 # super bowl is week 21
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def season(self):
         """Returns the year ID of the season in which this game took place. Useful for week 17 January games.
         :returns: An int representing the year of the season.
@@ -140,7 +140,7 @@ class BoxScore:
             # super bowl happens in calendar year after the season's year
             return self.date().year - 1 
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
         from PFR. The columns are:
@@ -168,7 +168,7 @@ class BoxScore:
             team = self.home() if h else self.away()
             for i, row in enumerate(table('tr[class=""]').items()):
                 datum = {}
-                datum['playerID'] = pfr.utils.relURLToID(
+                datum['playerID'] = sportsref.utils.relURLToID(
                     row('a')[0].attrib['href']
                 )
                 datum['playerName'] = row('a').filter(
@@ -181,7 +181,7 @@ class BoxScore:
                 data.append(datum)
         return pd.DataFrame(data)
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def gameInfo(self):
         """Gets a dictionary of basic information about the game. Note: line
         is given in terms of the home team (if the home team is favored, the
@@ -223,7 +223,7 @@ class BoxScore:
                     giDict['deferred'] = False
                     tm = txt
 
-                if tm in pfr.teams.Team(self.home()).name():
+                if tm in sportsref.pfr.teams.Team(self.home()).name():
                     val = self.home()
                 else:
                     val = self.away()
@@ -243,12 +243,12 @@ class BoxScore:
             elif key in ('vegas_line', 'weather'):
                 continue
             else:
-                val = pfr.utils.flattenLinks(td1).strip()
+                val = sportsref.utils.flattenLinks(td1).strip()
             giDict[key] = val
 
         return giDict
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def line(self):
         doc = self.getDoc()
         table = doc('table#game_info tr')
@@ -259,13 +259,13 @@ class BoxScore:
             favorite, line = m.groups()
             line = float(line)
             # give in terms of the home team
-            if favorite != pfr.teams.teamNames()[self.home()]:
+            if favorite != sportsref.pfr.teams.teamNames()[self.home()]:
                 line = -line
         else:
             line = 0
         return line
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def weather(self):
         """Returns a dictionary of weather-related info.
 
@@ -303,7 +303,7 @@ class BoxScore:
         d['windMPH'] = d['windMPH'] if pd.notnull(d['windMPH']) else 0
         return d
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
 
@@ -311,17 +311,17 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table#pbp_data')
-        pbp = pfr.utils.parseTable(table)
+        pbp = sportsref.utils.parseTable(table)
         # make the following features conveniently available on each row
         pbp['bsID'] = self.bsID
         pbp['home'] = self.home()
         pbp['away'] = self.away()
         pbp['season'] = self.season()
         pbp['week'] = self.week()
-        feats = pfr.utils.expandDetails(pbp)
+        feats = sportsref.pfr.pbp.expandDetails(pbp)
 
         # add team and opp columns by iterating through rows
-        df = pfr.utils.addTeamColumns(feats)
+        df = sportsref.pfr.utils.addTeamColumns(feats)
         # add WPA column (requires diff, can't be done row-wise)
         df['home_wpa'] = df.home_wp.diff()
         # lag score columns, fill in 0-0 to start
@@ -335,7 +335,7 @@ class BoxScore:
         firstPlaysOfGame = df[df.secsElapsed == 0].index
         line = self.line()
         for i in firstPlaysOfGame:
-            initwp = pfr.utils.initialWinProb(line)
+            initwp = sportsref.pfr.winProb.initialWinProb(line)
             df.ix[i, 'home_wp'] = initwp
             df.ix[i, 'home_wpa'] = df.ix[i+1, 'home_wp'] - initwp
         # fix last play border after diffing/shifting for WP and WPA
@@ -355,7 +355,7 @@ class BoxScore:
                 wpa = finalWP - df.ix[to+1, 'home_wp']
             df.ix[to+1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
-        df = df.apply(pfr.utils.addTeamFeatures, axis=1)
+        df = df.apply(sportsref.pfr.utils.addTeamFeatures, axis=1)
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)
@@ -363,7 +363,7 @@ class BoxScore:
 
         return df
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def refInfo(self):
         """Gets a dictionary of ref positions and the ref IDs of the refs for
         that game.
@@ -377,11 +377,11 @@ class BoxScore:
             td0, td1 = tr('td').items()
             key = td0.text().lower()
             key = re.sub(r'\W', '_', key)
-            val = pfr.utils.flattenLinks(td1)
+            val = sportsref.utils.flattenLinks(td1)
             refDict[key] = val
         return refDict
 
-    @pfr.decorators.memoized
+    @sportsref.decorators.memoized
     def playerStats(self):
         """Gets the stats for offense, defense, returning, and kicking of
         individual players in the game.
@@ -392,7 +392,7 @@ class BoxScore:
         dfs = []
         for tID in tableIDs:
             table = doc('#{}'.format(tID))
-            dfs.append(pfr.utils.parseTable(table))
+            dfs.append(sportsref.utils.parseTable(table))
         df = pd.concat(dfs, ignore_index=True)
         df = df.reset_index(drop=True)
         df['team'] = df['team'].str.lower()
