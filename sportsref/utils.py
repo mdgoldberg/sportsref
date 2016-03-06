@@ -95,7 +95,7 @@ def parseTable(table):
 
     if 'year_id' in df.columns:
         df['year_id'] = df.year_id.fillna(method='ffill')
-        df['year_id'] = df.year_id.astype(str).str[:4].astype(int)
+        df['year_id'] = df.year_id.map(lambda s: s[:4]).astype(int)
         df.rename(columns={'year_id': 'year'}, inplace=True)
 
     # game_date -> bsID
