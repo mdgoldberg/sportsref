@@ -1,5 +1,5 @@
 # Fill in PlayerSeasonFinder docstring
-from pfr.finders import PSF
+import PSF
 
 IOD = PSF.getInputsOptionsDefaults()
 
@@ -43,7 +43,7 @@ del IOD, paramStr, optsStr
 
 
 # Fill in GamePlayFinder docstring
-from pfr.finders import GPF
+import GPF
 
 IOD = GPF.getInputsOptionsDefaults()
 
@@ -88,8 +88,8 @@ Options for the inputs:
 # clean up namespace
 del IOD, paramStr, optsStr
 
-from pfr.finders.PSF import PlayerSeasonFinder
-from pfr.finders.GPF import GamePlayFinder
+from PSF import PlayerSeasonFinder
+from GPF import GamePlayFinder
 
 # modules/variables to expose
 __all__ = [

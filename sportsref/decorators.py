@@ -2,10 +2,13 @@ import collections
 import datetime
 import functools
 import os
+import re
 import time
 import urlparse
 
 import appdirs
+import numpy as np
+import pandas as pd
 
 def switchToDir(dirPath):
     """
@@ -46,7 +49,7 @@ def cacheHTML(func):
         # TODO: fix this problem?
         if len(noPathFN) > 255:
             # filename is too long, just evaluate the function
-            return func(url).encode('ascii', 'replace')
+            return func(url).decode('utf-8', 'ignore')
         
         # set time variables (in seconds)
         if os.path.isfile(fn):
@@ -54,9 +57,17 @@ def cacheHTML(func):
             curtime = int(time.time())
 
         def cacheValid(ct, mt, fn):
-            # first, if the filetype is a boxscore, then we're safe caching it
-            if any(kw in fn for kw in ('boxscore',)):
+            # first, if we can ensure that the file won't change,
+            # then we're safe caching it
+            if 'boxscore' in fn:
                 return True
+            m = re.search(r'(\d{4})', fn)
+            if m:
+                year = int(m.group(1))
+                now = datetime.datetime.now()
+                curSeason = now.year - (1 if now.month <= 2 else 0)
+                if year < curSeason:
+                    return True
 
             # otherwise, check if it's currently the offseason
             today = datetime.date.today()
@@ -81,7 +92,7 @@ def cacheHTML(func):
             return text
         # otherwise, download html and cache it
         else:
-            text = func(url)#.encode('ascii', 'replace')
+            text = func(url)
             with open(fn, 'w+') as f:
                 f.write(text)
             return text
@@ -92,8 +103,30 @@ def memoized(fun):
     """A simple memoize decorator."""
     @functools.wraps(fun)
     def wrapper(*args, **kwargs):
-        # TODO: deal with dicts in args
-        key = (args, frozenset(sorted(kwargs.items())))
+
+        # deal with lists in args
+        isList = lambda a: isinstance(a, list) or isinstance(a, np.ndarray)
+        def deListify(arg):
+            if isList(arg):
+                return tuple(map(deListify, arg))
+            else:
+                return arg
+
+        # deal with dicts in args
+        isDict = lambda d: isinstance(d, dict) or isinstance(d, pd.Series)
+        def deDictify(arg):
+            if isDict(arg):
+                items = dict(arg).items()
+                items = [(k, deListify(deDictify(v))) for k, v in items]
+                return frozenset(sorted(items))
+            else:
+                return arg
+        
+        clean_args = tuple(map(deListify, args))
+        clean_args = tuple(map(deDictify, clean_args))
+        clean_kwargs = deDictify(kwargs)
+
+        key = (clean_args, clean_kwargs)
         try:
             ret = cache[key]
             return ret
@@ -105,4 +138,28 @@ def memoized(fun):
             return fun(*args, **kwargs)
 
     cache = {}
+    return wrapper
+
+def kindRPB(fun):
+    """Supports functions that return a DataFrame and have a `kind` keyword
+    argument that specifies regular season ('R'), playoffs ('P'), or both
+    ('B'). If given 'B', it will call the function with both 'R' and 'P' and
+    concatenate the results.
+    """
+    @functools.wraps(fun)
+    def wrapper(*args, **kwargs):
+        kind = kwargs.get('kind', 'R').upper()
+        if kind == 'B':
+            kwargs['kind'] = 'R'
+            reg = fun(*args, **kwargs)
+            reg['game_type'] = 'R'
+            kwargs['kind'] = 'P'
+            poffs = fun(*args, **kwargs)
+            poffs['game_type'] = 'P'
+            return pd.concat((reg, poffs), ignore_index=True)
+        else:
+            df = fun(*args, **kwargs)
+            df['game_type'] = kind
+            return df
+
     return wrapper
