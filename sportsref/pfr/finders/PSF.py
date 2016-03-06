@@ -113,7 +113,7 @@ def kwArgsToQS(**kwargs):
                     opts[k] = ['N']
         # for draft positions
         if k.startswith('draft_pos_is'):
-            # if a draft draft_position is defined, mark all draft draft_pos as 'N'
+            # if a draft position is defined, mark all draft_pos as 'N'
             for k in opts:
                 if k.startswith('draft_pos_is'):
                     opts[k] = ['N']
@@ -235,7 +235,9 @@ def getInputsOptionsDefaults():
                     )
                 except:
                     def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
-                    def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
+                    def_dict[k]['options'] = sorted(
+                        list(def_dict[k]['options'])
+                    )
             json.dump(def_dict, f)
     
     return def_dict

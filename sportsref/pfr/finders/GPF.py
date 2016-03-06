@@ -245,7 +245,9 @@ def getInputsOptionsDefaults():
                     )
                 except:
                     def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
-                    def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
+                    def_dict[k]['options'] = sorted(
+                        list(def_dict[k]['options'])
+                    )
             json.dump(def_dict, f)
 
     return def_dict

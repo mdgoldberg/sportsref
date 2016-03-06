@@ -108,15 +108,16 @@ def parsePlayDetails(details):
                 .format(playerRE))
     # TODO: currently, plays with multiple fumbles record the original fumbler
     # and the final fumble recoverer
-    fumbleRE = (r"(?:"
-                r"\.? ?(?P<fumbler>{0}) fumbles"
-                r"(?: \(forced by (?P<fumbForcer>{0})\))?"
-                r"(?:.*, recovered by (?P<fumbRecoverer>{0}) at )?"
-                r"(?:, ball out of bounds at )?"
-                r"(?:(?P<fumbRecFieldSide>[a-z]+)?\-?(?P<fumbRecYdLine>\-?\d+))?"
-                r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
-                r")?"
-                .format(playerRE))
+    fumbleRE = (
+        r"(?:"
+        r"\.? ?(?P<fumbler>{0}) fumbles"
+        r"(?: \(forced by (?P<fumbForcer>{0})\))?"
+        r"(?:.*, recovered by (?P<fumbRecoverer>{0}) at )?"
+        r"(?:, ball out of bounds at )?"
+        r"(?:(?P<fumbRecFieldSide>[a-z]+)?\-?(?P<fumbRecYdLine>\-?\d+))?"
+        r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
+        r")?"
+        .format(playerRE))
     tdSafetyRE = r"(?:(?P<isTD>, touchdown)|(?P<isSafety>, safety))?"
     # TODO: offsetting penalties
     penaltyRE = (r"(?:.*?"
@@ -145,9 +146,9 @@ def parsePlayDetails(details):
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
     passYardsRE = r"(?: for (?:(?P<passYds>\-?\d+) yards?|no gain))"
-    intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
-             r'(?:(?P<intFieldSide>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?' +
-             r'(?: and returned for (?P<intRetYds>\-?\d+) yards?\.?)?)?')
+    intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE)
+             + r'(?:(?P<intFieldSide>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?'
+             + r'(?: and returned for (?P<intRetYds>\-?\d+) yards?\.?)?)?')
     throwRE = r'(?:{}{}{}(?:(?:{}|{}){})?)'.format(
         completeRE, passOptRE, targetedRE, passYardsRE, intRE, tackleRE
     )
@@ -158,11 +159,12 @@ def parsePlayDetails(details):
 
     # create kickoff regex
     koKickerRE = r'(?P<koKicker>{0})'.format(playerRE)
-    koYardsRE = r' kicks (?:off|(?P<isOnside>onside)) (?:(?P<koYds>\d+) yards?|no gain)'
+    koYardsRE = (r' kicks (?:off|(?P<isOnside>onside))'
+                 r' (?:(?P<koYds>\d+) yards?|no gain)')
     nextREs = []
     nextREs.append(
-        r', (?:returned|recovered) by (?P<koReturner>{0})(?: for '.format(playerRE) +
-        r'(?:(?P<koRetYds>\-?\d+) yards?|no gain))?'
+        (r', (?:returned|recovered) by (?P<koReturner>{0})(?: for '
+         r'(?:(?P<koRetYds>\-?\d+) yards?|no gain))?').format(playerRE)
     )
     nextREs.append(
         (r'(?P<isMuffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
@@ -174,7 +176,8 @@ def parsePlayDetails(details):
     )
     nextREs.append(r'(?P<oob>, out of bounds)')
     nextREs.append(r'(?P<isTouchback>, touchback)')
-    # TODO: test the following line to fix a small subset of cases (ex: muff -> oob)
+    # TODO: test the following line to fix a small subset of cases
+    # (ex: muff -> oob)
     nextRE = ''.join(r'(?:{})?'.format(nre) for nre in nextREs)
     # nextRE = r'(?:{})?'.format('|'.join(nextREs))
     kickoffREstr = r'{}{}{}{}{}{}{}'.format(
@@ -400,8 +403,8 @@ def cleanFeatures(struct):
     if struct['isRun']:
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
-    struct['timeoutTeam'] = sportsref.pfr.teams.teamIDs().get(struct.get('timeoutTeam'),
-                                                    np.nan)
+    struct['timeoutTeam'] = sportsref.pfr.teams.teamIDs().get(
+        struct.get('timeoutTeam'), np.nan)
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
 

@@ -128,7 +128,10 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def season(self):
-        """Returns the year ID of the season in which this game took place. Useful for week 17 January games.
+        """
+        Returns the year ID of the season in which this game took place.
+        Useful for week 17 January games.
+
         :returns: An int representing the year of the season.
         """
         doc = self.getDoc()
@@ -359,7 +362,7 @@ class BoxScore:
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)
-        df.distToGoal.fillna(method='ffill', inplace=True) # for last play of game
+        df.distToGoal.fillna(method='ffill', inplace=True) # for last play
 
         return df
 
