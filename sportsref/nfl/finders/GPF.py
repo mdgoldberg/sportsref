@@ -43,7 +43,7 @@ def GamePlayFinder(**kwargs):
         plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
-        plays = sportsref.pfr.pbp.expandDetails(plays, detailCol='description')
+        plays = sportsref.nfl.pbp.expandDetails(plays, detailCol='description')
 
     return plays
 

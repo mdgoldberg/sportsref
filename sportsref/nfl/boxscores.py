@@ -21,7 +21,7 @@ class BoxScore:
     def __init__(self, bsID):
         self.bsID = bsID
         self.mainURL = urlparse.urljoin(
-            sportsref.pfr.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
+            sportsref.nfl.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
         )
 
     def __eq__(self, other):
@@ -226,7 +226,7 @@ class BoxScore:
                     giDict['deferred'] = False
                     tm = txt
 
-                if tm in sportsref.pfr.teams.Team(self.home()).name():
+                if tm in sportsref.nfl.teams.Team(self.home()).name():
                     val = self.home()
                 else:
                     val = self.away()
@@ -262,7 +262,7 @@ class BoxScore:
             favorite, line = m.groups()
             line = float(line)
             # give in terms of the home team
-            if favorite != sportsref.pfr.teams.teamNames()[self.home()]:
+            if favorite != sportsref.nfl.teams.teamNames()[self.home()]:
                 line = -line
         else:
             line = 0
@@ -321,10 +321,10 @@ class BoxScore:
         pbp['away'] = self.away()
         pbp['season'] = self.season()
         pbp['week'] = self.week()
-        feats = sportsref.pfr.pbp.expandDetails(pbp)
+        feats = sportsref.nfl.pbp.expandDetails(pbp)
 
         # add team and opp columns by iterating through rows
-        df = sportsref.pfr.utils.addTeamColumns(feats)
+        df = sportsref.nfl.utils.addTeamColumns(feats)
         # add WPA column (requires diff, can't be done row-wise)
         df['home_wpa'] = df.home_wp.diff()
         # lag score columns, fill in 0-0 to start
@@ -338,7 +338,7 @@ class BoxScore:
         firstPlaysOfGame = df[df.secsElapsed == 0].index
         line = self.line()
         for i in firstPlaysOfGame:
-            initwp = sportsref.pfr.winProb.initialWinProb(line)
+            initwp = sportsref.nfl.winProb.initialWinProb(line)
             df.ix[i, 'home_wp'] = initwp
             df.ix[i, 'home_wpa'] = df.ix[i+1, 'home_wp'] - initwp
         # fix last play border after diffing/shifting for WP and WPA
@@ -358,7 +358,7 @@ class BoxScore:
                 wpa = finalWP - df.ix[to+1, 'home_wp']
             df.ix[to+1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
-        df = df.apply(sportsref.pfr.utils.addTeamFeatures, axis=1)
+        df = df.apply(sportsref.nfl.utils.addTeamFeatures, axis=1)
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)

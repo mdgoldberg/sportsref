@@ -20,7 +20,7 @@ class Player:
     def __init__(self, playerID):
         self.pID = playerID
         self.mainURL = urlparse.urljoin(
-            sportsref.pfr.BASE_URL, '/players/{0[0]}/{0}.htm'
+            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
 
     def __eq__(self, other):
@@ -179,7 +179,7 @@ class Player:
         :returns: A DataFrame with the player's career gamelog.
         """
         url = urlparse.urljoin(
-            sportsref.pfr.BASE_URL, '/players/{0[0]}/{0}/gamelog'
+            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}/gamelog'
         ).format(self.pID)
         doc = pq(sportsref.utils.getHTML(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')

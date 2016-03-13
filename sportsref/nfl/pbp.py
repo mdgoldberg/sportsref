@@ -27,7 +27,7 @@ def expandDetails(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.pfr.pbp.parsePlayDetails, df['detail'])
+    dicts = map(sportsref.nfl.pbp.parsePlayDetails, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
@@ -325,7 +325,7 @@ def parsePlayDetails(details):
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
         struct['twoPointSuccess'] = match.group('twoPointSuccess')
-        realPlay = sportsref.pfr.pbp.parsePlayDetails(match.group('twoPoint'))
+        realPlay = sportsref.nfl.pbp.parsePlayDetails(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
         return struct
@@ -403,7 +403,7 @@ def cleanFeatures(struct):
     if struct['isRun']:
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
-    struct['timeoutTeam'] = sportsref.pfr.teams.teamIDs().get(
+    struct['timeoutTeam'] = sportsref.nfl.teams.teamIDs().get(
         struct.get('timeoutTeam'), np.nan)
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
@@ -564,12 +564,12 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
         else:
             pID = None
         curTm = curOpp = np.nan
-        bs = sportsref.pfr.boxscores.BoxScore(struct['bsID'])
+        bs = sportsref.nfl.boxscores.BoxScore(struct['bsID'])
         if pID and len(pID) == 3:
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
-            player = sportsref.pfr.players.Player(pID)
+            player = sportsref.nfl.players.Player(pID)
             glog = player.gamelog(kind='B')
             if 'bsID' in glog.columns:
                 narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
@@ -610,7 +610,7 @@ def addTeamFeatures(row):
     row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
     row['opp_wpa'] = -row['team_wpa']
     # create column for offense and defense scores if not already there
-    bs = sportsref.pfr.boxscores.BoxScore(row['bsID'])
+    bs = sportsref.nfl.boxscores.BoxScore(row['bsID'])
     if bs.home() == row['team']:
         row['team_score'] = row['pbp_score_hm']
         row['opp_score'] = row['pbp_score_aw']

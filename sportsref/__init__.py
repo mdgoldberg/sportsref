@@ -1,3 +1,3 @@
 import decorators
 import utils
-import pfr
+import nfl
