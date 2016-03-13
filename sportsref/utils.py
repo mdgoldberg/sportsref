@@ -89,10 +89,7 @@ def parseTable(table):
 
     # small fixes to DataFrame
 
-    if 'year_id' in df.columns and 'league_id' in df.columns:
-        df['year_id'] = df['league_id']
-        del df['league_id']
-
+    # year_id -> year (as int)
     if 'year_id' in df.columns:
         df['year_id'] = df.year_id.fillna(method='ffill')
         df['year_id'] = df.year_id.map(lambda s: s[:4]).astype(int)
@@ -102,8 +99,8 @@ def parseTable(table):
     if 'game_date' in df.columns:
         df.rename(columns={'game_date': 'bsID'}, inplace=True)
 
-    # ignore * and + to note things
-    df.replace(re.compile(r'[\*\+]'), '', inplace=True)
+    # ignore *,+, and other characters used to note things
+    df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
 
     return df
 
@@ -134,7 +131,7 @@ def flattenLinks(td):
 
 @sportsref.decorators.memoized
 def relURLToID(url):
-    """Converts relative PFR URL to ID.
+    """Converts a relative URL to a unique ID.
 
     Here, 'ID' refers generally to the unique ID for a given 'type' that a
     given datum has. For example, 'BradTo00' is Tom Brady's player ID - this
@@ -153,10 +150,11 @@ def relURLToID(url):
 
     :returns: ID associated with the given relative URL.
     """
-    playerRegex = re.compile(r'.*/players/(?:[A-Z]/)?(.+?)(?:/|\.html?)')
+    yearRegex = re.compile(r'.*/years/(\d{4}).*|'
+                           r'.*/gamelog/(\d{4}).*')
+    playerRegex = re.compile(r'.*/players/(?:\w/)?(.+?)(?:/|\.html?)')
     boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')
     teamRegex = re.compile(r'/teams/(\w{3})/.*')
-    yearRegex = re.compile(r'.*/years/(\d{4})(?:_AFL)?/.*')
     coachRegex = re.compile(r'/coaches/(.+?)\.html?')
     stadiumRegex = re.compile(r'/stadiums/(.+?)\.html?')
     refRegex = re.compile(r'/officials/(.+?r)\.html?')
@@ -164,10 +162,10 @@ def relURLToID(url):
     hsRegex = re.compile(r'/schools/high_schools\.cgi\?id=([^\&]{8})')
 
     regexes = [
+        yearRegex,
         playerRegex,
         boxscoresRegex,
         teamRegex,
-        yearRegex,
         coachRegex,
         stadiumRegex,
         refRegex,
