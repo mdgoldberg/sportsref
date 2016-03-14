@@ -2,7 +2,6 @@ import datetime
 import re
 import urlparse
 
-import requests
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
@@ -20,9 +19,6 @@ class BoxScore:
 
     def __init__(self, bsID):
         self.bsID = bsID
-        self.mainURL = urlparse.urljoin(
-            sportsref.nfl.BASE_URL, '/boxscores/{}.htm'.format(self.bsID)
-        )
 
     def __eq__(self, other):
         return self.bsID == other.bsID
@@ -32,7 +28,10 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def getDoc(self):
-        doc = pq(sportsref.utils.getHTML(self.mainURL))
+        url = urlparse.urljoin(
+            sportsref.nfl.BASE_URL, 'boxscores/{}.htm'.format(self.bsID)
+        )
+        doc = pq(sportsref.utils.getHTML(url))
         return doc
 
     @sportsref.decorators.memoized
@@ -81,7 +80,6 @@ class BoxScore:
     def homeScore(self):
         """Returns score of the home team.
         :returns: int of the home score.
-
         """
         doc = self.getDoc()
         table = doc('table#linescore')
@@ -92,7 +90,6 @@ class BoxScore:
     def awayScore(self):
         """Returns score of the away team.
         :returns: int of the away score.
-
         """
         doc = self.getDoc()
         table = doc('table#linescore')
@@ -101,8 +98,7 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def winner(self):
-        """Returns the team ID of the winning team. Returns NaN if a tie.
-        """
+        """Returns the team ID of the winning team. Returns NaN if a tie."""
         hmScore = self.homeScore()
         awScore = self.awayScore()
         if hmScore > awScore:
