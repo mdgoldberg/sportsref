@@ -115,4 +115,77 @@ class BoxScore:
 
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
-        raise 'not yet implemented'
+        doc = self.getPBPDoc()
+        table = doc('table.stats_table').eq(-1)
+        rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
+        data = []
+        cur_qtr = 1
+        cur_aw_score = 0
+        cur_hm_score = 0
+        for row in rows:
+            p = {}
+
+            # add time of play to entry
+            t_str = row.eq(0).text()
+            t_regex = r'(\d+):(\d+)\.(\d+)'
+            mins, secs, tenths = map(int, re.match(t_regex, t_str).groups())
+            endQ = (12*60*min(cur_qtr, 4) +
+                    5*60*(cur_qtr - 4 if cur_qtr > 4 else 0))
+            secsElapsed = endQ - (60*mins + secs + 0.1*tenths)
+            p['secsElapsed'] = secsElapsed
+
+            # add scores to entry
+            p['hmScore'] = cur_hm_score
+            p['awScore'] = cur_aw_score
+            p['quarter'] = cur_qtr
+
+            # handle single play description
+            # ex: beginning/end of quarter, jump ball
+            if row.length == 2:
+                desc = row.eq(1)
+                if desc.text().startswith('End of '):
+                    # handle end of quarter/OT
+                    cur_qtr += 1
+                    continue
+                elif desc.text().startswith('Jump ball: '):
+                    # handle jump ball
+                    p['isJumpBall'] = True
+                    jb_str = sportsref.utils.flattenLinks(desc)
+                    n = None
+                    p.update(sportsref.nba.pbp.parsePlay(jb_str, n, n, n))
+                else:
+                    # if another case, continue
+                    if not desc.text().lower().startswith('start of '):
+                        print 'other case:', desc.text()
+                    continue
+
+            # handle team play description
+            # ex: shot, turnover, rebound, foul, sub, etc.
+            elif row.length == 6:
+                aw_desc, sc_desc, hm_desc = row.eq(1), row.eq(3), row.eq(5)
+                is_hm_play = bool(hm_desc.text())
+                desc = hm_desc if is_hm_play else aw_desc
+                desc = sportsref.utils.flattenLinks(desc)
+                # update scores
+                scores = re.match(r'(\d+)\-(\d+)', sc_desc.text()).groups()
+                cur_aw_score, cur_hm_score = map(int, scores)
+                # get home and away
+                hm, aw = self.home(), self.away()
+                # handle the play
+                p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play)
+                if p is None:
+                    continue
+
+            # otherwise, I don't know what this was
+            else:
+                raise Exception(("don't know how to handle row of length {}"
+                       .format(row.length)))
+
+            data.append(p)
+
+        # convert to DataFrame
+        df = pd.DataFrame.from_record(data)
+
+        # clean up columns
+
+        return df

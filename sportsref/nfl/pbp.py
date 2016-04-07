@@ -72,7 +72,6 @@ def parsePlayDetails(details):
 
     playerRE = r"\S{6,8}\d{2}"
 
-
     # initialize return dictionary - struct
     struct = {}
 
@@ -179,7 +178,6 @@ def parsePlayDetails(details):
     # TODO: test the following line to fix a small subset of cases
     # (ex: muff -> oob)
     nextRE = ''.join(r'(?:{})?'.format(nre) for nre in nextREs)
-    # nextRE = r'(?:{})?'.format('|'.join(nextREs))
     kickoffREstr = r'{}{}{}{}{}{}{}'.format(
         koKickerRE, koYardsRE, nextRE,
         tackleRE, fumbleRE, tdSafetyRE, penaltyRE
