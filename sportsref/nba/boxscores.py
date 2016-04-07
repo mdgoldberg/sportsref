@@ -3,6 +3,7 @@ import re
 import urlparse
 
 import numpy as np
+import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
@@ -184,8 +185,9 @@ class BoxScore:
             data.append(p)
 
         # convert to DataFrame
-        df = pd.DataFrame.from_record(data)
+        df = pd.DataFrame.from_records(data)
 
         # clean up columns
+        # TODO
 
         return df

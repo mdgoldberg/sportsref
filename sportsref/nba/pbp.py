@@ -86,13 +86,16 @@ def parsePlay(details, hm, aw, is_hm):
 
     # parsing free throws
     ftRE = (r'(?P<ftShooter>{}) (?P<isFTM>makes|misses) '
-            r'(?P<isTechFT>technical )?free throw'
+            r'(?P<isTechFT>technical )?(?P<isFlagFT>flagrant )?'
+            r'(?P<isClearPathFT>clear path )?free throw'
             r'(?: (?P<ftNum>\d+) of (?P<numAtt>\d+))?').format(playerRE)
     m = re.match(ftRE, details, re.I)
     if m:
         p['isFTA'] = True
         p.update(m.groupdict())
         p['isTechFT'] = p['isTechFT'] == 'technical '
+        p['isFlagFT'] = p['isFlagFT'] == 'flagrant '
+        p['isClearPathFT'] = p['isClearPathFT'] == 'clear path '
         p['team'] = hm if is_hm else aw
         p['opp'] = aw if is_hm else hm
         return p
@@ -181,6 +184,44 @@ def parsePlay(details, hm, aw, is_hm):
         p.update(m.groupdict())
         p['team'] = aw if is_hm else hm
         p['opp'] = hm if is_hm else aw
+        p['foulTeam'] = p['opp']
+        return p
+
+    # parsing inbound fouls
+    inboundRE = (r'Inbound foul by (?P<fouler>{0})'
+                 r'(?: \(drawn by (?P<drewFoul>{0})\))?').format(playerRE)
+    m = re.match(inboundRE, details, re.I)
+    if m:
+        p['isFoul'] = True
+        p['isInboundFoul'] = True
+        p.update(m.groupdict())
+        p['team'] = aw if is_hm else hm
+        p['opp'] = hm if is_hm else aw
+        p['foulTeam'] = p['opp']
+        return p
+
+    # parsing flagrant fouls
+    flagrantRE = (r'Flagrant foul type (?P<flagType>1|2) by (?P<fouler>{0})'
+                  r'(?: \(drawn by (?P<drewFoul>{0})\))?').format(playerRE)
+    m = re.match(flagrantRE, details, re.I)
+    if m:
+        p['isFoul'] = True
+        p['isFlagrant'] = True
+        p.update(m.groupdict())
+        p['foulTeam'] = hm if is_hm else aw
+        return p
+
+    # parsing clear path fouls
+    clearPathRE = (r'Clear path foul by (?P<fouler>{0})'
+                   r'(?: \(drawn by (?P<drewFoul>{0})\))?').format(playerRE)
+    m = re.match(clearPathRE, details, re.I)
+    if m:
+        p['isFoul'] = True
+        p['isClearPathFoul'] = True
+        p.update(m.groupdict())
+        p['team'] = aw if is_hm else hm
+        p['opp'] = hm if is_hm else aw
+        p['foulTeam'] = p['opp']
         return p
 
     # parsing timeouts
