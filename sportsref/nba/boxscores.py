@@ -2,6 +2,7 @@ import datetime
 import re
 import urlparse
 
+import numpy as np
 from pyquery import PyQuery as pq
 
 import sportsref
@@ -57,28 +58,34 @@ class BoxScore:
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        raise 'not yet implemented'
+        doc = self.getMainDoc()
+        table = doc('div#page_content div > div > table:eq(1) table')
+        hm_href = table('tr td').eq(1)('span a').eq(0).attr['href']
+        return sportsref.utils.relURLToID(hm_href)
 
     @sportsref.decorators.memoized
     def away(self):
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        raise 'not yet implemented'
+        doc = self.getMainDoc()
+        table = doc('div#page_content div > div > table:eq(1) table')
+        aw_href = table('tr td').eq(0)('span a').eq(0).attr['href']
+        return sportsref.utils.relURLToID(aw_href)
 
     @sportsref.decorators.memoized
     def homeScore(self):
         """Returns score of the home team.
         :returns: int of the home score.
         """
-        raise 'not yet implemented'
+        raise NotImplementedError("homeScore")
 
     @sportsref.decorators.memoized
     def awayScore(self):
         """Returns score of the away team.
         :returns: int of the away score.
         """
-        raise 'not yet implemented'
+        raise NotImplementedError("awayScore")
 
     @sportsref.decorators.memoized
     def winner(self):
@@ -100,7 +107,7 @@ class BoxScore:
 
         :returns: An int representing the year of the season.
         """
-        raise 'not yet implemented'
+        raise NotImplementedError("season")
     
     @sportsref.decorators.memoized
     def pbp(self):
