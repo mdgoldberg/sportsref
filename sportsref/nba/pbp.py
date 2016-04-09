@@ -74,7 +74,7 @@ def parsePlay(details, hm, aw, is_hm):
 
     # parsing shooting fouls
     shotFoulRE = (r'Shooting(?P<isBlockFoul> block)? foul by (?P<fouler>{0}) '
-                  r'\(drawn by (?P<shooter>{0})\)').format(playerRE)
+                  r'\(drawn by (?P<drewFoul>{0})\)').format(playerRE)
     m = re.match(shotFoulRE, details, re.I)
     if m:
         p['isShotFoul'] = True
@@ -134,7 +134,7 @@ def parsePlay(details, hm, aw, is_hm):
     # parsing offensive fouls
     offFoulRE = (r'Offensive(?P<isCharge> charge)? foul '
                  r'by (?P<turnoverBy>{0})'
-                 r'(?: \(drawn by (?P<chargeTaken>{0})\))?').format(playerRE)
+                 r'(?: \(drawn by (?P<drewFoul>{0})\))?').format(playerRE)
     m = re.match(offFoulRE, details, re.I)
     if m:
         p['isFoul'] = True
