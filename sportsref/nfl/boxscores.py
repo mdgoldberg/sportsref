@@ -320,7 +320,7 @@ class BoxScore:
         feats = sportsref.nfl.pbp.expandDetails(pbp)
 
         # add team and opp columns by iterating through rows
-        df = sportsref.nfl.utils.addTeamColumns(feats)
+        df = sportsref.nfl.pbp.addTeamColumns(feats)
         # add WPA column (requires diff, can't be done row-wise)
         df['home_wpa'] = df.home_wp.diff()
         # lag score columns, fill in 0-0 to start
@@ -354,7 +354,7 @@ class BoxScore:
                 wpa = finalWP - df.ix[to+1, 'home_wp']
             df.ix[to+1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
-        df = df.apply(sportsref.nfl.utils.addTeamFeatures, axis=1)
+        df = df.apply(sportsref.nfl.pbp.addTeamFeatures, axis=1)
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)
