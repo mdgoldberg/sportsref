@@ -233,7 +233,9 @@ def parsePlay(details, hm, aw, is_hm):
         p['team'] = hm if is_hm else aw
         p['opp'] = aw if is_hm else hm
         isOfficialTO = p['timeoutTeam'] == 'Official'
-        p['timeoutTeam'] = 'Official' if isOfficialTO else p['team']
+        p['timeoutTeam'] = \
+            'Official' if isOfficialTO else \
+            sportsref.nba.teams.teamIDs().get(p['team'], p['team'])
         return p
 
     # parsing technical fouls
