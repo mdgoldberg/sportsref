@@ -59,8 +59,10 @@ def _cacheValid_pfr(ct, mt, fn):
     return modDay >= lastGameDay
 
 def _cacheValid_bkref(ct, mt, fn):
+    if 'boxscore' in fn:
+        return True
     # TODO
-    return False
+    return True
 
 def cacheHTML(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
