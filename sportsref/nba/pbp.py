@@ -1,3 +1,4 @@
+import copy
 import re
 
 import numpy as np
@@ -288,3 +289,23 @@ def parsePlay(details, hm, aw, is_hm):
 
     print 'couldn\'t parse: %s' % details
     return p
+
+def cleanFeatures(df):
+    """Fixes up columns of the passed DataFrame, such as casting T/F columns to
+    boolean and filling in NaNs for team and opp.
+
+    :df: DataFrame of play-by-play data.
+    :returns: Dataframe with cleaned columns.
+    """
+    df = copy.deepcopy(df)
+    # make indicator columns boolean type (and fill in NaNs)
+    boolVals = set([True, False, None, np.nan])
+    for c in df:
+        if set(df[c].unique()[:5]) <= boolVals:
+            df[c] = (df[c] == True)
+
+    # backfill team, opp columns
+    df.team.fillna(method='bfill', inplace=True)
+    df.opp.fillna(method='bfill', inplace=True)
+
+    return df
