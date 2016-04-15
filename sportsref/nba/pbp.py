@@ -73,8 +73,8 @@ def parsePlay(details, hm, aw, is_hm):
         return p
 
     # parsing shooting fouls
-    shotFoulRE = (r'Shooting(?P<isBlockFoul> block)? foul by (?P<fouler>{0}) '
-                  r'\(drawn by (?P<drewFoul>{0})\)').format(playerRE)
+    shotFoulRE = (r'Shooting(?P<isBlockFoul> block)? foul by (?P<fouler>{0})'
+                  r'(?: \(drawn by (?P<drewFoul>{0})\))?').format(playerRE)
     m = re.match(shotFoulRE, details, re.I)
     if m:
         p['isShotFoul'] = True
@@ -88,14 +88,19 @@ def parsePlay(details, hm, aw, is_hm):
     ftRE = (r'(?P<ftShooter>{}) (?P<isFTM>makes|misses) '
             r'(?P<isTechFT>technical )?(?P<isFlagFT>flagrant )?'
             r'(?P<isClearPathFT>clear path )?free throw'
-            r'(?: (?P<ftNum>\d+) of (?P<numAtt>\d+))?').format(playerRE)
+            r'(?: (?P<ftNum>\d+) of (?P<totFTAtt>\d+))?').format(playerRE)
     m = re.match(ftRE, details, re.I)
     if m:
         p['isFTA'] = True
         p.update(m.groupdict())
+        p['isFTM'] = p['isFTM'] == 'makes'
         p['isTechFT'] = p['isTechFT'] == 'technical '
         p['isFlagFT'] = p['isFlagFT'] == 'flagrant '
         p['isClearPathFT'] = p['isClearPathFT'] == 'clear path '
+        if p['totFTAtt']:
+            p['totFTAtt'] = int(p['totFTAtt'])
+        if p['ftNum']:
+            p['ftNum'] = int(p['ftNum'])
         p['team'] = hm if is_hm else aw
         p['opp'] = aw if is_hm else hm
         return p
@@ -111,22 +116,26 @@ def parsePlay(details, hm, aw, is_hm):
         return p
 
     # parsing turnovers
-    toReasons = []
-    toReasons.append(r'(?P<shotClockViol>shot clock)')
-    toReasons.append(r'(?P<isTravel>traveling)')
-    toReasons.append(r'(?P<isOffFoul>offensive foul)')
-    toReasons.append((r'(?P<stealType>[^;]+)(?:; steal by '
-                      r'(?P<stealer>{0}))?').format(playerRE))
-    toReasons = r'|'.join(r'(?:{})'.format(tre) for tre in toReasons)
+    toReasons = (r'(?P<toType>[^;]+)(?:; steal by '
+                 r'(?P<stealer>{0}))?').format(playerRE)
     toRE = (r'Turnover by (?P<turnoverBy>{}|Team) '
             r'\((?:{})\)').format(playerRE, toReasons)
     m = re.match(toRE, details, re.I)
     if m:
         p['isTO'] = True
         p.update(m.groupdict())
-        if p['isOffFoul']:
+        if p['toType'].lower() == 'offensive foul':
             return None
-        p['isTravel'] = p['isTravel'] == 'traveling'
+        p['isSteal'] = pd.notnull(p['stealer'])
+        p['isTravel'] = p['toType'] == 'traveling'
+        p['isShotClockViol'] = p['toType'] == 'shot clock'
+        p['isOOB'] = p['toType'] == 'step out of bounds'
+        p['isThreeSecViol'] = p['toType'] == '3 sec'
+        p['isBackCourtViol'] = p['toType'] == 'back court'
+        p['isOffGoaltend'] = p['toType'] == 'offensive goaltending'
+        p['isDoubleDribble'] = p['toType'] == 'dbl dribble'
+        p['isDiscontDribble'] = p['toType'] == 'discontinued dribble'
+        p['isCarry'] = p['toType'] == 'palming'
         p['team'] = hm if is_hm else aw
         p['opp'] = aw if is_hm else hm
         return p
@@ -246,6 +255,14 @@ def parsePlay(details, hm, aw, is_hm):
         p['isTechFoul'] = True
         p.update(m.groupdict())
         p['foulTeam'] = hm if is_hm else aw
+        return p
+
+    # parsing ejections
+    ejectRE = r'(?P<ejectee>{0}) ejected from game'.format(playerRE)
+    m = re.match(ejectRE, details, re.I)
+    if m:
+        p['isEjection'] = True
+        p['ejecteeTeam'] = hm if is_hm else aw
         return p
 
     # parsing defensive 3 seconds techs

@@ -173,9 +173,10 @@ class BoxScore:
                 # get home and away
                 hm, aw = self.home(), self.away()
                 # handle the play
-                p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play)
-                if p is None:
+                new_p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play)
+                if new_p is None:
                     continue
+                p.update(new_p)
 
             # otherwise, I don't know what this was
             else:
@@ -187,7 +188,24 @@ class BoxScore:
         # convert to DataFrame
         df = pd.DataFrame.from_records(data)
 
-        # clean up columns
-        # TODO
+        # clean up and add columns
+
+        # add columns for home team, away team, and bsID
+        df['home'] = self.home()
+        df['away'] = self.away()
+        df['bsID'] = self.bsID
+
+        # make indicator columns boolean type (and fill in NaNs)
+        boolVals = set([True, False, None, np.nan])
+        for c in df:
+            if set(df[c].unique()[:5]) <= boolVals:
+                df[c] = (df[c] == True)
+
+        # TODO: track current lineup for each team
+
+        # backfill team, opp columns
+        # TODO: fix this so team/opp are (almost) always filled in
+        # df.team.fillna(method='bfill', inplace=True)
+        # df.opp.fillna(method='bfill', inplace=True)
 
         return df
