@@ -54,9 +54,10 @@ class Team:
         return hash(self.teamID)
 
     @sportsref.decorators.memoized
-    def teamYearURL(self, yr=yr):
+    def teamYearURL(self, yr_str):
         return urlparse.urljoin(
-            sportsref.nba.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+            sportsref.nba.BASE_URL,
+            '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
     @sportsref.decorators.memoized
     def getMainDoc(self):
@@ -66,12 +67,12 @@ class Team:
         return mainDoc
 
     @sportsref.decorators.memoized
-    def getYearDoc(self, year=yr):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(year)))
+    def getYearDoc(self, yr_str=yr):
+        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
 
     @sportsref.decorators.memoized
     def name(self):
-        """Returns the real name of the franchise given a team ID.
+        """Returns the real name of the franchise given the team ID.
 
         Examples:
         'BOS' -> 'Boston Celtics'
@@ -79,7 +80,11 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        raise NotImplementedError('teamYearURL')
+        doc = self.getMainDoc()
+        headerwords = doc('div#info_box h1')[0].text_content().split()
+        lastIdx = headerwords.index('Franchise')
+        teamwords = headerwords[:lastIdx]
+        return ' '.join(teamwords)
 
     @sportsref.decorators.memoized
     def roster(self, year=yr):
@@ -88,7 +93,7 @@ class Team:
         :year: The year for which we want the roster; defaults to current year.
         :returns: A DataFrame containing roster information for that year.
         """
-        raise NotImplementedError('teamYearURL')
+        raise NotImplementedError('roster')
 
     @sportsref.decorators.memoized
     def boxscores(self, year=yr):
@@ -99,4 +104,9 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        raise NotImplementedError('teamYearURL')
+        doc = self.getYearDoc('{}_games'.format(year))
+        table = doc('table#teams_games')
+        df = sportsref.utils.parseTable(table)
+        if df.empty:
+            return np.array([])
+        return df.box_score_text.dropna().values
