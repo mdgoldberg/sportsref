@@ -53,9 +53,10 @@ class Team:
         return hash(self.teamID)
 
     @sportsref.decorators.memoized
-    def teamYearURL(self, yr):
+    def teamYearURL(self, yr_str):
         return urlparse.urljoin(
-            sportsref.nfl.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+            sportsref.nfl.BASE_URL,
+            '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
     @sportsref.decorators.memoized
     def getMainDoc(self):
@@ -65,12 +66,12 @@ class Team:
         return mainDoc
 
     @sportsref.decorators.memoized
-    def getYearDoc(self, year=yr):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(year)))
+    def getYearDoc(self, yr_str=yr):
+        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
 
     @sportsref.decorators.memoized
     def name(self):
-        """Returns the real name of the franchise given a team ID.
+        """Returns the real name of the franchise given the team ID.
 
         Examples:
         'nwe' -> 'New England Patriots'
