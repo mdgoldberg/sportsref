@@ -153,16 +153,16 @@ def relURLToID(url):
 
     :returns: ID associated with the given relative URL.
     """
-    yearRegex = re.compile(r'.*/years/(\d{4}).*|'
-                           r'.*/gamelog/(\d{4}).*')
-    playerRegex = re.compile(r'.*/players/(?:\w/)?(.+?)(?:/|\.html?)')
-    boxscoresRegex = re.compile(r'/boxscores/(.+?)\.html?')
-    teamRegex = re.compile(r'/teams/(\w{3})/.*')
-    coachRegex = re.compile(r'/coaches/(.+?)\.html?')
-    stadiumRegex = re.compile(r'/stadiums/(.+?)\.html?')
-    refRegex = re.compile(r'/officials/(.+?r)\.html?')
-    collegeRegex = re.compile(r'.*/schools/(\S+?)/.*')
-    hsRegex = re.compile(r'/schools/high_schools\.cgi\?id=([^\&]{8})')
+    yearRegex = r'.*/years/(\d{4}).*|.*/gamelog/(\d{4}).*'
+    playerRegex = r'.*/players/(?:\w/)?(.+?)(?:/|\.html?)'
+    boxscoresRegex = r'/boxscores/(.+?)\.html?'
+    teamRegex = r'/teams/(\w{3})/.*'
+    coachRegex = r'/coaches/(.+?)\.html?'
+    stadiumRegex = r'/stadiums/(.+?)\.html?'
+    refRegex = r'/officials/(.+?r)\.html?'
+    collegeRegex = r'.*/schools/(\S+?)/.*'
+    hsRegex = r'/schools/high_schools\.cgi\?id=([^\&]{8})'
+    bsDateRegex = r'/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
 
     regexes = [
         yearRegex,
@@ -174,10 +174,11 @@ def relURLToID(url):
         refRegex,
         collegeRegex,
         hsRegex,
+        bsDateRegex,
     ]
 
     for regex in regexes:
-        match = regex.search(url)
+        match = re.match(regex, url, re.I)
         if match:
             return match.group(1)
 
