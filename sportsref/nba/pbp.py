@@ -15,7 +15,8 @@ def parsePlay(details, hm, aw, is_hm):
     :hm: the ID of the home team (for identifying team w/ possession)
     :aw: the ID of the away team (for identifying team w/ possession)
     :is_hm: bool indicating whether it is a home play (for possession)
-    :returns: dictionary of play attributes
+    :returns: dictionary of play attributes; -1 on a play that should be
+    skipped
     """
     # if input isn't a string, return None
     if not isinstance(details, basestring):
@@ -126,7 +127,7 @@ def parsePlay(details, hm, aw, is_hm):
         p['isTO'] = True
         p.update(m.groupdict())
         if p['toType'].lower() == 'offensive foul':
-            return None
+            return -1
         p['isSteal'] = pd.notnull(p['stealer'])
         p['isTravel'] = p['toType'] == 'traveling'
         p['isShotClockViol'] = p['toType'] == 'shot clock'
@@ -287,7 +288,7 @@ def parsePlay(details, hm, aw, is_hm):
         p['violTeam'] = hm if is_hm else aw
         return p
 
-    print 'couldn\'t parse: %s' % details
+    p['isError'] = True
     return p
 
 def cleanFeatures(df):

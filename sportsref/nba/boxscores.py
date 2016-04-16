@@ -174,8 +174,11 @@ class BoxScore:
                 hm, aw = self.home(), self.away()
                 # handle the play
                 new_p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play)
-                if new_p is None:
+                if new_p == -1:
                     continue
+                elif new_p.get('isError'):
+                    print "can't parse: %s, boxscore: %s" % (desc, self.bsID)
+                    # import pdb; pdb.set_trace()
                 p.update(new_p)
 
             # otherwise, I don't know what this was
