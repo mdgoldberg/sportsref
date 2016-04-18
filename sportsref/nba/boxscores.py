@@ -61,7 +61,7 @@ class BoxScore:
         """
         doc = self.getMainDoc()
         table = doc('div#page_content div > div > table:eq(1) table')
-        hm_href = table('tr td').eq(1)('span a').eq(0).attr['href']
+        hm_href = table('tr td:eq(1) span a:eq(0)').attr['href']
         return sportsref.utils.relURLToID(hm_href)
 
     @sportsref.decorators.memoized
@@ -71,7 +71,7 @@ class BoxScore:
         """
         doc = self.getMainDoc()
         table = doc('div#page_content div > div > table:eq(1) table')
-        aw_href = table('tr td').eq(0)('span a').eq(0).attr['href']
+        aw_href = table('tr td:eq(0) span a:eq(0)').attr['href']
         return sportsref.utils.relURLToID(aw_href)
 
     @sportsref.decorators.memoized
@@ -79,14 +79,22 @@ class BoxScore:
         """Returns score of the home team.
         :returns: int of the home score.
         """
-        raise NotImplementedError("homeScore")
+        doc = self.getMainDoc()
+        table = doc('div#page_content div > div > table:eq(1) table')
+        hm_txt = table('tr td:eq(1) span:eq(0)').text()
+        hm_sc = int(re.match(r'.*?(\d+)$', hm_txt).group(1))
+        return hm_sc
 
     @sportsref.decorators.memoized
     def awayScore(self):
         """Returns score of the away team.
         :returns: int of the away score.
         """
-        raise NotImplementedError("awayScore")
+        doc = self.getMainDoc()
+        table = doc('div#page_content div > div > table:eq(1) table')
+        aw_txt = table('tr td:eq(0) span:eq(0)').text()
+        aw_sc = int(re.match(r'.*?(\d+)$', aw_txt).group(1))
+        return aw_sc
 
     @sportsref.decorators.memoized
     def winner(self):
@@ -117,7 +125,7 @@ class BoxScore:
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
         doc = self.getPBPDoc()
-        table = doc('table.stats_table').eq(-1)
+        table = doc('table.stats_table:last')
         rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
         data = []
         cur_qtr = 1
@@ -200,5 +208,13 @@ class BoxScore:
 
         # clean columns
         df = sportsref.nba.pbp.cleanFeatures(df)
+
+        # fill in NaN's in team, opp columns except for jump balls
+        df.team.fillna(method='bfill', inplace=True)
+        df.opp.fillna(method='bfill', inplace=True)
+        df.team.fillna(method='ffill', inplace=True)
+        df.opp.fillna(method='ffill', inplace=True)
+        if 'isJumpBall' in df.columns:
+            df.ix[df.isJumpBall, ['team', 'opp']] = np.nan
 
         return df

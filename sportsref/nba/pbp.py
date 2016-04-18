@@ -268,7 +268,8 @@ def parsePlay(details, hm, aw, is_hm):
         return p
 
     # parsing defensive 3 seconds techs
-    def3TechRE = r'Def 3 sec tech foul by (?P<fouler>{})'.format(playerRE)
+    def3TechRE = (r'(?:Def 3 sec tech foul|Defensive three seconds)'
+                  r' by (?P<fouler>{})').format(playerRE)
     m = re.match(def3TechRE, details, re.I)
     if m:
         p['isFoul'] = True
@@ -304,9 +305,5 @@ def cleanFeatures(df):
     for c in df:
         if set(df[c].unique()[:5]) <= boolVals:
             df[c] = (df[c] == True)
-
-    # backfill team, opp columns
-    df.team.fillna(method='bfill', inplace=True)
-    df.opp.fillna(method='bfill', inplace=True)
 
     return df
