@@ -18,6 +18,9 @@ __all__ = [
 
 yr = datetime.datetime.now().year
 
+# TODO: make team functions dependent on year
+# team IDs change by year, ex: NJN -> BKN
+
 @sportsref.decorators.memoized
 def teamNames():
     html = sportsref.utils.getHTML(sportsref.nba.BASE_URL + '/teams/')

@@ -18,9 +18,9 @@ def parsePlay(details, hm, aw, is_hm):
     :returns: dictionary of play attributes; -1 on a play that should be
     skipped
     """
-    # if input isn't a string, return None
+    # if input isn't a string, return -1
     if not isinstance(details, basestring):
-        return None
+        return -1
 
     p = {}
     p['detail'] = details
@@ -305,5 +305,8 @@ def cleanFeatures(df):
     for c in df:
         if set(df[c].unique()[:5]) <= boolVals:
             df[c] = (df[c] == True)
+
+    # fix free throw columns on technicals
+    df.ix[df.isTechFT, ['ftNum', 'totFTAtt']] = 1
 
     return df
