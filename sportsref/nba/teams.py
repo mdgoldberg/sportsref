@@ -22,7 +22,7 @@ yr = datetime.datetime.now().year
 # team IDs change by year, ex: NJN -> BKN
 
 @sportsref.decorators.memoized
-def teamNames():
+def teamIDsToNames():
     html = sportsref.utils.getHTML(sportsref.nba.BASE_URL + '/teams/')
     doc = pq(html)
     table = doc('table#active')
@@ -35,14 +35,14 @@ def teamNames():
     return d
 
 @sportsref.decorators.memoized
-def teamIDs():
-    names = teamNames()
+def teamNamesToIDs():
+    names = teamIDsToNames()
     ids = {v: k for k, v in names.iteritems()}
     return ids
 
 @sportsref.decorators.memoized
-def listTeams():
-    return teamNames().keys()
+def listTeamIDs():
+    return teamIDsToNames().keys()
 
 @sportsref.decorators.memoized
 class Team:
