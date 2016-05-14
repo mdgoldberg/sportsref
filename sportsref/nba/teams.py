@@ -2,47 +2,13 @@ import datetime
 import re
 import urlparse
 
-import requests
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
 
-__all__ = [
-    'teamNames',
-    'teamIDs',
-    'listTeams',
-    'Team',
-]
-
 yr = datetime.datetime.now().year
-
-# TODO: make team functions dependent on year
-# team IDs change by year, ex: NJN -> BKN
-
-@sportsref.decorators.memoized
-def teamIDsToNames():
-    html = sportsref.utils.getHTML(sportsref.nba.BASE_URL + '/teams/')
-    doc = pq(html)
-    table = doc('table#active')
-    df = sportsref.utils.parseTable(table)
-    ids = df.loc[df['franch_name'].str.len() == 3, 'franch_name'].values
-    teamNames = [tr('td a') for tr in table('tr').items()]
-    teamNames = filter(None, teamNames)
-    teamNames = [lst.eq(0).text() for lst in teamNames]
-    d = dict(zip(ids, teamNames))
-    return d
-
-@sportsref.decorators.memoized
-def teamNamesToIDs():
-    names = teamIDsToNames()
-    ids = {v: k for k, v in names.iteritems()}
-    return ids
-
-@sportsref.decorators.memoized
-def listTeamIDs():
-    return teamIDsToNames().keys()
 
 @sportsref.decorators.memoized
 class Team:
