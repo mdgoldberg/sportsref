@@ -79,7 +79,7 @@ class Season(object):
         return {v:k for k,v in d.items()}
 
     @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB
+    @sportsref.decorators.kindRPB(include_type=False)
     def getBSIDs(self, kind='R'):
         """Returns a list of BoxScore IDs for every game in the season.
         Only needs to handle 'R' or 'P' options because decorator handles 'B'.

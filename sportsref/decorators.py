@@ -150,26 +150,30 @@ def memoized(fun):
     cache = {}
     return wrapper
 
-def kindRPB(fun):
-    """Supports functions that return a DataFrame and have a `kind` keyword
-    argument that specifies regular season ('R'), playoffs ('P'), or both
-    ('B'). If given 'B', it will call the function with both 'R' and 'P' and
-    concatenate the results.
-    """
-    @functools.wraps(fun)
-    def wrapper(*args, **kwargs):
-        kind = kwargs.get('kind', 'R').upper()
-        if kind == 'B':
-            kwargs['kind'] = 'R'
-            reg = fun(*args, **kwargs)
-            reg['game_type'] = 'R'
-            kwargs['kind'] = 'P'
-            poffs = fun(*args, **kwargs)
-            poffs['game_type'] = 'P'
-            return pd.concat((reg, poffs), ignore_index=True)
-        else:
-            df = fun(*args, **kwargs)
-            df['game_type'] = kind
-            return df
-
-    return wrapper
+def kindRPB(include_type=False):
+    def decorator(fun):
+        """Supports functions that return a DataFrame and have a `kind` keyword
+        argument that specifies regular season ('R'), playoffs ('P'), or both
+        ('B'). If given 'B', it will call the function with both 'R' and 'P'
+        and concatenate the results.
+        """
+        @functools.wraps(fun)
+        def wrapper(*args, **kwargs):
+            kind = kwargs.get('kind', 'R').upper()
+            if kind == 'B':
+                kwargs['kind'] = 'R'
+                reg = fun(*args, **kwargs)
+                if include_type:
+                    reg['game_type'] = 'R'
+                kwargs['kind'] = 'P'
+                poffs = fun(*args, **kwargs)
+                if include_type:
+                    poffs['game_type'] = 'P'
+                return pd.concat((reg, poffs), ignore_index=True)
+            else:
+                df = fun(*args, **kwargs)
+                if include_type:
+                    df['game_type'] = kind
+                return df
+        return wrapper
+    return decorator
