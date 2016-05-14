@@ -7,7 +7,7 @@ import pandas as pd
 import sportsref
 
 @sportsref.decorators.memoized
-def parsePlay(details, hm, aw, is_hm):
+def parsePlay(details, hm, aw, is_hm, yr):
     """Parse play details from a play-by-play string describing a play; returns
     structured data in a dictionary.
 
@@ -15,6 +15,7 @@ def parsePlay(details, hm, aw, is_hm):
     :hm: the ID of the home team (for identifying team w/ possession)
     :aw: the ID of the away team (for identifying team w/ possession)
     :is_hm: bool indicating whether it is a home play (for possession)
+    :yr: year of the game
     :returns: dictionary of play attributes; -1 on a play that should be
     skipped
     """
@@ -246,7 +247,7 @@ def parsePlay(details, hm, aw, is_hm):
         isOfficialTO = p['timeoutTeam'] == 'Official'
         p['timeoutTeam'] = \
             'Official' if isOfficialTO else \
-            sportsref.nba.teams.teamIDs().get(p['team'], p['team'])
+            sportsref.nba.Season(yr).teamNamesToIDs().get(p['team'], p['team'])
         return p
 
     # parsing technical fouls

@@ -112,11 +112,14 @@ class BoxScore:
     def season(self):
         """
         Returns the year ID of the season in which this game took place.
-        Useful for week 17 January games.
 
         :returns: An int representing the year of the season.
         """
-        raise NotImplementedError("season")
+        d = self.date()
+        if d.month >= 9:
+            return d.year + 1
+        else:
+            return d.year
     
     @sportsref.decorators.memoized
     def pbp(self):
@@ -128,6 +131,7 @@ class BoxScore:
         table = doc('table.stats_table:last')
         rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
         data = []
+        year = self.season()
         cur_qtr = 1
         cur_aw_score = 0
         cur_hm_score = 0
@@ -161,7 +165,7 @@ class BoxScore:
                     p['isJumpBall'] = True
                     jb_str = sportsref.utils.flattenLinks(desc)
                     n = None
-                    p.update(sportsref.nba.pbp.parsePlay(jb_str, n, n, n))
+                    p.update(sportsref.nba.pbp.parsePlay(jb_str, n, n, n, year))
                 else:
                     # if another case, continue
                     if not desc.text().lower().startswith('start of '):
@@ -181,7 +185,7 @@ class BoxScore:
                 # get home and away
                 hm, aw = self.home(), self.away()
                 # handle the play
-                new_p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play)
+                new_p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play, year)
                 if new_p == -1:
                     continue
                 elif new_p.get('isError'):
