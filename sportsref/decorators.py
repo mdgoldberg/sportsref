@@ -90,7 +90,7 @@ def cacheHTML(func):
     the user cache determined by the appdirs package.
     """
 
-    CACHE_DIR = appdirs.user_cache_dir('sportsref', 'mgoldberg')
+    CACHE_DIR = appdirs.user_cache_dir('SportsRef', 'mgoldberg')
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
 

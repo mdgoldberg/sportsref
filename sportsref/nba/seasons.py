@@ -1,6 +1,7 @@
 import re
 import urlparse
 
+import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
@@ -95,3 +96,88 @@ class Season(object):
             print 'ERROR: no boxscores found in season'
             return []
         return df.box_score_text
+
+    def finalsWinner(self):
+        """Returns the team ID for the winner of that year's NBA Finals.
+        :returns: 3-letter team ID for champ.
+        """
+        doc = self.getMainDoc()
+        playoff_table = doc('div#all_playoffs > table')
+        anchor = playoff_table('tr').eq(0)('td').eq(1)('a').eq(0)
+        href = sportsref.utils.relURLToID(anchor.attr['href'])
+        return href
+
+    def finalsLoser(self):
+        """Returns the team ID for the loser of that year's NBA Finals.
+        :returns: 3-letter team ID for runner-up..
+        """
+        doc = self.getMainDoc()
+        playoff_table = doc('div#all_playoffs > table')
+        anchor = playoff_table('tr').eq(0)('td').eq(1)('a').eq(1)
+        href = sportsref.utils.relURLToID(anchor.attr['href'])
+        return href
+
+    def playoffSeriesResults(self):
+        """Returns the winning and losing team of every playoff series in the
+        given year.
+        :returns: Returns a list of tuples of the form
+        (home team ID, away team ID, bool(home team won)).
+        """
+        doc = self.getMainDoc()
+        p_table = doc('div#all_playoffs > table')
+
+        # get winners/losers
+        atags = [tr('td:eq(1) a')
+                 for tr in p_table('tr:contains("Series Stats")').items()]
+        relURLs = [(a.eq(0).attr['href'], a.eq(1).attr['href']) for a in atags]
+        wl = [tuple(map(sportsref.utils.relURLToID, ru)) for ru in relURLs]
+
+        # get home team
+        atags = p_table('tr.hidden table tr:eq(0) td:eq(0) a')
+        bsIDs = [sportsref.utils.relURLToID(a.attrib['href']) for a in atags]
+        home = np.array([sportsref.nba.BoxScore(bs).home() for bs in bsIDs])
+
+        win, loss = map(np.array, zip(*wl))
+        homeWon = home == win
+        ret = zip(home, np.where(homeWon, loss, win), homeWon)
+
+        return ret
+
+    def teamStats(self):
+        """Returns a Pandas DataFrame of each team's basic stat totals for the
+        season.
+        :returns: Pandas DataFrame of team stats, with team ID as index.
+        """
+        doc = self.getMainDoc()
+        table = doc('table#team')
+        df = sportsref.utils.parseTable(table)
+        return df.drop('ranker', axis=1).set_index('team_name')
+
+    def oppStats(self):
+        """Returns a Pandas DataFrame of each team's opponent's basic stat
+        totals for the season.
+        :returns: Pandas DataFrame of each team's opponent's stats, with team
+        ID as index.
+        """
+        doc = self.getMainDoc()
+        table = doc('table#opponent')
+        df = sportsref.utils.parseTable(table)
+        return df.drop('ranker', axis=1).set_index('team_name')
+
+    def miscStats(self, with_arena=False):
+        """Returns a Pandas DataFrame of miscellaneous stats about each team's
+        season.
+        :with_arena: Include arena name column in DataFrame. Defaults to False.
+        :returns: Pandas DataFrame of each team's miscellaneous season stats,
+        with team ID as index.
+        """
+        doc = self.getMainDoc()
+        table = doc('table#misc')
+        df = sportsref.utils.parseTable(table)
+        df['attendance'] = (df['attendance']
+                            .str.replace(',', '')
+                            .astype(float))
+        df.fillna(df.mean(), inplace=True)
+        if not with_arena:
+            df.drop('arena_name', axis=1, inplace=True)
+        return df.drop('ranker', axis=1).set_index('team_name')

@@ -209,6 +209,11 @@ class BoxScore:
         df['bsID'] = self.bsID
 
         # TODO: track current lineup for each team
+        # TODO: track possession number for each possession
+
+        # TODO: add shot clock as a feature OR
+        # make PBP a standard of one entry per second
+        # (so we can deduce shot clock and use as feature)
 
         # clean columns
         df = sportsref.nba.pbp.cleanFeatures(df)
