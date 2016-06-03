@@ -27,7 +27,7 @@ def expandDetails(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.pfr.pbp.parsePlayDetails, df['detail'])
+    dicts = map(sportsref.nfl.pbp.parsePlayDetails, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
@@ -72,7 +72,6 @@ def parsePlayDetails(details):
 
     playerRE = r"\S{6,8}\d{2}"
 
-
     # initialize return dictionary - struct
     struct = {}
 
@@ -108,15 +107,16 @@ def parsePlayDetails(details):
                 .format(playerRE))
     # TODO: currently, plays with multiple fumbles record the original fumbler
     # and the final fumble recoverer
-    fumbleRE = (r"(?:"
-                r"\.? ?(?P<fumbler>{0}) fumbles"
-                r"(?: \(forced by (?P<fumbForcer>{0})\))?"
-                r"(?:.*, recovered by (?P<fumbRecoverer>{0}) at )?"
-                r"(?:, ball out of bounds at )?"
-                r"(?:(?P<fumbRecFieldSide>[a-z]+)?\-?(?P<fumbRecYdLine>\-?\d+))?"
-                r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
-                r")?"
-                .format(playerRE))
+    fumbleRE = (
+        r"(?:"
+        r"\.? ?(?P<fumbler>{0}) fumbles"
+        r"(?: \(forced by (?P<fumbForcer>{0})\))?"
+        r"(?:.*, recovered by (?P<fumbRecoverer>{0}) at )?"
+        r"(?:, ball out of bounds at )?"
+        r"(?:(?P<fumbRecFieldSide>[a-z]+)?\-?(?P<fumbRecYdLine>\-?\d+))?"
+        r"(?: and returned for (?P<fumbRetYds>\-?\d*) yards)?"
+        r")?"
+        .format(playerRE))
     tdSafetyRE = r"(?:(?P<isTD>, touchdown)|(?P<isSafety>, safety))?"
     # TODO: offsetting penalties
     penaltyRE = (r"(?:.*?"
@@ -145,9 +145,9 @@ def parsePlayDetails(details):
     passOptRE = r"(?: {})?".format(passOptRE)
     targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
     passYardsRE = r"(?: for (?:(?P<passYds>\-?\d+) yards?|no gain))"
-    intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE) +
-             r'(?:(?P<intFieldSide>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?' +
-             r'(?: and returned for (?P<intRetYds>\-?\d+) yards?\.?)?)?')
+    intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE)
+             + r'(?:(?P<intFieldSide>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?'
+             + r'(?: and returned for (?P<intRetYds>\-?\d+) yards?\.?)?)?')
     throwRE = r'(?:{}{}{}(?:(?:{}|{}){})?)'.format(
         completeRE, passOptRE, targetedRE, passYardsRE, intRE, tackleRE
     )
@@ -158,11 +158,12 @@ def parsePlayDetails(details):
 
     # create kickoff regex
     koKickerRE = r'(?P<koKicker>{0})'.format(playerRE)
-    koYardsRE = r' kicks (?:off|(?P<isOnside>onside)) (?:(?P<koYds>\d+) yards?|no gain)'
+    koYardsRE = (r' kicks (?:off|(?P<isOnside>onside))'
+                 r' (?:(?P<koYds>\d+) yards?|no gain)')
     nextREs = []
     nextREs.append(
-        r', (?:returned|recovered) by (?P<koReturner>{0})(?: for '.format(playerRE) +
-        r'(?:(?P<koRetYds>\-?\d+) yards?|no gain))?'
+        (r', (?:returned|recovered) by (?P<koReturner>{0})(?: for '
+         r'(?:(?P<koRetYds>\-?\d+) yards?|no gain))?').format(playerRE)
     )
     nextREs.append(
         (r'(?P<isMuffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
@@ -174,9 +175,9 @@ def parsePlayDetails(details):
     )
     nextREs.append(r'(?P<oob>, out of bounds)')
     nextREs.append(r'(?P<isTouchback>, touchback)')
-    # TODO: test the following line to fix a small subset of cases (ex: muff -> oob)
+    # TODO: test the following line to fix a small subset of cases
+    # (ex: muff -> oob)
     nextRE = ''.join(r'(?:{})?'.format(nre) for nre in nextREs)
-    # nextRE = r'(?:{})?'.format('|'.join(nextREs))
     kickoffREstr = r'{}{}{}{}{}{}{}'.format(
         koKickerRE, koYardsRE, nextRE,
         tackleRE, fumbleRE, tdSafetyRE, penaltyRE
@@ -322,7 +323,7 @@ def parsePlayDetails(details):
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
         struct['twoPointSuccess'] = match.group('twoPointSuccess')
-        realPlay = sportsref.pfr.pbp.parsePlayDetails(match.group('twoPoint'))
+        realPlay = sportsref.nfl.pbp.parsePlayDetails(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
         return struct
@@ -400,8 +401,8 @@ def cleanFeatures(struct):
     if struct['isRun']:
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
-    struct['timeoutTeam'] = sportsref.pfr.teams.teamIDs().get(struct.get('timeoutTeam'),
-                                                    np.nan)
+    struct['timeoutTeam'] = sportsref.nfl.teams.teamIDs().get(
+        struct.get('timeoutTeam'), np.nan)
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
 
@@ -561,12 +562,12 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
         else:
             pID = None
         curTm = curOpp = np.nan
-        bs = sportsref.pfr.boxscores.BoxScore(struct['bsID'])
+        bs = sportsref.nfl.boxscores.BoxScore(struct['bsID'])
         if pID and len(pID) == 3:
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
-            player = sportsref.pfr.players.Player(pID)
+            player = sportsref.nfl.players.Player(pID)
             glog = player.gamelog(kind='B')
             if 'bsID' in glog.columns:
                 narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
@@ -607,7 +608,7 @@ def addTeamFeatures(row):
     row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
     row['opp_wpa'] = -row['team_wpa']
     # create column for offense and defense scores if not already there
-    bs = sportsref.pfr.boxscores.BoxScore(row['bsID'])
+    bs = sportsref.nfl.boxscores.BoxScore(row['bsID'])
     if bs.home() == row['team']:
         row['team_score'] = row['pbp_score_hm']
         row['opp_score'] = row['pbp_score_aw']

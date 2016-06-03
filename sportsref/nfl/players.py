@@ -20,7 +20,7 @@ class Player:
     def __init__(self, playerID):
         self.pID = playerID
         self.mainURL = urlparse.urljoin(
-            sportsref.pfr.BASE_URL, '/players/{0[0]}/{0}.htm'
+            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}.htm'
         ).format(self.pID)
 
     def __eq__(self, other):
@@ -169,7 +169,7 @@ class Player:
             return np.nan
 
     @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB
+    @sportsref.decorators.kindRPB(include_type=True)
     def gamelog(self, kind='R', year=None):
         """Gets the career gamelog of the given player.
         :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
@@ -179,7 +179,7 @@ class Player:
         :returns: A DataFrame with the player's career gamelog.
         """
         url = urlparse.urljoin(
-            sportsref.pfr.BASE_URL, '/players/{0[0]}/{0}/gamelog'
+            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}/gamelog'
         ).format(self.pID)
         doc = pq(sportsref.utils.getHTML(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
@@ -189,7 +189,7 @@ class Player:
         return df
 
     @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB
+    @sportsref.decorators.kindRPB(include_type=True)
     def passing(self, kind='R'):
         """Gets yearly passing stats for the player.
 
@@ -201,6 +201,7 @@ class Player:
         df = sportsref.utils.parseTable(table)
         return df
 
+    # TODO: differentiate regular season and playoffs
     @sportsref.decorators.memoized
     def rushing_and_receiving(self):
         doc = self.getDoc()

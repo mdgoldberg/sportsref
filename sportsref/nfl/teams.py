@@ -20,7 +20,7 @@ yr = datetime.datetime.now().year
 
 @sportsref.decorators.memoized
 def teamNames():
-    doc = pq(sportsref.utils.getHTML(sportsref.pfr.BASE_URL + '/teams/'))
+    doc = pq(sportsref.utils.getHTML(sportsref.nfl.BASE_URL + '/teams/'))
     table = doc('table#teams_active')
     df = sportsref.utils.parseTable(table)
     ids = df.team_name.str[:3].values
@@ -53,24 +53,25 @@ class Team:
         return hash(self.teamID)
 
     @sportsref.decorators.memoized
-    def teamYearURL(self, yr):
+    def teamYearURL(self, yr_str):
         return urlparse.urljoin(
-            sportsref.pfr.BASE_URL, '/teams/{}/{}.htm'.format(self.teamID, yr))
+            sportsref.nfl.BASE_URL,
+            '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
     @sportsref.decorators.memoized
     def getMainDoc(self):
         relURL = '/teams/{}'.format(self.teamID)
-        teamURL = urlparse.urljoin(sportsref.pfr.BASE_URL, relURL)
+        teamURL = urlparse.urljoin(sportsref.nfl.BASE_URL, relURL)
         mainDoc = pq(sportsref.utils.getHTML(teamURL))
         return mainDoc
 
     @sportsref.decorators.memoized
-    def getYearDoc(self, year=yr):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(year)))
+    def getYearDoc(self, yr_str=yr):
+        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
 
     @sportsref.decorators.memoized
     def name(self):
-        """Returns the real name of the franchise given a team ID.
+        """Returns the real name of the franchise given the team ID.
 
         Examples:
         'nwe' -> 'New England Patriots'

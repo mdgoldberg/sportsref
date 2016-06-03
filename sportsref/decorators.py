@@ -1,4 +1,5 @@
 import collections
+import copy
 import datetime
 import functools
 import os
@@ -9,6 +10,9 @@ import urlparse
 import appdirs
 import numpy as np
 import pandas as pd
+from pyquery import PyQuery as pq
+
+import sportsref
 
 def switchToDir(dirPath):
     """
@@ -28,27 +32,82 @@ def switchToDir(dirPath):
 
     return decorator
 
+def _cacheValid_pfr(ct, mt, fn):
+    # first, if we can ensure that the file won't change,
+    # then we're safe caching it
+    if 'boxscore' in fn:
+        return True
+    # now, check for a year in the filename
+    m = re.search(r'(\d{4})', fn)
+    if not m:
+        return False
+    year = int(m.group(1))
+    today = datetime.date.today()
+    endOfSeason = datetime.date(today.year, 2, 18)
+    startOfSeason = datetime.date(today.year, 8, 25)
+    # if it was a year prior to the current season, we're good
+    curSeason = today.year - (today <= endOfSeason)
+    if year < curSeason:
+        return True
+    # if we're in the offseason, we're good
+    if endOfSeason < today < startOfSeason:
+        return True
+    # otherwise, check if new data could have been updated since mod
+    # (assumed that new game data is added the day after that game)
+    modDay = today - datetime.timedelta(seconds=ct-mt)
+    lastGameDay = today
+    while (lastGameDay.weekday() + 1) % 7 not in (0, 1, 2, 5):
+        lastGameDay = lastGameDay - datetime.timedelta(days=1)
+    return modDay >= lastGameDay
+
+def _cacheValid_bkref(ct, mt, fn):
+    # first, if we can ensure that the file won't change,
+    # then we're safe caching it
+    if 'boxscore' in fn:
+        return True
+    # now, check for a year in the filename
+    m = re.search(r'(\d{4})', fn)
+    if not m:
+        return False
+    year = int(m.group(1))
+    today = datetime.date.today()
+    endOfSeason = datetime.date(today.year, 6, 30)
+    startOfSeason = datetime.date(today.year, 9, 23)
+    # if it was a year prior to the current season, we're good
+    curSeason = today.year - (today <= endOfSeason)
+    if year < curSeason:
+        return True
+    # if we're in the offseason, we're good
+    if endOfSeason < today < startOfSeason:
+        return True
+    # otherwise, check if new data could have been updated since mod
+    # (assumed that new game data is added the day after that game)
+    modDay = today - datetime.timedelta(seconds=ct-mt)
+    return modDay >= today
+
 def cacheHTML(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
     the user cache determined by the appdirs package.
     """
 
-    CACHE_DIR = appdirs.user_cache_dir('pfr', 'mgoldberg')
+    CACHE_DIR = appdirs.user_cache_dir('SportsRef', 'mgoldberg')
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
+
+    cacheValidFuncs = lambda s: eval('_cacheValid_' + s)
 
     @functools.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
+        sport = sportsref.SITE_ABBREV[parsed.scheme + '://' + parsed.netloc]
         relURL = parsed.path
         if parsed.query:
             relURL += '?' + parsed.query
-        noPathFN = relURL.replace('/', '')
+        noPathFN = re.sub(r'\.html?', '', sport + relURL.replace('/', ''))
         fn = '{}/{}'.format(CACHE_DIR, noPathFN)
 
-        # TODO: fix this problem?
         if len(noPathFN) > 255:
-            # filename is too long, just evaluate the function
+            # filename is too long, just evaluate the function again
             return func(url).decode('utf-8', 'ignore')
         
         # set time variables (in seconds)
@@ -56,36 +115,8 @@ def cacheHTML(func):
             modtime = int(os.path.getmtime(fn))
             curtime = int(time.time())
 
-        def cacheValid(ct, mt, fn):
-            # first, if we can ensure that the file won't change,
-            # then we're safe caching it
-            if 'boxscore' in fn:
-                return True
-            m = re.search(r'(\d{4})', fn)
-            if m:
-                year = int(m.group(1))
-                now = datetime.datetime.now()
-                curSeason = now.year - (1 if now.month <= 2 else 0)
-                if year < curSeason:
-                    return True
-
-            # otherwise, check if it's currently the offseason
-            today = datetime.date.today()
-            endOfSeason = datetime.date(today.year, 2, 10)
-            startOfSeason = datetime.date(today.year, 9, 1)
-            # if we're in the offseason, don't worry about it
-            if endOfSeason < today < startOfSeason:
-                return True
-
-            # otherwise, check if new data could have been updated since mod
-            # (assumed that new game data is added the day after that game)
-            modDay = today - datetime.timedelta(seconds=ct-mt)
-            lastGameDay = today
-            while (lastGameDay.weekday() + 1) % 7 not in (0, 1, 2, 5):
-                lastGameDay = lastGameDay - datetime.timedelta(days=1)
-            return modDay >= lastGameDay
-
         # if file found and caching is valid, read from file
+        cacheValid = cacheValidFuncs(sport)
         if os.path.isfile(fn) and cacheValid(curtime, modtime, fn):
             with open(fn, 'r') as f:
                 text = f.read()
@@ -126,12 +157,19 @@ def memoized(fun):
         clean_args = tuple(map(deDictify, clean_args))
         clean_kwargs = deDictify(kwargs)
 
+        def _copy(v):
+            if isinstance(v, pq):
+                return v.clone()
+            else:
+                return copy.deepcopy(v)
+
         key = (clean_args, clean_kwargs)
         try:
-            ret = cache[key]
+            ret = _copy(cache[key])
             return ret
         except KeyError:
-            ret = cache[key] = fun(*args, **kwargs)
+            cache[key] = fun(*args, **kwargs)
+            ret = _copy(cache[key])
             return ret
         except TypeError:
             print 'memoization type error here', fun.__name__, key
@@ -140,26 +178,30 @@ def memoized(fun):
     cache = {}
     return wrapper
 
-def kindRPB(fun):
-    """Supports functions that return a DataFrame and have a `kind` keyword
-    argument that specifies regular season ('R'), playoffs ('P'), or both
-    ('B'). If given 'B', it will call the function with both 'R' and 'P' and
-    concatenate the results.
-    """
-    @functools.wraps(fun)
-    def wrapper(*args, **kwargs):
-        kind = kwargs.get('kind', 'R').upper()
-        if kind == 'B':
-            kwargs['kind'] = 'R'
-            reg = fun(*args, **kwargs)
-            reg['game_type'] = 'R'
-            kwargs['kind'] = 'P'
-            poffs = fun(*args, **kwargs)
-            poffs['game_type'] = 'P'
-            return pd.concat((reg, poffs), ignore_index=True)
-        else:
-            df = fun(*args, **kwargs)
-            df['game_type'] = kind
-            return df
-
-    return wrapper
+def kindRPB(include_type=False):
+    def decorator(fun):
+        """Supports functions that return a DataFrame and have a `kind` keyword
+        argument that specifies regular season ('R'), playoffs ('P'), or both
+        ('B'). If given 'B', it will call the function with both 'R' and 'P'
+        and concatenate the results.
+        """
+        @functools.wraps(fun)
+        def wrapper(*args, **kwargs):
+            kind = kwargs.get('kind', 'R').upper()
+            if kind == 'B':
+                kwargs['kind'] = 'R'
+                reg = fun(*args, **kwargs)
+                if include_type:
+                    reg['game_type'] = 'R'
+                kwargs['kind'] = 'P'
+                poffs = fun(*args, **kwargs)
+                if include_type:
+                    poffs['game_type'] = 'P'
+                return pd.concat((reg, poffs), ignore_index=True)
+            else:
+                df = fun(*args, **kwargs)
+                if include_type:
+                    df['game_type'] = kind
+                return df
+        return wrapper
+    return decorator

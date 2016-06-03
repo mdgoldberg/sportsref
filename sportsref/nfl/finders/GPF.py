@@ -43,7 +43,7 @@ def GamePlayFinder(**kwargs):
         plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
-        plays = sportsref.pfr.pbp.expandDetails(plays, detailCol='description')
+        plays = sportsref.nfl.pbp.expandDetails(plays, detailCol='description')
 
     return plays
 
@@ -245,7 +245,9 @@ def getInputsOptionsDefaults():
                     )
                 except:
                     def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
-                    def_dict[k]['options'] = sorted(list(def_dict[k]['options']))
+                    def_dict[k]['options'] = sorted(
+                        list(def_dict[k]['options'])
+                    )
             json.dump(def_dict, f)
 
     return def_dict
