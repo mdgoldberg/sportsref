@@ -22,17 +22,13 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def getMainDoc(self):
-        url = urlparse.urljoin(
-            sportsref.nba.BASE_URL, 'boxscores/{}.html'.format(self.bsID)
-        )
+        url = sportsref.nba.BASE_URL + 'boxscores/{}.html'.format(self.bsID)
         doc = pq(sportsref.utils.getHTML(url))
         return doc
 
     @sportsref.decorators.memoized
     def getPBPDoc(self):
-        url = urlparse.urljoin(
-            sportsref.nba.BASE_URL, 'boxscores/pbp/{}.html'.format(self.bsID)
-        )
+        url = sportsref.nba.BASE_URL, 'boxscores/pbp/{}.html'.format(self.bsID)
         doc = pq(sportsref.utils.getHTML(url))
         return doc
     

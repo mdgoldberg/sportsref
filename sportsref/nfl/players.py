@@ -19,9 +19,8 @@ class Player:
 
     def __init__(self, playerID):
         self.pID = playerID
-        self.mainURL = urlparse.urljoin(
-            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}.htm'
-        ).format(self.pID)
+        self.mainURL = (sportsref.nfl.BASE_URL +
+                        '/players/{0[0]}/{0}.htm').format(self.pID)
 
     def __eq__(self, other):
         return self.pID == other.pID
@@ -178,9 +177,8 @@ class Player:
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        url = urlparse.urljoin(
-            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}/gamelog'
-        ).format(self.pID)
+        url = (sportsref.nfl.BASE_URL +
+               '/players/{0[0]}/{0}/gamelog').format(self.pID)
         doc = pq(sportsref.utils.getHTML(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
         df = sportsref.utils.parseTable(table)

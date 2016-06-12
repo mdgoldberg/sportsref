@@ -54,14 +54,13 @@ class Team:
 
     @sportsref.decorators.memoized
     def teamYearURL(self, yr_str):
-        return urlparse.urljoin(
-            sportsref.nfl.BASE_URL,
-            '/teams/{}/{}.htm'.format(self.teamID, yr_str))
+        return (sportsref.nfl.BASE_URL +
+                '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
     @sportsref.decorators.memoized
     def getMainDoc(self):
         relURL = '/teams/{}'.format(self.teamID)
-        teamURL = urlparse.urljoin(sportsref.nfl.BASE_URL, relURL)
+        teamURL = sportsref.nfl.BASE_URL + relURL
         mainDoc = pq(sportsref.utils.getHTML(teamURL))
         return mainDoc
 

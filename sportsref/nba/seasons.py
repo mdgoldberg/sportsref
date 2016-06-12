@@ -18,9 +18,8 @@ class Season(object):
         :year: The year of the season we want.
         """
         self._yr = int(year)
-        self._url = lambda s: urlparse.urljoin(
-            sportsref.nba.BASE_URL, '/leagues/NBA_{}.html'.format(s))
-
+        self._url = lambda s: (sportsref.nba.BASE_URL +
+                               '/leagues/NBA_{}.html'.format(s))
 
     def __eq__(self, other):
         return (self._yr == other._yr)

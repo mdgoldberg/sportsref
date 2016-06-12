@@ -28,9 +28,7 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def getDoc(self):
-        url = urlparse.urljoin(
-            sportsref.nfl.BASE_URL, 'boxscores/{}.htm'.format(self.bsID)
-        )
+        url = sportsref.nfl.BASE_URL + 'boxscores/{}.htm'.format(self.bsID)
         doc = pq(sportsref.utils.getHTML(url))
         return doc
 
