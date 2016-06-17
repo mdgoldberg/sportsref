@@ -85,6 +85,10 @@ def _cacheValid_bkref(ct, mt, fn):
     modDay = today - datetime.timedelta(seconds=ct-mt)
     return modDay >= today
 
+def _cacheValid_cfb(ct, mt, fn):
+    # TODO
+    return True
+
 def cacheHTML(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
     the user cache determined by the appdirs package.
@@ -99,7 +103,11 @@ def cacheHTML(func):
     @functools.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
-        sport = sportsref.SITE_ABBREV[parsed.scheme + '://' + parsed.netloc]
+        sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' + parsed.netloc)
+        if sport == None:
+            for ncaaSport in ('cfb', 'cbb'):
+                if ncaaSport in url:
+                    sport = ncaaSport
         relURL = parsed.path
         if parsed.query:
             relURL += '?' + parsed.query

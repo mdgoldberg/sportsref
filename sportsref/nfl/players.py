@@ -81,19 +81,25 @@ class Player:
     @sportsref.decorators.memoized
     def weight(self):
         doc = self.getDoc()
-        rawText = (doc('div#info_box p')
-                   .filter(lambda i,e: 'Weight:' in e.text_content())
-                   .text())
-        rawWeight = re.search(r'Weight: (\S+)', rawText, re.I).group(1)
+        try:
+            rawText = (doc('div#info_box p')
+                       .filter(lambda i,e: 'Weight:' in e.text_content())
+                       .text())
+            rawWeight = re.search(r'Weight: (\S+)', rawText, re.I).group(1)
+        except AttributeError:
+            return np.nan
         return int(rawWeight)
 
     @sportsref.decorators.memoized
     def hand(self):
         doc = self.getDoc()
-        rawText = (doc('div#info_box p')
-                   .filter(lambda i,e: 'Position' in e.text_content())
-                   .text())
-        rawHand = re.search(r'Throws: (\S+)', rawText, re.I).group(1)
+        try:
+            rawText = (doc('div#info_box p')
+                       .filter(lambda i,e: 'Position' in e.text_content())
+                       .text())
+            rawHand = re.search(r'Throws: (\S+)', rawText, re.I).group(1)
+        except AttributeError:
+            return np.nan
         return rawHand[0] # 'L' or 'R'
 
     @sportsref.decorators.memoized

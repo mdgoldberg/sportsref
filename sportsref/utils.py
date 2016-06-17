@@ -157,14 +157,14 @@ def relURLToID(url):
     """
     yearRegex = r'.*/years/(\d{4}).*|.*/gamelog/(\d{4}).*'
     playerRegex = r'.*/players/(?:\w/)?(.+?)(?:/|\.html?)'
-    boxscoresRegex = r'/boxscores/(.+?)\.html?'
-    teamRegex = r'/teams/(\w{3})/.*'
-    coachRegex = r'/coaches/(.+?)\.html?'
-    stadiumRegex = r'/stadiums/(.+?)\.html?'
-    refRegex = r'/officials/(.+?r)\.html?'
+    boxscoresRegex = r'.*/boxscores/(.+?)\.html?'
+    teamRegex = r'.*/teams/(\w{3})/.*'
+    coachRegex = r'.*/coaches/(.+?)\.html?'
+    stadiumRegex = r'.*/stadiums/(.+?)\.html?'
+    refRegex = r'.*/officials/(.+?r)\.html?'
     collegeRegex = r'.*/schools/(\S+?)/.*'
-    hsRegex = r'/schools/high_schools\.cgi\?id=([^\&]{8})'
-    bsDateRegex = r'/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
+    bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
 
     regexes = [
         yearRegex,
