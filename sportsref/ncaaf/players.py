@@ -1,6 +1,6 @@
 import datetime
 import re
-import urlparse
+import collections
 
 import numpy as np
 import pandas as pd
@@ -119,47 +119,61 @@ class Player:
         college = sportsref.utils.relURLToID(aTag.attr['href'])
         return college
 
-    # TODO: scrape player features that will be used for analysis
-    # ex: pass/rush/rec/def season/career stats + awards
-    # after that, get college-level and conference-level features
-
     @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB(include_type=True)
-    def gamelog(self, kind='R', year=None):
+    def gamelog(self, year=None):
         """Gets the career gamelog of the given player.
-        :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
-        Case-insensitive; defaults to 'R'.
         :year: The year for which the gamelog should be returned; if None,
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        url = urlparse.urljoin(
-            sportsref.nfl.BASE_URL, '/players/{0[0]}/{0}/gamelog'
-        ).format(self.pID)
+        url = sportsref.nfl.BASE_URL, '/players/{0}/gamelog/'.format(self.pID)
         doc = pq(sportsref.utils.getHTML(url))
-        table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
+        table = doc('#gamelog')
         df = sportsref.utils.parseTable(table)
         if year is not None:
             df = df.query('year == @year')
         return df
 
     @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB(include_type=True)
-    def passing(self, kind='R'):
+    def passing(self):
         """Gets yearly passing stats for the player.
-
-        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
         :returns: Pandas DataFrame with passing stats.
         """
         doc = self.getDoc()
-        table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
+        table = doc('#passing')
         df = sportsref.utils.parseTable(table)
         return df
 
-    # TODO: differentiate regular season and playoffs
     @sportsref.decorators.memoized
     def rushing_and_receiving(self):
+        """Gets yearly rushing & receiving stats for the player.
+        :returns: Pandas DataFrame with stats.
+        """
         doc = self.getDoc()
-        table = doc('#rushing_and_receiving')
+        table = doc('#rushing')
         df = sportsref.utils.parseTable(table)
         return df
+
+    @sportsref.decorators.memoized
+    def defense(self):
+        """Gets yearly defensive stats for the player.
+        :returns: Pandas DataFrame with defensive stats.
+        """
+        doc = self.getDoc()
+        table = doc('#defense')
+        df = sportsref.utils.parseTable(table)
+        return df
+
+    def awards(self):
+        """Gets the awards won by the player, if any.
+        :returns: dictionary mapping year to awards won during that year.
+        """
+        ret = collections.defaultdict(list)
+        doc = self.getDoc()
+        anchors = doc('table#leaderboard td:contains("Awards and Honors") a')
+        results = anchors.map(
+            lambda i,e: sportsref.utils.relURLToID(e.attrib['href'])
+        )
+        for yr, award in zip(*[iter(results)]*2):
+            ret[int(yr)].append(award)
+        return dict(ret)

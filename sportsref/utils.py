@@ -115,7 +115,6 @@ def flattenLinks(td):
 
     :td: the PyQuery object for the HTML to convert
     :returns: the string with the links flattened to IDs
-
     """
 
     # helper function to flatten individual strings/links
@@ -152,6 +151,7 @@ def relURLToID(url):
     * officials/...
     * schools/...
     * schools/high_schools.cgi?id=...
+    * awards/...
 
     :returns: ID associated with the given relative URL.
     """
@@ -165,6 +165,7 @@ def relURLToID(url):
     collegeRegex = r'.*/schools/(\S+?)/.*'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    awardsRegex = r'.*/awards/(\S+?)(?:\-\d{4}\-\d{4})?\.html?'
 
     regexes = [
         yearRegex,
@@ -177,6 +178,7 @@ def relURLToID(url):
         collegeRegex,
         hsRegex,
         bsDateRegex,
+        awardsRegex,
     ]
 
     for regex in regexes:
