@@ -1,4 +1,3 @@
-import datetime
 import re
 import urlparse
 
@@ -11,8 +10,6 @@ import sportsref
 __all__ = [
     'Player',
 ]
-
-yr = datetime.datetime.now().year
 
 @sportsref.decorators.memoized
 class Player:
@@ -40,7 +37,7 @@ class Player:
         return name
 
     @sportsref.decorators.memoized
-    def age(self, year=yr, month=9, day=1):
+    def age(self, year, month=9, day=1):
         doc = self.getDoc()
         span = doc('div#info_box span#necro-birth')
         birthstring = span.attr('data-birth')
@@ -151,7 +148,7 @@ class Player:
         return hs
 
     @sportsref.decorators.memoized
-    def av(self, year=yr):
+    def av(self, year):
         doc = self.getDoc()
         tables = doc('table[id]').filter(
             lambda i,e: 'AV' in e.text_content()

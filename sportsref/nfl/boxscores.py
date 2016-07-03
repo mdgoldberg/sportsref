@@ -1,4 +1,3 @@
-import datetime
 import re
 import urlparse
 
@@ -11,8 +10,6 @@ import sportsref
 __all__ = [
     'BoxScore',
 ]
-
-yr = datetime.datetime.now().year
 
 @sportsref.decorators.memoized
 class BoxScore:

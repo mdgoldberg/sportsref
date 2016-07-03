@@ -16,8 +16,6 @@ __all__ = [
     'Team',
 ]
 
-yr = datetime.datetime.now().year
-
 @sportsref.decorators.memoized
 def teamNames():
     doc = pq(sportsref.utils.getHTML(sportsref.nfl.BASE_URL + '/teams/'))
@@ -65,7 +63,7 @@ class Team:
         return mainDoc
 
     @sportsref.decorators.memoized
-    def getYearDoc(self, yr_str=yr):
+    def getYearDoc(self, yr_str):
         return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
 
     @sportsref.decorators.memoized
@@ -85,7 +83,7 @@ class Team:
         return ' '.join(teamwords)
 
     @sportsref.decorators.memoized
-    def roster(self, year=yr):
+    def roster(self, year):
         """Returns the roster table for the given year.
 
         :year: The year for which we want the roster; defaults to current year.
@@ -94,7 +92,7 @@ class Team:
         raise "not yet implemented"
 
     @sportsref.decorators.memoized
-    def boxscores(self, year=yr):
+    def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
 
@@ -110,21 +108,21 @@ class Team:
         return df.boxscore_word.dropna().values
 
     @sportsref.decorators.memoized
-    def passing(self, year=yr):
+    def passing(self, year):
         doc = self.getYearDoc(year)
         table = doc('#passing')
         df = sportsref.utils.parseTable(table)
         return df
 
     @sportsref.decorators.memoized
-    def rushingAndReceiving(self, year=yr):
+    def rushingAndReceiving(self, year):
         doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
         df = sportsref.utils.parseTable(table)
         return df
 
     @sportsref.decorators.memoized
-    def teamInfo(self, year=yr):
+    def teamInfo(self, year):
         doc = self.getYearDoc(year)
         teamDict = {}
         table = doc('#all_team_stats table.stats_table').eq(0)
