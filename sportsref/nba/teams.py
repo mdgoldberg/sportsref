@@ -1,4 +1,3 @@
-import datetime
 import re
 import urlparse
 
@@ -7,8 +6,6 @@ import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
-
-yr = datetime.datetime.now().year
 
 @sportsref.decorators.memoized
 class Team:
@@ -35,7 +32,7 @@ class Team:
         return mainDoc
 
     @sportsref.decorators.memoized
-    def getYearDoc(self, yr_str=yr):
+    def getYearDoc(self, yr_str):
         return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
 
     @sportsref.decorators.memoized
@@ -55,7 +52,7 @@ class Team:
         return ' '.join(teamwords)
 
     @sportsref.decorators.memoized
-    def roster(self, year=yr):
+    def roster(self, year):
         """Returns the roster table for the given year.
 
         :year: The year for which we want the roster; defaults to current year.
@@ -64,7 +61,7 @@ class Team:
         raise NotImplementedError('roster')
 
     @sportsref.decorators.memoized
-    def boxscores(self, year=yr):
+    def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
 
