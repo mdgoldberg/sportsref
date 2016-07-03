@@ -152,6 +152,7 @@ def relURLToID(url):
     * schools/...
     * schools/high_schools.cgi?id=...
     * awards/...
+    * conferences/...
 
     :returns: ID associated with the given relative URL.
     """
@@ -166,6 +167,7 @@ def relURLToID(url):
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
     awardsRegex = r'.*/awards/(\S+?)(?:\-\d{4}\-\d{4})?\.html?'
+    confRegex = r'.*/conferences/(\S+?)/.*'
 
     regexes = [
         yearRegex,
@@ -179,6 +181,7 @@ def relURLToID(url):
         hsRegex,
         bsDateRegex,
         awardsRegex,
+        confRegex,
     ]
 
     for regex in regexes:
