@@ -1,4 +1,3 @@
-import datetime
 import re
 import collections
 
@@ -11,8 +10,6 @@ import sportsref
 __all__ = [
     'Player',
 ]
-
-yr = datetime.datetime.now().year
 
 @sportsref.decorators.memoized
 class Player:
