@@ -84,8 +84,8 @@ def parseTable(table):
     )
     for cls in allClasses:
         df['hasClass_' + cls] = [
-            row.attr['class'] and
-            cls in row.attr['class'].split()
+            bool(row.attr['class'] and
+                 cls in row.attr['class'].split())
             for row in rows
         ]
 

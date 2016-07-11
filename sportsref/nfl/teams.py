@@ -16,15 +16,14 @@ __all__ = [
     'Team',
 ]
 
-# TODO: fix whole file
-
 @sportsref.decorators.memoized
 def teamNames():
     doc = pq(sportsref.utils.getHTML(sportsref.nfl.BASE_URL + '/teams/'))
     table = doc('table#teams_active')
     df = sportsref.utils.parseTable(table)
+    df = df.loc[~df['hasClass_partial_table']]
     ids = df.team_name.str[:3].values
-    teamNames = [tr('td a') for tr in table('tr').items()]
+    teamNames = [tr('th a') for tr in table('tr').items()]
     teamNames = filter(None, teamNames)
     teamNames = [lst[0].text_content() for lst in teamNames]
     d = dict(zip(ids, teamNames))
@@ -79,7 +78,7 @@ class Team:
         :returns: A string corresponding to the team's full name.
         """
         doc = self.getMainDoc()
-        headerwords = doc('div#info_box h1')[0].text_content().split()
+        headerwords = doc('div#meta h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
@@ -103,7 +102,7 @@ class Team:
         :returns: np.array of strings representing boxscore IDs.
         """
         doc = self.getYearDoc(year)
-        table = doc('table#team_gamelogs')
+        table = doc('table#games')
         df = sportsref.utils.parseTable(table)
         if df.empty:
             return np.array([])
@@ -111,27 +110,20 @@ class Team:
 
     @sportsref.decorators.memoized
     def passing(self, year):
+        # TODO: WHY WON'T THIS WORK??
+        print 'ERROR: THIS FUNCTION IS BROKEN'
         doc = self.getYearDoc(year)
-        table = doc('#passing')
+        table = doc('table#passing')
         df = sportsref.utils.parseTable(table)
         return df
 
     @sportsref.decorators.memoized
     def rushingAndReceiving(self, year):
+        # TODO: WHY WON'T THIS WORK??
+        print 'ERROR: THIS FUNCTION IS BROKEN'
         doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
         df = sportsref.utils.parseTable(table)
         return df
 
-    @sportsref.decorators.memoized
-    def teamInfo(self, year):
-        doc = self.getYearDoc(year)
-        teamDict = {}
-        table = doc('#all_team_stats table.stats_table').eq(0)
-        for tr in table('tbody tr').items():
-            td0, td1 = tr('td')[:2]
-            key = td0.text_content().lower()
-            key = re.sub(r'\W', '_', key)
-            val = sportsref.utils.flattenLinks(td1)
-            teamDict[key] = val
-        return teamDict
+    # TODO: add functions for HC, OC, DC, SRS, SOS, PF, PA, W-L, etc.
