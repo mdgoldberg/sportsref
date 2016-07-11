@@ -61,14 +61,14 @@ def parseTable(table):
         return pd.DataFrame()
     # get columns
     columns = [c.attrib['data-stat']
-               for c in table('thead tr[class=""] th[data-stat]')]
+               for c in table('thead tr:not([class]) th[data-stat]')]
 
     # get data
     rows = list(table('tbody tr')
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flattenLinks(td) for td in row.items('td')]
+        [flattenLinks(td) for td in row.items('th,td')]
         for row in rows
     ]
 

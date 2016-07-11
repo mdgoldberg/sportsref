@@ -16,6 +16,8 @@ __all__ = [
     'Team',
 ]
 
+# TODO: fix whole file
+
 @sportsref.decorators.memoized
 def teamNames():
     doc = pq(sportsref.utils.getHTML(sportsref.nfl.BASE_URL + '/teams/'))

@@ -1,5 +1,5 @@
 import re
-import urlparse
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -33,28 +33,28 @@ class Player:
     @sportsref.decorators.memoized
     def name(self):
         doc = self.getDoc()
-        name = doc('div#info_box h1:first').text()
+        name = doc('div#meta h1:first').text()
         return name
 
     @sportsref.decorators.memoized
     def age(self, year, month=9, day=1):
         doc = self.getDoc()
-        span = doc('div#info_box span#necro-birth')
+        span = doc('div#meta span#necro-birth')
         birthstring = span.attr('data-birth')
         dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})', birthstring).groups()
         dateargs = map(int, dateargs)
         birthDate = datetime.date(*dateargs)
-        delta = datetime.date(year=year, month=month, day=day) - birthdate
+        delta = datetime.date(year=year, month=month, day=day) - birthDate
         age = delta.days / 365.
         return age
 
     @sportsref.decorators.memoized
     def position(self):
         doc = self.getDoc()
-        rawText = (doc('div#info_box p')
+        rawText = (doc('div#meta p')
                    .filter(lambda i,e: 'Position' in e.text_content())
                    .text())
-        rawPos = re.search(r'Position: (\S+)', rawText, re.I).group(1)
+        rawPos = re.search(r'Position\W*(\S+)', rawText, re.I).group(1)
         allPositions = rawPos.split('-')
         # right now, returning just the primary position for those with
         # multiple positions
@@ -63,38 +63,25 @@ class Player:
     @sportsref.decorators.memoized
     def height(self):
         doc = self.getDoc()
-        try:
-            rawText = (doc('div#info_box p')
-                       .filter(
-                           lambda i,e: 'height:' in e.text_content().lower()
-                       ).text())
-            rawHeight = (re.search(r'Height: (\d\-\d{1,2})', rawText, re.I)
-                         .group(1))
-        except AttributeError:
-            return np.nan
-        feet, inches = map(int, rawHeight.split('-'))
-        return feet*12 + inches
+        rawText = doc('div#meta p span[itemprop="height"]').text()
+        feet, inches = map(int, rawText.split('-'))
+        return feet * 12 + inches
 
     @sportsref.decorators.memoized
     def weight(self):
         doc = self.getDoc()
-        try:
-            rawText = (doc('div#info_box p')
-                       .filter(lambda i,e: 'Weight:' in e.text_content())
-                       .text())
-            rawWeight = re.search(r'Weight: (\S+)', rawText, re.I).group(1)
-        except AttributeError:
-            return np.nan
-        return int(rawWeight)
+        rawText = doc('div#meta p span[itemprop="weight"]').text()
+        weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
+        return int(weight)
 
     @sportsref.decorators.memoized
     def hand(self):
         doc = self.getDoc()
         try:
-            rawText = (doc('div#info_box p')
-                       .filter(lambda i,e: 'Position' in e.text_content())
+            rawText = (doc('div#meta p')
+                       .filter(lambda i,e: 'Throws' in e.text_content())
                        .text())
-            rawHand = re.search(r'Throws: (\S+)', rawText, re.I).group(1)
+            rawHand = re.search(r'Throws\W+(\S+)', rawText, re.I).group(1)
         except AttributeError:
             return np.nan
         return rawHand[0] # 'L' or 'R'
@@ -102,8 +89,8 @@ class Player:
     @sportsref.decorators.memoized
     def draftPick(self):
         doc = self.getDoc()
-        rawDraft = doc('div#info_box > p:first').text()
-        m = re.search(r'Drafted .*? round \((\d+).*?overall\)', rawDraft, re.I)
+        rawDraft = doc('div#meta p:contains("Draft")').text()
+        m = re.search(r'Draft.*? round \((\d+).*?overall\)', rawDraft, re.I)
         # if not drafted or taken in supplemental draft, return NaN
         if not m or 'Supplemental' in rawDraft:
             return np.nan
@@ -113,8 +100,8 @@ class Player:
     @sportsref.decorators.memoized
     def draftClass(self):
         doc = self.getDoc()
-        rawDraft = doc('div#info_box > p:first').text()
-        m = re.search(r'Drafted.*?of the (\d{4}) NFL', rawDraft, re.I)
+        rawDraft = doc('div#meta p:contains("Draft")').text()
+        m = re.search(r'Draft.*?of the (\d{4}) NFL', rawDraft, re.I)
         if not m:
             return np.nan
         else:
@@ -123,9 +110,9 @@ class Player:
     @sportsref.decorators.memoized
     def draftTeam(self):
         doc = self.getDoc()
-        rawDraft = doc('div#info_box > p:first')
+        rawDraft = doc('div#meta p:contains("Draft")')
         draftStr = sportsref.utils.flattenLinks(rawDraft)
-        m = re.search(r'Drafted by the (\w{3})', draftStr)
+        m = re.search(r'Draft\W+(\w+)', draftStr)
         if not m:
             return np.nan
         else:
@@ -134,7 +121,7 @@ class Player:
     @sportsref.decorators.memoized
     def college(self):
         doc = self.getDoc()
-        rawText = doc('div#info_box > p:first')
+        rawText = doc('div#meta p:contains("College")')
         cleanedText = sportsref.utils.flattenLinks(rawText)
         college = re.search(r'College: (\S+)', cleanedText).group(1)
         return college
@@ -142,33 +129,10 @@ class Player:
     @sportsref.decorators.memoized
     def highSchool(self):
         doc = self.getDoc()
-        rawText = doc('div#info_box > p:first')
+        rawText = doc('div#meta p:contains("High School")')
         cleanedText = sportsref.utils.flattenLinks(rawText)
-        hs = re.search(r'High School: (\S{8})', cleanedText).group(1)
+        hs = re.search(r'High School: (\S+)', cleanedText).group(1)
         return hs
-
-    @sportsref.decorators.memoized
-    def av(self, year):
-        doc = self.getDoc()
-        tables = doc('table[id]').filter(
-            lambda i,e: 'AV' in e.text_content()
-        )
-        # if no AV table, return NaN
-        if not tables:
-            return np.nan
-        # otherwise, extract the AV
-        table = tables.eq(0)
-        df = sportsref.utils.parseTable(table)
-        df = df.query('year == @year')
-
-        # if the player has an AV for that year, return it
-        # note: when players play for multiple teams in a season, this returns
-        # total AV for the season
-        if not df.empty:
-            return df['av'].iloc[0]
-        # otherwise, return NaN
-        else:
-            return np.nan
 
     @sportsref.decorators.memoized
     @sportsref.decorators.kindRPB(include_type=True)
@@ -186,7 +150,7 @@ class Player:
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
         df = sportsref.utils.parseTable(table)
         if year is not None:
-            df = df.query('year == @year')
+            df = df.query('year == @year').reset_index(drop=True)
         return df
 
     @sportsref.decorators.memoized
