@@ -133,7 +133,7 @@ def cacheHTML(func):
         else:
             text = func(url)
             with open(fn, 'w+') as f:
-                f.write(text)
+                f.write(text.encode('ascii', 'replace'))
             return text
     
     return wrapper
