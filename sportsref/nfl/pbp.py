@@ -105,7 +105,7 @@ def parsePlayDetails(details):
     tackleRE = (r"(?: \(tackle by (?P<tackler1>{0})"
                 r"(?: and (?P<tackler2>{0}))?\))?"
                 .format(playerRE))
-    # TODO: currently, plays with multiple fumbles record the original fumbler
+    # currently, plays with multiple fumbles record the original fumbler
     # and the final fumble recoverer
     fumbleRE = (
         r"(?:"
@@ -578,7 +578,7 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
         return curTm, curOpp
 
     # use row's class to determine when possession changes
-    if struct['hasClass_pos_change']:
+    if struct['hasClass_divider']:
         return curOpp, curTm
     else:
         return curTm, curOpp

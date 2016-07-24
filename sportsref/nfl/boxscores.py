@@ -1,5 +1,5 @@
 import re
-import urlparse
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def getDoc(self):
-        url = sportsref.nfl.BASE_URL + 'boxscores/{}.htm'.format(self.bsID)
+        url = sportsref.nfl.BASE_URL + '/boxscores/{}.htm'.format(self.bsID)
         doc = pq(sportsref.utils.getHTML(url))
         return doc
 
@@ -57,8 +57,9 @@ class BoxScore:
         :returns: 3-character string representing home team's ID.
         """
         doc = self.getDoc()
-        table = doc('table#linescore')
-        home = sportsref.utils.relURLToID(table('tr').eq(2)('a').attr['href'])
+        table = doc('table.linescore')
+        relURL = table('tr').eq(1)('a').eq(2).attr['href']
+        home = sportsref.utils.relURLToID(relURL)
         return home
 
     @sportsref.decorators.memoized
@@ -67,8 +68,9 @@ class BoxScore:
         :returns: 3-character string representing away team's ID.
         """
         doc = self.getDoc()
-        table = doc('table#linescore')
-        away = sportsref.utils.relURLToID(table('tr').eq(1)('a').attr['href'])
+        table = doc('table.linescore')
+        relURL = table('tr').eq(2)('a').eq(2).attr['href']
+        away = sportsref.utils.relURLToID(relURL)
         return away
 
     @sportsref.decorators.memoized
@@ -77,8 +79,8 @@ class BoxScore:
         :returns: int of the home score.
         """
         doc = self.getDoc()
-        table = doc('table#linescore')
-        homeScore = table('tr').eq(2)('td')[-1].text_content()
+        table = doc('table.linescore')
+        homeScore = table('tr').eq(1)('td')[-1].text_content()
         return int(homeScore)
 
     @sportsref.decorators.memoized
@@ -87,8 +89,8 @@ class BoxScore:
         :returns: int of the away score.
         """
         doc = self.getDoc()
-        table = doc('table#linescore')
-        awayScore = table('tr').eq(1)('td')[-1].text_content()
+        table = doc('table.linescore')
+        awayScore = table('tr').eq(2)('td')[-1].text_content()
         return int(awayScore)
 
     @sportsref.decorators.memoized
@@ -137,7 +139,9 @@ class BoxScore:
     @sportsref.decorators.memoized
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
-        from PFR. The columns are:
+        from PFR.
+        
+        The columns are:
         * playerID - the PFR player ID for the player (note that this column is
         not necessarily all unique; that is, one player can be a starter in
         multiple positions, in theory).
@@ -152,23 +156,18 @@ class BoxScore:
         :returns: A pandas DataFrame. See the description for details.
         """
         doc = self.getDoc()
-        pretable = next(div for div in doc('div.table_heading').items()
-                        if div('h2:contains("Starting Lineups")'))
-        tableCont = pretable.nextAll('div.table_container')
-        tableCont = [tableCont.eq(0), tableCont.eq(1)]
-        a, h = (tc('table.stats_table') for tc in tableCont)
+        a = doc('table#vis_starters')
+        h = doc('table#home_starters')
         data = []
         for h, table in enumerate((a, h)):
             team = self.home() if h else self.away()
-            for i, row in enumerate(table('tr[class=""]').items()):
+            for i, row in enumerate(table('tbody tr').items()):
                 datum = {}
                 datum['playerID'] = sportsref.utils.relURLToID(
                     row('a')[0].attrib['href']
                 )
-                datum['playerName'] = row('a').filter(
-                    lambda i,e: len(e.text_content()) > 0
-                ).text()
-                datum['position'] = row('td')[1].text_content()
+                datum['playerName'] = row('th').text()
+                datum['position'] = row('td').text()
                 datum['team'] = team
                 datum['home'] = (h == 1)
                 datum['offense'] = (i <= 10)
@@ -176,79 +175,14 @@ class BoxScore:
         return pd.DataFrame(data)
 
     @sportsref.decorators.memoized
-    def gameInfo(self):
-        """Gets a dictionary of basic information about the game. Note: line
-        is given in terms of the home team (if the home team is favored, the
-        line will be negative).
-        :returns: Dictionary of game information.
-
-        """
-        # starting values
-        giDict = {
-            'home': self.home(),
-            'home_score': self.homeScore(),
-            'away': self.away(),
-            'away_score': self.awayScore(),
-            'weekday': self.weekday(),
-            'line': self.line(),
-            'weather': self.weather()
-        }
-        doc = self.getDoc()
-        giTable = doc('table#game_info')
-        for tr in giTable('tr[class=""]').items():
-            td0, td1 = tr('td').items()
-            key = td0.text().lower()
-            key = re.sub(r'\W+', '_', key).strip('_')
-            # keys to skip
-            if key in ['tickets']:
-                continue
-            # adjustments
-            elif key == 'attendance':
-                val = int(td1.text().replace(',',''))
-            elif key == 'over_under':
-                val = float(td1.text().split()[0])
-            elif key == 'won_toss':
-                txt = td1.text()
-                if 'deferred' in txt:
-                    giDict['deferred'] = True
-                    defIdx = txt.index('deferred')
-                    tm = txt[:defIdx-2]
-                else:
-                    giDict['deferred'] = False
-                    tm = txt
-
-                if tm in sportsref.nfl.teams.Team(self.home()).name():
-                    val = self.home()
-                else:
-                    val = self.away()
-            # create datetime.time object for start time
-            elif key == 'start_time_et':
-                txt = td1.text()
-                colon = txt.index(':')
-                hour = int(txt[:colon])
-                mins = int(txt[colon+1:colon+3])
-                hour += (0 if txt[colon+3] == 'a' or hour == 12 else 12)
-                val = datetime.time(hour=hour, minute=mins)
-            # give duration in minutes
-            elif key == 'duration':
-                hrs, mins = td1.text().split(':')
-                val = int(hrs)*60 + int(mins)
-            # keys to skip since they're already added
-            elif key in ('vegas_line', 'weather'):
-                continue
-            else:
-                val = sportsref.utils.flattenLinks(td1).strip()
-            giDict[key] = val
-
-        return giDict
-
-    @sportsref.decorators.memoized
     def line(self):
         doc = self.getDoc()
-        table = doc('table#game_info tr')
-        tr = table.filter(lambda i: 'Vegas Line' in this.text_content())
-        td0, td1 = tr('td').items()
-        m = re.match(r'(.+?) ([\-\.\d]+)$', td1.text())
+        table = doc('table#game_info')
+        giTable = sportsref.utils.parseInfoTable(table)
+        line_text = giTable.get('vegas_line', None)
+        if line_text is None:
+            return np.nan
+        m = re.match(r'(.+?) ([\-\.\d]+)$', line_text)
         if m:
             favorite, line = m.groups()
             line = float(line)
@@ -260,42 +194,95 @@ class BoxScore:
         return line
 
     @sportsref.decorators.memoized
+    def surface(self):
+        """The playing surface on which the game was played.
+
+        :returns: string representing the type of surface. Returns np.nan if
+        not avaiable.
+        """
+        doc = self.getDoc()
+        table = doc('table#game_info')
+        giTable = sportsref.utils.parseInfoTable(table)
+        return giTable.get('surface', np.nan)
+
+    @sportsref.decorators.memoized
+    def over_under(self):
+        """
+        Returns the over/under for the game as a float, or np.nan if not
+        available.
+        """
+        doc = self.getDoc()
+        table = doc('table#game_info')
+        giTable = sportsref.utils.parseInfoTable(table)
+        if 'over_under' in giTable:
+            ou = giTable['over_under']
+            return float(ou.split()[0])
+        else:
+            return np.nan
+
+    @sportsref.decorators.memoized
+    def coinToss(self):
+        """Gets information relating to the opening coin toss.
+
+        Keys are:
+        * wonToss - contains the ID of the team that won the toss
+        * deferred - bool whether the team that won the toss deferred it
+
+        :returns: Dictionary of coin toss-related info.
+        """
+        doc = self.getDoc()
+        table = doc('table#game_info')
+        giTable = sportsref.utils.parseInfoTable(table)
+        if 'Won Toss' in giTable:
+            # TODO: finish coinToss function
+            pass
+        else:
+            return np.nan
+        
+
+    @sportsref.decorators.memoized
     def weather(self):
         """Returns a dictionary of weather-related info.
 
-        :returns: Dict of weather data; None if weather data not available.
+        Keys of the returned dict:
+        * temp
+        * windChill
+        * relHumidity
+        * windMPH
+
+        :returns: Dict of weather data.
         """
         doc = self.getDoc()
-        table = doc('table#game_info tr')
-        tr = table.filter(lambda i: 'Weather' in this.text_content())
-        if len(tr) == 0:
+        table = doc('table#game_info')
+        giTable = sportsref.utils.parseInfoTable(table)
+        if 'weather' in giTable:
+            regex = (
+                r'(?:(?P<temp>\-?\d+) degrees )?'
+                r'(?:relative humidity (?P<relHumidity>\d+)%, )?'
+                r'(?:wind (?P<windMPH>\d+) mph, )?'
+                r'(?:wind chill (?P<windChill>\-?\d+))?'
+            )
+            m = re.match(regex, giTable['weather'])
+            d = m.groupdict()
+
+            # cast values to int
+            for k in d:
+                try:
+                    d[k] = int(d[k])
+                except TypeError:
+                    pass
+
+            # one-off fixes
+            d['windChill'] = (d['windChill'] if pd.notnull(d['windChill'])
+                              else d['temp'])
+            d['windMPH'] = d['windMPH'] if pd.notnull(d['windMPH']) else 0
+            return d
+        else:
             # no weather found, because it's a dome
             # TODO: what's relative humidity in a dome?
             return {
-                'temp': 70, 'windChill': 70, 'relHumid': None, 'windMPH': 0
+                'temp': 70, 'windChill': 70, 'relHumidity': None, 'windMPH': 0
             }
-        td0, td1 = tr('td').items()
-        regex = (
-            r'(?:(?P<temp>\-?\d+) degrees )?'
-            r'(?:relative humidity (?P<relHumid>\d+)%, )?'
-            r'(?:wind (?P<windMPH>\d+) mph, )?'
-            r'(?:wind chill (?P<windChill>\-?\d+))?'
-        )
-        m = re.match(regex, td1.text())
-        d = m.groupdict()
-
-        # cast values to int
-        for k in d:
-            try:
-                d[k] = int(d[k])
-            except TypeError:
-                pass
-
-        # one-off fixes
-        d['windChill'] = (d['windChill'] if pd.notnull(d['windChill'])
-                          else d['temp'])
-        d['windMPH'] = d['windMPH'] if pd.notnull(d['windMPH']) else 0
-        return d
 
     @sportsref.decorators.memoized
     def pbp(self):
@@ -304,7 +291,7 @@ class BoxScore:
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
         doc = self.getDoc()
-        table = doc('table#pbp_data')
+        table = doc('table#pbp')
         pbp = sportsref.utils.parseTable(table)
         # make the following features conveniently available on each row
         pbp['bsID'] = self.bsID
@@ -361,19 +348,12 @@ class BoxScore:
     def refInfo(self):
         """Gets a dictionary of ref positions and the ref IDs of the refs for
         that game.
-        :returns: A dictionary of ref positions and IDs.
 
+        :returns: A dictionary of ref positions and IDs.
         """
         doc = self.getDoc()
-        refDict = {}
-        refTable = doc('table#ref_info')
-        for tr in refTable('tr[class=""]').items():
-            td0, td1 = tr('td').items()
-            key = td0.text().lower()
-            key = re.sub(r'\W', '_', key)
-            val = sportsref.utils.flattenLinks(td1)
-            refDict[key] = val
-        return refDict
+        table = doc('table#officials')
+        return sportsref.utils.parseInfoTable(table)
 
     @sportsref.decorators.memoized
     def playerStats(self):
@@ -382,7 +362,7 @@ class BoxScore:
         :returns: A DataFrame containing individual player stats.
         """
         doc = self.getDoc()
-        tableIDs = ('skill_stats', 'def_stats', 'st_stats', 'kick_stats')
+        tableIDs = ('player_offense', 'player_defense', 'returns', 'kicking')
         dfs = []
         for tID in tableIDs:
             table = doc('#{}'.format(tID))
