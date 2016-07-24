@@ -3,7 +3,7 @@ import time
 
 import pandas as pd
 from pyquery import PyQuery as pq
-import requests
+from selenium import webdriver
 
 import sportsref
 
@@ -16,34 +16,17 @@ def getHTML(url):
 
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
-
     """
-    K = 60*3 # K is length of next backoff (in seconds)
     TOTAL_TIME = 0.4 # num of secs we we wait between last request & return
-    html = None
-    numTries = 0
-    while not html and numTries < 10:
-        numTries += 1
-        start = time.time()
-        try:
-            html = requests.get(url).content
-        except requests.ConnectionError as e:
-            errnum = e.args[0].args[1].errno
-            if errnum == 61:
-                # Connection Refused
-                if K >= 60:
-                    print 'Waiting {} minutes...'.format(K/60.0)
-                else:
-                    print 'Waiting {} seconds...'.format(K)
-                # sleep
-                for _ in xrange(K):
-                    time.sleep(1)
-                # backoff gets doubled, capped at 1 hour
-                K *= 2
-                K = min(K, 60*60)
-            else:
-                # Some other error code
-                raise e
+    start = time.time()
+    d = webdriver.PhantomJS(service_args=['--load-images=false'],
+                            service_log_path='/dev/null')
+    d.set_window_size(10000, 10000)
+    d.get(url)
+    html = d.page_source
+    if html == '<html><head></head><body></body></html>':
+        raise Exception("Received HTML empty response")
+    d.quit()
     timeOnRequest = time.time() - start
     timeRemaining = int(1000*(TOTAL_TIME - timeOnRequest)) # in milliseconds
     for _ in xrange(timeRemaining):
@@ -107,7 +90,28 @@ def parseTable(table):
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
 
+    # player -> playerID
+    if 'player' in df.columns:
+        df.rename(columns={'player': 'playerID'}, inplace=True)
+
     return df
+
+def parseInfoTable(table):
+    """Parses an info table, like the "Game Info" table or the "Officials"
+    table on the PFR Boxscore page. Keys are lower case and have spaces/special
+    characters converted to underscores.
+
+    :table: PyQuery object representing the HTML table.
+    :returns: A dictionary representing the information.
+    """
+    ret = {}
+    for tr in table('tbody tr').items():
+        th, td = tr('th, td').items()
+        key = th.text().lower()
+        key = re.sub(r'\W', '_', key)
+        val = sportsref.utils.flattenLinks(td)
+        ret[key] = val
+    return ret
 
 def flattenLinks(td):
     """Flattens relative URLs within text of a table cell to IDs and returns
