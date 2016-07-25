@@ -187,7 +187,8 @@ class BoxScore:
             favorite, line = m.groups()
             line = float(line)
             # give in terms of the home team
-            if favorite != sportsref.nfl.teams.teamNames()[self.home()]:
+            year = self.season()
+            if favorite != sportsref.nfl.teams.teamNames(year)[self.home()]:
                 line = -line
         else:
             line = 0

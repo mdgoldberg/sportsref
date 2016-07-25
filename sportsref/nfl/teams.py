@@ -2,7 +2,6 @@ import datetime
 import re
 import urlparse
 
-import requests
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
@@ -17,27 +16,51 @@ __all__ = [
 ]
 
 @sportsref.decorators.memoized
-def teamNames():
+def teamNames(year):
+    """Returns a mapping from team ID to full team name for a given season.
+    Example of a full team name: "New England Patriots"
+
+    :year: The year of the season in question (as an int).
+    :returns: A dictionary with teamID keys and full team name values.
+    """
     doc = pq(sportsref.utils.getHTML(sportsref.nfl.BASE_URL + '/teams/'))
-    table = doc('table#teams_active')
-    df = sportsref.utils.parseTable(table)
+    active_table = doc('table#teams_active')
+    active_df = sportsref.utils.parseTable(active_table)
+    inactive_table = doc('table#teams_inactive')
+    inactive_df = sportsref.utils.parseTable(inactive_table)
+    df = pd.concat((active_df, inactive_df))
     df = df.loc[~df['hasClass_partial_table']]
     ids = df.team_name.str[:3].values
-    teamNames = [tr('th a') for tr in table('tr').items()]
-    teamNames = filter(None, teamNames)
-    teamNames = [lst[0].text_content() for lst in teamNames]
-    d = dict(zip(ids, teamNames))
-    return d
+    names = [tr('th a') for tr in active_table('tr').items()]
+    names.extend(tr('th a') for tr in inactive_table('tr').items())
+    names = filter(None, names)
+    names = [lst[0].text_content() for lst in names]
+    # combine IDs and team names into pandas series
+    series = pd.Series(names, index=ids)
+    # create a mask to filter to teams from the given year
+    mask = ((df.year_min <= year) & (year <= df.year_max)).values
+    # filter, convert to a dict, and return
+    return series[mask].to_dict()
 
 @sportsref.decorators.memoized
-def teamIDs():
-    names = teamNames()
-    ids = {v: k for k, v in names.iteritems()}
-    return ids
+def teamIDs(year):
+    """Returns a mapping from team name to team ID for a given season. Inverse
+    mapping of teamNames. Example of a full team name: "New England Patriots"
+
+    :year: The year of the season in question (as an int).
+    :returns: A dictionary with full team name keys and teamID values.
+    """
+    names = teamNames(year)
+    return {v: k for k, v in names.iteritems()}
 
 @sportsref.decorators.memoized
-def listTeams():
-    return teamNames().keys()
+def listTeams(year):
+    """Returns a list of team IDs for a given season.
+
+    :year: The year of the season in question (as an int).
+    :returns: A list of team IDs.
+    """
+    return teamNames(year).keys()
 
 @sportsref.decorators.memoized
 class Team:
@@ -110,8 +133,6 @@ class Team:
 
     @sportsref.decorators.memoized
     def passing(self, year):
-        # TODO: WHY WON'T THIS WORK??
-        print 'ERROR: THIS FUNCTION IS BROKEN'
         doc = self.getYearDoc(year)
         table = doc('table#passing')
         df = sportsref.utils.parseTable(table)
@@ -119,8 +140,6 @@ class Team:
 
     @sportsref.decorators.memoized
     def rushingAndReceiving(self, year):
-        # TODO: WHY WON'T THIS WORK??
-        print 'ERROR: THIS FUNCTION IS BROKEN'
         doc = self.getYearDoc(year)
         table = doc('#rushing_and_receiving')
         df = sportsref.utils.parseTable(table)

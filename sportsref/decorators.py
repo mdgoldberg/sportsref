@@ -40,7 +40,10 @@ def _cacheValid_pfr(ct, mt, fn):
     # now, check for a year in the filename
     m = re.search(r'(\d{4})', fn)
     if not m:
-        return False
+        if 'teams' in fn:
+            return True
+        else:
+            return False
     year = int(m.group(1))
     today = datetime.date.today()
     endOfSeason = datetime.date(today.year, 2, 18)
@@ -86,7 +89,7 @@ def _cacheValid_bkref(ct, mt, fn):
     return modDay >= today
 
 def _cacheValid_cfb(ct, mt, fn):
-    # TODO
+    # TODO: caching for CFB
     return True
 
 def cacheHTML(func):
