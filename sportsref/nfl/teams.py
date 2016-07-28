@@ -113,7 +113,10 @@ class Team:
         :year: The year for which we want the roster; defaults to current year.
         :returns: A DataFrame containing roster information for that year.
         """
-        raise "not yet implemented"
+        doc = self.getYearDoc(str(year) + '_roster')
+        table = doc('table#games_played_team')
+        df = sportsref.utils.parseTable(table)
+        return df
 
     @sportsref.decorators.memoized
     def boxscores(self, year):
