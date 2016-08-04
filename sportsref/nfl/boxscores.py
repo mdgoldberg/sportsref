@@ -58,7 +58,7 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table.linescore')
-        relURL = table('tr').eq(1)('a').eq(2).attr['href']
+        relURL = table('tr').eq(2)('a').eq(2).attr['href']
         home = sportsref.utils.relURLToID(relURL)
         return home
 
@@ -69,7 +69,7 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table.linescore')
-        relURL = table('tr').eq(2)('a').eq(2).attr['href']
+        relURL = table('tr').eq(1)('a').eq(2).attr['href']
         away = sportsref.utils.relURLToID(relURL)
         return away
 
@@ -80,7 +80,7 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table.linescore')
-        homeScore = table('tr').eq(1)('td')[-1].text_content()
+        homeScore = table('tr').eq(2)('td')[-1].text_content()
         return int(homeScore)
 
     @sportsref.decorators.memoized
@@ -90,7 +90,7 @@ class BoxScore:
         """
         doc = self.getDoc()
         table = doc('table.linescore')
-        awayScore = table('tr').eq(2)('td')[-1].text_content()
+        awayScore = table('tr').eq(1)('td')[-1].text_content()
         return int(awayScore)
 
     @sportsref.decorators.memoized
@@ -112,8 +112,8 @@ class BoxScore:
         :returns: Integer from 1 to 21.
         """
         doc = self.getDoc()
-        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
-        match = re.search(r'Week (\d+)', rawTxt)
+        rawTxt = doc('div#div_other_scores a').eq(0).attr['href']
+        match = re.search(r'week_(\d+)', rawTxt)
         if match:
             return int(match.group(1))
         else:
@@ -127,14 +127,9 @@ class BoxScore:
 
         :returns: An int representing the year of the season.
         """
-        doc = self.getDoc()
-        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
-        match = re.search(r'Week \d+ (\d{4})', rawTxt)
-        if match:
-            return int(match.group(1))
-        else:
-            # super bowl happens in calendar year after the season's year
-            return self.date().year - 1 
+        season = int(self.bsID[0:4])
+        if int(self.bsID[4:6]) <= 2: season -= 1
+        return season
 
     @sportsref.decorators.memoized
     def starters(self):
@@ -205,6 +200,18 @@ class BoxScore:
         table = doc('table#game_info')
         giTable = sportsref.utils.parseInfoTable(table)
         return giTable.get('surface', np.nan)
+
+    @sportsref.decorators.memoized
+    def roof(self):
+        """The playing surface on which the game was played.
+
+        :returns: string representing the roof of stadium. Returns np.nan if
+        not avaiable.
+        """
+        doc = self.getDoc()
+        table = doc('table#game_info')
+        giTable = sportsref.utils.parseInfoTable(table)
+        return giTable.get('roof', np.nan)
 
     @sportsref.decorators.memoized
     def over_under(self):
@@ -371,4 +378,84 @@ class BoxScore:
         df = pd.concat(dfs, ignore_index=True)
         df = df.reset_index(drop=True)
         df['team'] = df['team'].str.lower()
+        return df
+
+    @sportsref.decorators.memoized
+    def statsOffense(self):
+        """Gets the stats for offense of individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        doc = self.getDoc()
+        table = doc('#player_offense')
+        df = sportsref.utils.parseTable(table)
+        df['team'] = df['team'].str.lower()
+        return df
+
+    @sportsref.decorators.memoized
+    def statsDefense(self):
+        """Gets the stats for defense of individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        doc = self.getDoc()
+        table = doc('#player_defense')
+        df = sportsref.utils.parseTable(table)
+        df['team'] = df['team'].str.lower()
+        return df
+
+    @sportsref.decorators.memoized
+    def statsReturns(self):
+        """Gets the stats for returns of individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        doc = self.getDoc()
+        table = doc('#returns')
+        df = sportsref.utils.parseTable(table)
+        df['team'] = df['team'].str.lower()
+        return df
+
+    @sportsref.decorators.memoized
+    def statsKicking(self):
+        """Gets the stats for kicking of individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        doc = self.getDoc()
+        table = doc('#kicking')
+        df = sportsref.utils.parseTable(table)
+        df['team'] = df['team'].str.lower()
+        return df
+
+    @sportsref.decorators.memoized
+    def passDirections(self):
+        """Gets the stats for kicking of individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        doc = self.getDoc()
+        table = doc('#targets_directions')
+        df = sportsref.utils.parseTable(table)
+        df['team'] = df['team'].str.lower()
+        # sum short and deep stats
+        # cols = ['rec_targets_sl', 'rec_targets_sm', 'rec_targets_sr']
+        # df['rec_targets_s'] = df[cols].sum(axis=1)
+        # cols = ['rec_targets_dl', 'rec_targets_dm', 'rec_targets_dr']
+        # df['rec_targets_d'] = df[cols].sum(axis=1)
+        # cols = ['rec_catches_sl', 'rec_catches_sm', 'rec_catches_sr']
+        # df['rec_catches_s'] = df[cols].sum(axis=1)
+        # cols = ['rec_catches_dl', 'rec_catches_dm', 'rec_catches_dr']
+        # df['rec_catches_d'] = df[cols].sum(axis=1)
+        return df
+
+    @sportsref.decorators.memoized
+    def snapCounts(self):
+        """Gets the snap counts of individual players in the game.
+        :returns: A DataFrame containing individual player stats.
+        """
+        doc = self.getDoc()
+        table = doc('#home_snap_counts')
+        dfH = sportsref.utils.parseTable(table)
+        dfH['team'] = self.home()
+        table = doc('#vis_snap_counts')
+        dfV = sportsref.utils.parseTable(table)
+        dfV['team'] = self.away()
+        df = pd.concat([dfH, dfV], ignore_index=True)
+        df = df.reset_index(drop=True)      
         return df
