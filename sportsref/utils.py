@@ -20,7 +20,7 @@ def getHTML(url):
     TOTAL_TIME = 0.4 # num of secs we we wait between last request & return
     start = time.time()
     d = webdriver.PhantomJS(service_args=['--load-images=false'],
-                            service_log_path='/dev/null')
+                            service_log_path='NUL')
     d.set_window_size(10000, 10000)
     d.get(url)
     html = d.page_source
