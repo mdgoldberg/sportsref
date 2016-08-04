@@ -116,6 +116,12 @@ class Team:
         doc = self.getYearDoc(str(year) + '_roster')
         table = doc('table#games_played_team')
         df = sportsref.utils.parseTable(table)
+        df['season'] = int(year)
+        df['team'] = self.teamID
+        playerNames = [c.text for c in table('tbody tr td a[href]') 
+                       if c.attrib['href'][1:8]=='players']
+        if len(df) == len(playerNames):
+            df['playerName'] = playerNames
         return df
 
     @sportsref.decorators.memoized
