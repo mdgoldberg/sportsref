@@ -381,6 +381,84 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
+    def statsTeam(self):
+        """Gets the summarized stats for each team.
+        :returns: A DataFrame containing team stats.
+        """
+        doc = self.getDoc()
+        table = doc('#team_stats')
+        df = sportsref.utils.parseTable(table)
+        df = df.transpose()
+        df.columns = df.iloc[0]
+        df.columns.name = None
+        df.drop(['stat'], inplace=True)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
+        df['team'] = [self.away(), self.home()]
+        df['home'] = [False, True]
+        # create features from lines with multiple stats in 1 row
+        df = pd.concat(
+            [df,
+             df['Rush-Yds-TDs'].str.extract(
+                    r'(?:(?P<rushAtt>\d+))?'
+                    r'(?:-(?P<rushYds>\d+))?'
+                    r'(?:-(?P<rushTds>\d+))?',
+                    expand=False),
+             df['Cmp-Att-Yd-TD-INT'].str.extract(
+                    r'(?:(?P<passCmp>\d+))?'
+                    r'(?:-(?P<passAtt>\d+))?'
+                    r'(?:-(?P<passYds>\d+))?'
+                    r'(?:-(?P<passTds>\d+))?'
+                    r'(?:-(?P<passInt>\d+))?',
+                    expand=False),
+             df['Sacked-Yards'].str.extract(
+                    r'(?:(?P<sacks>\d+))?'
+                    r'(?:-(?P<sacksYds>\d+))?',
+                    expand=False),
+             df['Fumbles-Lost'].str.extract(
+                    r'(?:(?P<fumbles>\d+))?'
+                    r'(?:-(?P<fumblesLost>\d+))?',
+                    expand=False),
+             df['Sacked-Yards'].str.extract(
+                    r'(?:(?P<pentalties>\d+))?'
+                    r'(?:-(?P<pentaltiesYds>\d+))?',
+                    expand=False),
+             df['Third Down Conv.'].str.extract(
+                    r'(?:(?P<thirdDownAtt>\d+))?'
+                    r'(?:-(?P<thirdDownConv>\d+))?',
+                    expand=False),
+             df['Fourth Down Conv.'].str.extract(
+                    r'(?:(?P<fourthDownAtt>\d+))?'
+                    r'(?:-(?P<fourthDownConv>\d+))?',
+                    expand=False)
+             ], axis=1
+        )
+        # multi stat features to drop
+        dropCols = [
+            'Rush-Yds-TDs',
+            'Cmp-Att-Yd-TD-INT',
+            'Sacked-Yards',
+            'Fumbles-Lost',
+            'Penalties-Yards',
+            'Sacked-Yards',
+            'Third Down Conv.',
+            'Fourth Down Conv.'
+        ]
+        # features to rename
+        newCols = {
+            'First Downs':'firstDowns',
+            'Net Pass Yards':'netPassYards',
+            'Total Yards':'totalYards',
+            'Turnovers':'turnovers',
+            'Time of Possession':'timeOfPossession'
+        }
+        df.drop(dropCols, axis=1, inplace=True)
+        df.rename(columns = newCols, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+        return df
+
+    @sportsref.decorators.memoized
     def statsOffense(self):
         """Gets the stats for offense of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -388,6 +466,9 @@ class BoxScore:
         doc = self.getDoc()
         table = doc('#player_offense')
         df = sportsref.utils.parseTable(table)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
         df['team'] = df['team'].str.lower()
         return df
 
@@ -399,6 +480,9 @@ class BoxScore:
         doc = self.getDoc()
         table = doc('#player_defense')
         df = sportsref.utils.parseTable(table)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
         df['team'] = df['team'].str.lower()
         return df
 
@@ -410,6 +494,9 @@ class BoxScore:
         doc = self.getDoc()
         table = doc('#returns')
         df = sportsref.utils.parseTable(table)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
         df['team'] = df['team'].str.lower()
         return df
 
@@ -421,6 +508,9 @@ class BoxScore:
         doc = self.getDoc()
         table = doc('#kicking')
         df = sportsref.utils.parseTable(table)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
         df['team'] = df['team'].str.lower()
         return df
 
@@ -432,16 +522,27 @@ class BoxScore:
         doc = self.getDoc()
         table = doc('#targets_directions')
         df = sportsref.utils.parseTable(table)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
         df['team'] = df['team'].str.lower()
         # sum short and deep stats
-        # cols = ['rec_targets_sl', 'rec_targets_sm', 'rec_targets_sr']
-        # df['rec_targets_s'] = df[cols].sum(axis=1)
-        # cols = ['rec_targets_dl', 'rec_targets_dm', 'rec_targets_dr']
-        # df['rec_targets_d'] = df[cols].sum(axis=1)
-        # cols = ['rec_catches_sl', 'rec_catches_sm', 'rec_catches_sr']
-        # df['rec_catches_s'] = df[cols].sum(axis=1)
-        # cols = ['rec_catches_dl', 'rec_catches_dm', 'rec_catches_dr']
-        # df['rec_catches_d'] = df[cols].sum(axis=1)
+        df['rec_targets_s'] = df[['rec_targets_sl',
+                                  'rec_targets_sm',
+                                  'rec_targets_sr'
+                                 ]].sum(axis=1)
+        df['rec_targets_d'] = df[['rec_targets_dl',
+                                  'rec_targets_dm',
+                                  'rec_targets_dr'
+                                ]].sum(axis=1)
+        df['rec_catches_s'] = df[['rec_catches_sl',
+                                  'rec_catches_sm',
+                                  'rec_catches_sr'
+                                ]].sum(axis=1)
+        df['rec_catches_d'] = df[['rec_catches_dl',
+                                  'rec_catches_dm',
+                                  'rec_catches_dr'
+                                ]].sum(axis=1)
         return df
 
     @sportsref.decorators.memoized
@@ -457,5 +558,8 @@ class BoxScore:
         dfV = sportsref.utils.parseTable(table)
         dfV['team'] = self.away()
         df = pd.concat([dfH, dfV], ignore_index=True)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
         df = df.reset_index(drop=True)      
         return df
