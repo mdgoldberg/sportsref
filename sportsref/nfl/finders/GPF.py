@@ -6,27 +6,24 @@ import time
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import sportsref
-
-GAME_PLAY_URL = ('http://www.pro-football-reference.com/'
-                 'play-index/play_finder.cgi')
-
-CONSTANTS_FN = 'GPFConstants.json'
+from ... import decorators, utils
+from .. import pbp
+from . import GPF_URL, GPF_CONSTANTS_FILENAME
 
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 
     querystring = kwArgsToQS(**kwargs)
-    url = '{}?{}'.format(GAME_PLAY_URL, querystring)
+    url = '{}?{}'.format(GPF_URL, querystring)
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
-    html = sportsref.utils.getHTML(url)
+    html = utils.getHTML(url)
     doc = pq(html)
     
     # parse
     table = doc('#div_ table.stats_table')
-    plays = sportsref.utils.parseTable(table)
+    plays = utils.parseTable(table)
 
     # clean game date
     if 'game_date' in plays.columns:
@@ -43,7 +40,7 @@ def GamePlayFinder(**kwargs):
         plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
-        plays = sportsref.nfl.pbp.expandDetails(plays, detailCol='description')
+        plays = pbp.expandDetails(plays, detailCol='description')
 
     return plays
 
@@ -68,7 +65,7 @@ def kwArgsToQS(**kwargs):
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
-                kwargs[k] = sportsref.utils.relURLToID(v)
+                kwargs[k] = utils.relURLToID(v)
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
@@ -150,7 +147,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@sportsref.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for play finder form.
 
@@ -173,7 +170,7 @@ def getInputsOptionsDefaults():
 
         print 'Regenerating GPFConstants file'
 
-        html = sportsref.utils.getHTML(GAME_PLAY_URL)
+        html = utils.getHTML(GPF_URL)
         doc = pq(html)
         
         def_dict = {}

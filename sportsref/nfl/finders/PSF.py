@@ -5,12 +5,8 @@ import time
 
 from pyquery import PyQuery as pq
 
-import sportsref
-
-PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
-                     'play-index/psl_finder.cgi')
-
-CONSTANTS_FN = 'PSFConstants.json'
+from ... import utils, decorators
+from . import PSF_URL, PSF_CONSTANTS_FILENAME
 
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
@@ -21,17 +17,17 @@ def PlayerSeasonFinder(**kwargs):
     playerseasons = []
     while True:
         querystring = kwArgsToQS(**kwargs)
-        url = '{}?{}'.format(PLAYER_SEASON_URL, querystring)
+        url = '{}?{}'.format(PSF_URL, querystring)
         if kwargs.get('verbose', False):
             print url
-        html = sportsref.utils.getHTML(url)
+        html = utils.getHTML(url)
         doc = pq(html)
         table = doc('table#stats')
         yearTh = table('thead tr[class=""] th[data-stat="year_id"]')[0]
         yearIdx = table('thead tr[class=""] th').index(yearTh)
         for row in table('tbody tr[class=""]').items():
             relURL = row('a[href*="/players/"]').attr.href
-            playerID = sportsref.utils.relURLToID(relURL)
+            playerID = utils.relURLToID(relURL)
             year = int(row('td')[yearIdx].text)
             playerseasons.append((playerID, year))
 
@@ -145,7 +141,7 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@sportsref.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
 def getInputsOptionsDefaults():
     """Handles scraping options for player-season finder form.
 
@@ -167,7 +163,7 @@ def getInputsOptionsDefaults():
 
         print 'Regenerating PSFConstants file'
 
-        html = sportsref.utils.getHTML(PLAYER_SEASON_URL)
+        html = utils.getHTML(PSF_URL)
         doc = pq(html)
 
         def_dict = {}
