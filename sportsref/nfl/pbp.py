@@ -401,7 +401,7 @@ def cleanFeatures(struct):
     if struct['isRun']:
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
-    year = struct['season']
+    year = struct.get('season', np.nan)
     struct['timeoutTeam'] = sportsref.nfl.teams.teamIDs(year).get(
         struct.get('timeoutTeam'), np.nan)
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
