@@ -1,3 +1,25 @@
+# Constants
+
+PSF_URL = ('http://www.pro-football-reference.com/'
+                     'play-index/psl_finder.cgi')
+
+PSF_CONSTANTS_FILENAME = 'PSFConstants.json'
+
+GPF_URL = ('http://www.pro-football-reference.com/'
+           'play-index/play_finder.cgi')
+
+GPF_CONSTANTS_FILENAME = 'GPFConstants.json'
+
+# modules/variables to expose
+__all__ = [
+    'PlayerSeasonFinder',
+    'GamePlayFinder',
+    'PSF_URL',
+    'PSF_CONSTANTS_FILENAME',
+    'GPF_URL',
+    'GPF_CONSTANTS_FILENAME',
+]
+
 # Fill in PlayerSeasonFinder docstring
 import PSF
 
@@ -91,23 +113,3 @@ del IOD, paramStr, optsStr
 
 from PSF import PlayerSeasonFinder
 from GPF import GamePlayFinder
-
-PSF_URL = ('http://www.pro-football-reference.com/'
-                     'play-index/psl_finder.cgi')
-
-PSF_CONSTANTS_FILENAME = 'PSFConstants.json'
-
-GPF_URL = ('http://www.pro-football-reference.com/'
-           'play-index/play_finder.cgi')
-
-GPF_CONSTANTS_FILENAME = 'GPFConstants.json'
-
-# modules/variables to expose
-__all__ = [
-    'PlayerSeasonFinder',
-    'GamePlayFinder',
-    'PSF_URL',
-    'PSF_CONSTANTS_FILENAME',
-    'GPF_URL',
-    'GPF_CONSTANTS_FILENAME',
-]

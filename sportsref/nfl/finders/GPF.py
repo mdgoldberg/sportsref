@@ -22,7 +22,7 @@ def GamePlayFinder(**kwargs):
     doc = pq(html)
     
     # parse
-    table = doc('#div_ table.stats_table')
+    table = doc('table#all_plays')
     plays = utils.parseTable(table)
 
     # clean game date
@@ -155,14 +155,15 @@ def getInputsOptionsDefaults():
 
     """
     # set time variables
-    if os.path.isfile(CONSTANTS_FN):
-        modtime = int(os.path.getmtime(CONSTANTS_FN))
+    if os.path.isfile(GPF_CONSTANTS_FILENAME):
+        modtime = int(os.path.getmtime(GPF_CONSTANTS_FILENAME))
         curtime = int(time.time())
     # if file found and it's been <= a week
-    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 7*24*60*60:
+    if (os.path.isfile(GPF_CONSTANTS_FILENAME)
+            and curtime - modtime <= 7*24*60*60):
 
         # just read the dict from the cached file
-        with open(CONSTANTS_FN, 'r') as const_f:
+        with open(GPF_CONSTANTS_FILENAME, 'r') as const_f:
             def_dict = json.load(const_f)
 
     # otherwise, we must regenerate the dict and rewrite it
@@ -231,7 +232,7 @@ def getInputsOptionsDefaults():
         def_dict.pop('request', None)
         def_dict.pop('use_favorites', None)
 
-        with open(CONSTANTS_FN, 'w+') as f:
+        with open(GPF_CONSTANTS_FILENAME, 'w+') as f:
             for k in def_dict:
                 try:
                     def_dict[k]['value'] = sorted(
