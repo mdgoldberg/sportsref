@@ -167,7 +167,7 @@ class BoxScore:
                 datum['home'] = (h == 1)
                 datum['offense'] = (i <= 10)
                 data.append(datum)
-            df = pd.DataFrame(data)
+        df = pd.DataFrame(data)
         pbp['bsID'] = self.bsID
         pbp['season'] = self.season()
         pbp['week'] = self.week()
