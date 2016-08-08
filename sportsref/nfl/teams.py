@@ -107,10 +107,59 @@ class Team:
         return ' '.join(teamwords)
 
     @sportsref.decorators.memoized
+    def injuryStatus(self, year):
+        """Returns the player's injury status each week of the given year.
+
+        :year: The year for which we want the injury report;
+        :returns: A DataFrame containing player's injury status for that year.
+        """
+        doc = self.getYearDoc(str(year) + '_injuries')
+        table = doc('table#team_injuries')
+        columns = [c.attrib['data-stat']
+                   for c in table('thead tr:not([class]) th[data-stat]')]
+
+        # get data
+        rows = list(table('tbody tr')
+                    .not_('.thead, .stat_total, .stat_average')
+                    .items())
+        data = [
+            [str(int(td.has_class('dnp'))) +
+             str(sportsref.utils.flattenLinks(td)) for td in row.items('th,td')
+            ]
+            for row in rows
+        ]
+
+        # make DataFrame and a few small fixes
+        df = pd.DataFrame(data, columns=columns, dtype='float')
+        df.rename(columns={'player': 'playerID'}, inplace=True)
+        df['playerID'] = df.playerID.str[1:]
+        df = pd.melt(df, id_vars=['playerID'])
+        df['season'] = year
+        df['week'] = pd.to_numeric(df.variable.str[5:])
+        df['team'] = self.teamID
+        statusMap = {
+            'P':'Probably',
+            'Q':'Questionable',
+            'D':'Doubfult',
+            'O':'Out',
+            'PUP':'Physically Unable to Perform',
+            'IR':'Injured Reserve',
+            'None':'None'
+        }
+        df['status'] = df.value.str[1:].map(statusMap)
+        didNotPlayMap = {
+            '1':True,
+            '0':False
+        }
+        df['didNotPlay'] = df.value.str[0].map(didNotPlayMap)
+        df.drop(['variable','value'], axis=1, inplace=True)
+        return df
+
+    @sportsref.decorators.memoized
     def roster(self, year):
         """Returns the roster table for the given year.
 
-        :year: The year for which we want the roster; defaults to current year.
+        :year: The year for which we want the roster;
         :returns: A DataFrame containing roster information for that year.
         """
         doc = self.getYearDoc(str(year) + '_roster')
