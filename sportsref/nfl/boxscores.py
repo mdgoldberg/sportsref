@@ -158,9 +158,12 @@ class BoxScore:
             team = self.home() if h else self.away()
             for i, row in enumerate(table('tbody tr').items()):
                 datum = {}
-                datum['playerID'] = sportsref.utils.relURLToID(
-                    row('a')[0].attrib['href']
-                )
+                try:
+                    datum['playerID'] = sportsref.utils.relURLToID(
+                        row('a')[0].attrib['href']
+                    )
+                except IndexError:
+                    pass
                 datum['playerName'] = row('th').text()
                 datum['position'] = row('td').text()
                 datum['team'] = team
@@ -168,10 +171,10 @@ class BoxScore:
                 datum['offense'] = (i <= 10)
                 data.append(datum)
         df = pd.DataFrame(data)
-        pbp['bsID'] = self.bsID
-        pbp['season'] = self.season()
-        pbp['week'] = self.week()
-        return pd.DataFrame(data)
+        df['bsID'] = self.bsID
+        df['season'] = self.season()
+        df['week'] = self.week()
+        return df.dropna()
 
     @sportsref.decorators.memoized
     def line(self):
@@ -250,7 +253,6 @@ class BoxScore:
             pass
         else:
             return np.nan
-        
 
     @sportsref.decorators.memoized
     def weather(self):
@@ -487,7 +489,11 @@ class BoxScore:
         df['bsID'] = self.bsID
         df['season'] = self.season()
         df['week'] = self.week()
-        df['team'] = df['team'].str.lower()
+        # bsID 201202050nwe with no defense table...
+        try:
+            df['team'] = df['team'].str.lower()
+        except:
+            pass
         return df
 
     @sportsref.decorators.memoized
@@ -566,4 +572,33 @@ class BoxScore:
         df['season'] = self.season()
         df['week'] = self.week()
         df = df.reset_index(drop=True)      
+        return df
+
+    @sportsref.decorators.memoized
+    def gameInfo(self):
+        """Returns a one row dataframe of game info.
+
+        :returns: DataFrame of game info.
+        """
+        doc = self.getDoc()
+        d = {
+            'season':self.season(),
+            'week':self.week(),
+            'bsID':self.bsID,
+            'date':self.date(),
+            'weekday':self.weekday(),
+            'home':self.home(),
+            'away':self.away(),
+            'homeScore':self.homeScore(),
+            'awayScore':self.awayScore(),
+            'winner':self.winner(),
+            'line':self.line(),
+            'overUnder':self.over_under(),
+            'roof':self.roof()
+        }
+        d.update(self.weather())
+        rawTxt = doc('div.scorebox_meta div').eq(1).text()
+        regex = (r"(?:Start Time : (?P<startTime>\d+:\d+ ?[apAP][mM]))?")
+        d.update(re.match(regex, rawTxt).groupdict())
+        df = pd.DataFrame(d, index=[0])
         return df
