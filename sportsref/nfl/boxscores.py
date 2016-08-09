@@ -507,7 +507,11 @@ class BoxScore:
         df['bsID'] = self.bsID
         df['season'] = self.season()
         df['week'] = self.week()
-        df['team'] = df['team'].str.lower()
+        # bsID with no returns table...
+        try:
+            df['team'] = df['team'].str.lower()
+        except:
+            pass
         return df
 
     @sportsref.decorators.memoized
