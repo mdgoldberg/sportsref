@@ -131,28 +131,37 @@ class Team:
 
         # make DataFrame and a few small fixes
         df = pd.DataFrame(data, columns=columns, dtype='float')
-        df.rename(columns={'player': 'playerID'}, inplace=True)
-        df['playerID'] = df.playerID.str[1:]
-        df = pd.melt(df, id_vars=['playerID'])
-        df['season'] = year
-        df['week'] = pd.to_numeric(df.variable.str[5:])
-        df['team'] = self.teamID
-        statusMap = {
-            'P':'Probably',
-            'Q':'Questionable',
-            'D':'Doubfult',
-            'O':'Out',
-            'PUP':'Physically Unable to Perform',
-            'IR':'Injured Reserve',
-            'None':'None'
-        }
-        df['status'] = df.value.str[1:].map(statusMap)
-        didNotPlayMap = {
-            '1':True,
-            '0':False
-        }
-        df['didNotPlay'] = df.value.str[0].map(didNotPlayMap)
-        df.drop(['variable','value'], axis=1, inplace=True)
+        if not df.empty:
+            df.rename(columns={'player': 'playerID'}, inplace=True)
+            df['playerID'] = df.playerID.str[1:]
+            df = pd.melt(df, id_vars=['playerID'])
+            df['season'] = year
+            df['week'] = pd.to_numeric(df.variable.str[5:])
+            df['team'] = self.teamID
+            statusMap = {
+                'P':'Probable',
+                'Q':'Questionable',
+                'D':'Doubfult',
+                'O':'Out',
+                'PUP':'Physically Unable to Perform',
+                'IR':'Injured Reserve',
+                'None':'None'
+            }
+            df['status'] = df.value.str[1:].map(statusMap)
+            didNotPlayMap = {
+                1:True,
+                0:False
+            }
+            df['didNotPlay'] = df.value.str[0].map(didNotPlayMap)
+            df['didNotPlay'] = df['didNotPlay'].astype(bool)
+            df.drop(['variable','value'], axis=1, inplace=True)
+            df['season'] = df['season'].astype(int)
+            df['week'] = df['week'].astype(int)
+        # set col order
+        cols = ['season', 'week', 'team', 'playerID', 'status', 'didNotPlay']
+        for col in cols:
+            if col not in df: df[col] = np.nan
+        df = df[cols]
         return df
 
     @sportsref.decorators.memoized
@@ -165,12 +174,29 @@ class Team:
         doc = self.getYearDoc(str(year) + '_roster')
         table = doc('table#games_played_team')
         df = sportsref.utils.parseTable(table)
-        df['season'] = int(year)
-        df['team'] = self.teamID
-        playerNames = [c.text for c in table('tbody tr td a[href]') 
-                       if c.attrib['href'][1:8]=='players']
-        if len(df) == len(playerNames):
-            df['playerName'] = playerNames
+        if not df.empty:
+            df['season'] = int(year)
+            df['team'] = self.teamID
+            playerNames = [c.text for c in table('tbody tr td a[href]') 
+                           if c.attrib['href'][1:8]=='players']
+            if len(df) == len(playerNames):
+                df['playerName'] = playerNames
+            df.rename(columns={'pos':'position',
+                               'uniform_number':'uniformNumber',
+                               'g':'gamesPlayed',
+                               'gs':'gamesStarted',
+                               'birth_date_mod':'birthDate',
+                               'av':'pfrApproxValue',
+                               'college_id':'college',
+                               'draft_info':'draftInfo'
+                              }, inplace=True)
+        cols = ['season', 'team', 'playerID',
+                'playerName', 'position', 'uniformNumber', 'gamesPlayed', 'gamesStarted',
+                'pfrApproxValue', 'experience', 'age', 'birthDate', 'height', 'weight',
+                'college', 'draftInfo', 'salary',]
+        for col in cols:
+            if col not in df: df[col] = np.nan
+        df = df[cols]
         return df
 
     @sportsref.decorators.memoized
