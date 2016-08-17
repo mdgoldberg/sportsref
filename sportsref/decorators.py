@@ -1,6 +1,7 @@
 import collections
 import copy
 import datetime
+import hashlib
 import functools
 import os
 import re
@@ -115,27 +116,26 @@ def cacheHTML(func):
         if parsed.query:
             relURL += '?' + parsed.query
         noPathFN = re.sub(r'\.html?', '', sport + relURL.replace('/', ''))
-        fn = '{}/{}'.format(CACHE_DIR, noPathFN)
+        file_hash = hashlib.md5()
+        file_hash.update(noPathFN)
+        file_hash = file_hash.hexdigest()
+        filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
-        if len(noPathFN) > 255:
-            # filename is too long, just evaluate the function again
-            return func(url).encode('utf-8')
-        
         # set time variables (in seconds)
-        if os.path.isfile(fn):
-            modtime = int(os.path.getmtime(fn))
+        if os.path.isfile(filename):
+            modtime = int(os.path.getmtime(filename))
             curtime = int(time.time())
 
         # if file found and caching is valid, read from file
         cacheValid = cacheValidFuncs(sport)
-        if os.path.isfile(fn) and cacheValid(curtime, modtime, fn):
-            with open(fn, 'r') as f:
+        if os.path.isfile(filename) and cacheValid(curtime, modtime, filename):
+            with open(filename, 'r') as f:
                 text = f.read()
             return text
         # otherwise, download html and cache it
         else:
             text = func(url)
-            with open(fn, 'w+') as f:
+            with open(filename, 'w+') as f:
                 f.write(text.encode('ascii', 'replace'))
             return text
     
@@ -155,7 +155,8 @@ def memoized(fun):
                 return arg
 
         # deal with dicts in args
-        isDict = lambda d: isinstance(d, dict) or isinstance(d, pd.Series)
+        def isDict(d):
+            return isinstance(d, dict) or isinstance(d, pd.Series)
         def deDictify(arg):
             if isDict(arg):
                 items = dict(arg).items()
