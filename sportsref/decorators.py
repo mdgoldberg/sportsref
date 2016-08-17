@@ -37,6 +37,12 @@ def _cacheValid_pfr(ct, mt, fn):
     # then we're safe caching it
     if 'boxscore' in fn:
         return True
+    # if it's currently the offseason, then we're also good
+    today = datetime.date.today()
+    endOfSeason = datetime.date(today.year, 2, 18)
+    startOfSeason = datetime.date(today.year, 8, 25)
+    if endOfSeason < today < startOfSeason:
+        return True
     # now, check for a year in the filename
     m = re.search(r'(\d{4})', fn)
     if not m:
@@ -45,15 +51,9 @@ def _cacheValid_pfr(ct, mt, fn):
         else:
             return False
     year = int(m.group(1))
-    today = datetime.date.today()
-    endOfSeason = datetime.date(today.year, 2, 18)
-    startOfSeason = datetime.date(today.year, 8, 25)
     # if it was a year prior to the current season, we're good
     curSeason = today.year - (today <= endOfSeason)
     if year < curSeason:
-        return True
-    # if we're in the offseason, we're good
-    if endOfSeason < today < startOfSeason:
         return True
     # otherwise, check if new data could have been updated since mod
     # (assumed that new game data is added the day after that game)
