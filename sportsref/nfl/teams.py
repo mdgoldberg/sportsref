@@ -75,6 +75,9 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
+    def __reduce__(self):
+        return Team, (self.teamID,)
+
     @decorators.memoized
     def teamYearURL(self, yr_str):
         return NFL_BASE_URL + '/teams/{}/{}.htm'.format(self.teamID, yr_str)

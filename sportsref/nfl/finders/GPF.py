@@ -10,6 +10,7 @@ from ... import decorators, utils
 from .. import pbp
 from . import GPF_URL, GPF_CONSTANTS_FILENAME
 
+@decorators.memoized
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 

@@ -5,9 +5,11 @@ import time
 
 from pyquery import PyQuery as pq
 
-from ... import utils, decorators
+from ... import decorators, utils
+from .. import players
 from . import PSF_URL, PSF_CONSTANTS_FILENAME
 
+@decorators.memoized
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
     

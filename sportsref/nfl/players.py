@@ -5,18 +5,19 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import sportsref
+from .. import decorators, utils
+from . import NFL_BASE_URL
 
 __all__ = [
     'Player',
 ]
 
-@sportsref.decorators.memoized
+@decorators.memoized
 class Player:
 
     def __init__(self, playerID):
         self.pID = playerID
-        self.mainURL = (sportsref.nfl.BASE_URL +
+        self.mainURL = (NFL_BASE_URL +
                         '/players/{0[0]}/{0}.htm').format(self.pID)
 
     def __eq__(self, other):
@@ -25,18 +26,21 @@ class Player:
     def __hash__(self):
         return hash(self.pID)
 
-    @sportsref.decorators.memoized
+    def __reduce__(self):
+        return Player, (self.pID,)
+
+    @decorators.memoized
     def getDoc(self):
-        doc = pq(sportsref.utils.getHTML(self.mainURL))
+        doc = pq(utils.getHTML(self.mainURL))
         return doc
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def name(self):
         doc = self.getDoc()
         name = doc('div#meta h1:first').text()
         return name
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def age(self, year, month=9, day=1):
         doc = self.getDoc()
         span = doc('div#meta span#necro-birth')
@@ -144,17 +148,16 @@ class Player:
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        url = (sportsref.nfl.BASE_URL +
-               '/players/{0[0]}/{0}/gamelog').format(self.pID)
-        doc = pq(sportsref.utils.getHTML(url))
+        url = (NFL_BASE_URL + '/players/{0[0]}/{0}/gamelog').format(self.pID)
+        doc = pq(utils.getHTML(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
-        df = sportsref.utils.parseTable(table)
+        df = utils.parseTable(table)
         if year is not None:
             df = df.query('year == @year').reset_index(drop=True)
         return df
 
-    @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB(include_type=True)
+    @decorators.memoized
+    @decorators.kindRPB(include_type=True)
     def passing(self, kind='R'):
         """Gets yearly passing stats for the player.
 
