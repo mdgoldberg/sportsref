@@ -45,14 +45,18 @@ class Player:
         doc = self.getDoc()
         span = doc('div#meta span#necro-birth')
         birthstring = span.attr('data-birth')
-        dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})', birthstring).groups()
-        dateargs = map(int, dateargs)
-        birthDate = datetime.date(*dateargs)
-        delta = datetime.date(year=year, month=month, day=day) - birthDate
-        age = delta.days / 365.
-        return age
+        try:
+            dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})',
+                                birthstring).groups()
+            dateargs = map(int, dateargs)
+            birthDate = datetime.date(*dateargs)
+            delta = datetime.date(year=year, month=month, day=day) - birthDate
+            age = delta.days / 365.
+            return age
+        except Exception:
+            return np.nan
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def position(self):
         doc = self.getDoc()
         rawText = (doc('div#meta p')
@@ -64,21 +68,27 @@ class Player:
         # multiple positions
         return allPositions[0]
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def height(self):
         doc = self.getDoc()
         rawText = doc('div#meta p span[itemprop="height"]').text()
-        feet, inches = map(int, rawText.split('-'))
-        return feet * 12 + inches
+        try:
+            feet, inches = map(int, rawText.split('-'))
+            return feet * 12 + inches
+        except ValueError:
+            return np.nan
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def weight(self):
         doc = self.getDoc()
         rawText = doc('div#meta p span[itemprop="weight"]').text()
-        weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
-        return int(weight)
+        try:
+            weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
+            return int(weight)
+        except AttributeError:
+            return np.nan
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def hand(self):
         doc = self.getDoc()
         try:
@@ -90,56 +100,77 @@ class Player:
             return np.nan
         return rawHand[0] # 'L' or 'R'
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
+    def currentTeam(self):
+        doc = self.getDoc()
+        team = (doc('div#meta p')
+                .filter(lambda i,e: 'Team' in e.text_content()))
+        text = utils.flattenLinks(team)
+        try:
+            m = re.match(r'Team: (\w{3})', text)
+            return m.group(1)
+        except Exception:
+            return np.nan
+
+    @decorators.memoized
     def draftPick(self):
         doc = self.getDoc()
-        rawDraft = doc('div#meta p:contains("Draft")').text()
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i,e: 'Draft' in e.text_content())
+                    .text())
         m = re.search(r'Draft.*? round \((\d+).*?overall\)', rawDraft, re.I)
         # if not drafted or taken in supplemental draft, return NaN
-        if not m or 'Supplemental' in rawDraft:
+        if m is None or 'Supplemental' in rawDraft:
             return np.nan
         else:
             return int(m.group(1))
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def draftClass(self):
         doc = self.getDoc()
-        rawDraft = doc('div#meta p:contains("Draft")').text()
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i,e: 'Draft' in e.text_content())
+                    .text())
         m = re.search(r'Draft.*?of the (\d{4}) NFL', rawDraft, re.I)
         if not m:
             return np.nan
         else:
             return int(m.group(1))
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def draftTeam(self):
         doc = self.getDoc()
-        rawDraft = doc('div#meta p:contains("Draft")')
-        draftStr = sportsref.utils.flattenLinks(rawDraft)
-        m = re.search(r'Draft\W+(\w+)', draftStr)
-        if not m:
-            return np.nan
-        else:
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i,e: 'Draft' in e.text_content()))
+        try:
+            draftStr = utils.flattenLinks(rawDraft)
+            m = re.search(r'Draft\W+(\w+)', draftStr)
             return m.group(1)
+        except Exception:
+            return np.nan
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def college(self):
         doc = self.getDoc()
-        rawText = doc('div#meta p:contains("College")')
-        cleanedText = sportsref.utils.flattenLinks(rawText)
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i,e: 'College' in e.text_content())
+                    .text())
+        cleanedText = utils.flattenLinks(rawText)
         college = re.search(r'College: (\S+)', cleanedText).group(1)
         return college
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def highSchool(self):
         doc = self.getDoc()
-        rawText = doc('div#meta p:contains("High School")')
-        cleanedText = sportsref.utils.flattenLinks(rawText)
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i,e: 'High School' in e.text_content())
+                    .text())
+        cleanedText = utils.flattenLinks(rawText)
         hs = re.search(r'High School: (\S+)', cleanedText).group(1)
         return hs
 
-    @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB(include_type=True)
+    @decorators.memoized
+    @decorators.kindRPB(include_type=True)
     def gamelog(self, kind='R', year=None):
         """Gets the career gamelog of the given player.
         :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
@@ -166,13 +197,22 @@ class Player:
         """
         doc = self.getDoc()
         table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
-        df = sportsref.utils.parseTable(table)
+        df = utils.parseTable(table)
         return df
 
-    # TODO: differentiate regular season and playoffs
-    @sportsref.decorators.memoized
-    def rushing_and_receiving(self):
+    @decorators.memoized
+    @decorators.kindRPB(include_type=True)
+    def rushing_and_receiving(self, kind='R'):
+        """Gets yearly rushing/receiving stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with rushing/receiving stats.
+        """
         doc = self.getDoc()
-        table = doc('#rushing_and_receiving')
-        df = sportsref.utils.parseTable(table)
+        table = (doc('#rushing_and_receiving') if kind == 'R'
+                 else doc('#rushing_and_receiving_playoffs'))
+        if not table:
+            table = (doc('#receiving_and_rushing') if kind == 'R'
+                     else doc('#receiving_and_rushing_playoffs'))
+        df = utils.parseTable(table)
         return df

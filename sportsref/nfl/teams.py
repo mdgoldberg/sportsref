@@ -116,7 +116,10 @@ class Team:
         :year: The year for which we want the roster; defaults to current year.
         :returns: A DataFrame containing roster information for that year.
         """
-        raise "not yet implemented"
+        doc = self.getYearDoc('{}_roster'.format(year))
+        table = doc('table#games_played_team')
+        df = utils.parseTable(table)
+        return df
 
     @decorators.memoized
     def boxscores(self, year):
@@ -148,7 +151,8 @@ class Team:
         game in the season.
         """
         doc = self.getYearDoc(year)
-        coaches = doc('div#meta p:contains("Coach:")')
+        coaches = (doc('div#meta p')
+                   .filter(lambda i,e: 'Coach:' in e.text_content()))
         coachStr = utils.flattenLinks(coaches)
         regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
         coachAndTenure = []
@@ -173,7 +177,9 @@ class Team:
         :returns: A float of SRS.
         """
         doc = self.getYearDoc(year)
-        srsText = doc('div#meta p:contains("SRS")').text()
+        srsText = (doc('div#meta p')
+                   .filter(lambda i,e: 'SRS' in e.text_content())
+                   .text())
         m = re.match(r'SRS\s*?:\s*?(\S+)', srsText)
         if m:
             return float(m.group(1))
@@ -189,7 +195,9 @@ class Team:
         :returns: A float of SOS.
         """
         doc = self.getYearDoc(year)
-        sosText = doc('div#meta p:contains("SOS")').text()
+        sosText = (doc('div#meta p')
+                   .filter(lambda i,e: 'SOS' in e.text_content())
+                   .text())
         m = re.search(r'SOS\s*?:\s*?(\S+)', sosText)
         if m:
             return float(m.group(1))
@@ -205,8 +213,36 @@ class Team:
         :returns: A string representing the stadium ID.
         """
         doc = self.getYearDoc(year)
-        anchor = doc('div#meta p:contains("Stadium") a')
+        anchor = (doc('div#meta p')
+                  .filter(lambda i,e: 'Stadium' in e.text_content())
+                 )('a')
         return utils.relURLToID(anchor.attr['href'])
+
+    @decorators.memoized
+    def teamStats(self, year):
+        """Returns a Series (dict-like) of team stats from the team-season
+        page.
+
+        :year: Int representing the season.
+        :returns: A Series of team stats.
+        """
+        doc = self.getYearDoc(year)
+        table = doc('table#team_stats')
+        df = utils.parseTable(table)
+        return df.ix[df.playerID == 'Team Stats'].iloc[0]
+
+    @decorators.memoized
+    def oppStats(self, year):
+        """Returns a Series (dict-like) of the team's opponent's stats from the
+        team-season page.
+
+        :year: Int representing the season.
+        :returns: A Series of team stats.
+        """
+        doc = self.getYearDoc(year)
+        table = doc('table#team_stats')
+        df = utils.parseTable(table)
+        return df.ix[df.playerID == 'Opp. Stats'].iloc[0]
 
     @decorators.memoized
     def passing(self, year):

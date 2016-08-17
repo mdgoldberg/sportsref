@@ -24,9 +24,9 @@ def getHTML(url):
     d.set_window_size(10000, 10000)
     d.get(url)
     html = d.page_source
+    d.quit()
     if html == '<html><head></head><body></body></html>':
         raise Exception("Received HTML empty response")
-    d.quit()
     timeOnRequest = time.time() - start
     timeRemaining = int(1000*(TOTAL_TIME - timeOnRequest)) # in milliseconds
     for _ in xrange(timeRemaining):
@@ -119,7 +119,6 @@ def flattenLinks(td):
 
     :td: the PyQuery object for the HTML to convert
     :returns: the string with the links flattened to IDs
-
     """
 
     # helper function to flatten individual strings/links
@@ -130,10 +129,10 @@ def flattenLinks(td):
             cID = relURLToID(c.attrib['href'])
             return cID if cID else c.text_content()
         else:
-            return c.text_content()
+            return flattenLinks(pq(c))
 
     # if there's no text, just return None
-    if not td.text():
+    if not td or not td.text():
         return None
 
     return ''.join(_flattenC(c) for c in td.contents())
