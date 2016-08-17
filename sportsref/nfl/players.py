@@ -1,5 +1,6 @@
-import re
 import datetime
+import re
+import urlparse
 
 import numpy as np
 import pandas as pd
@@ -216,3 +217,49 @@ class Player:
                      else doc('#receiving_and_rushing_playoffs'))
         df = utils.parseTable(table)
         return df
+
+    @decorators.memoized
+    def _plays(self, year, play_type):
+        """Returns a DataFrame of plays for a given year for a given play type
+        (like rushing, receiving, or passing).
+
+        :year: The year for the season.
+        :play_type: A type of play for which there are plays (as of this
+        writing, either "passing", "rushing", or "receiving")
+        :returns: A DataFrame of plays, each row is a play.
+        """
+        url = urlparse.urljoin(
+            self.mainURL, '{}/{}-plays/{}'.format(self.pID, play_type, year)
+        )
+        doc = pq(utils.getHTML(url))
+        table = doc('table#all_plays')
+        plays = nfl.pbp.expandDetails(utils.parseTable(table),
+                                      detailCol='description')
+        return plays
+
+    @decorators.memoized
+    def passing_plays(self, year):
+        """Returns a pbp DataFrame of a player's passing plays in a season.
+
+        :year: The year for the season.
+        :returns: A DataFrame of stats, each row is a play.
+        """
+        return self._plays(year, 'passing')
+
+    @decorators.memoized
+    def rushing_plays(self, year):
+        """Returns a pbp DataFrame of a player's rushing plays in a season.
+
+        :year: The year for the season.
+        :returns: A DataFrame of stats, each row is a play.
+        """
+        return self._plays(year, 'rushing')
+
+    @decorators.memoized
+    def receiving_plays(self, year):
+        """Returns a pbp DataFrame of a player's receiving plays in a season.
+
+        :year: The year for the season.
+        :returns: A DataFrame of stats, each row is a play.
+        """
+        return self._plays(year, 'receiving')
