@@ -7,7 +7,7 @@ import pandas as pd
 from pyquery import PyQuery as pq
 
 from .. import decorators, utils
-from . import NFL_BASE_URL
+from . import NFL_BASE_URL, pbp
 
 __all__ = [
     'Player',
@@ -29,6 +29,18 @@ class Player:
 
     def __reduce__(self):
         return Player, (self.pID,)
+
+    def _subPageURL(self, page, year=None):
+        # if no year, return career version
+        if year is None:
+            return urlparse.urljoin(
+                self.mainURL, '{}/{}/'.format(self.pID, page)
+            )
+        # otherwise, return URL for a given year
+        else:
+            return urlparse.urljoin(
+                self.mainURL, '{}/{}/{}/'.format(self.pID, page, year)
+            )
 
     @decorators.memoized
     def getDoc(self):
@@ -180,7 +192,7 @@ class Player:
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        url = (NFL_BASE_URL + '/players/{0[0]}/{0}/gamelog').format(self.pID)
+        url = self._subPageURL('gamelog', None) # year is filtered later
         doc = pq(utils.getHTML(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
         df = utils.parseTable(table)
@@ -218,7 +230,6 @@ class Player:
         df = utils.parseTable(table)
         return df
 
-    @decorators.memoized
     def _plays(self, year, play_type):
         """Returns a DataFrame of plays for a given year for a given play type
         (like rushing, receiving, or passing).
@@ -228,13 +239,11 @@ class Player:
         writing, either "passing", "rushing", or "receiving")
         :returns: A DataFrame of plays, each row is a play.
         """
-        url = urlparse.urljoin(
-            self.mainURL, '{}/{}-plays/{}'.format(self.pID, play_type, year)
-        )
+        url = self._subPageURL('{}-plays'.format(play_type), year)
         doc = pq(utils.getHTML(url))
         table = doc('table#all_plays')
-        plays = nfl.pbp.expandDetails(utils.parseTable(table),
-                                      detailCol='description')
+        plays = pbp.expandDetails(utils.parseTable(table),
+                                  detailCol='description')
         return plays
 
     @decorators.memoized
@@ -263,3 +272,21 @@ class Player:
         :returns: A DataFrame of stats, each row is a play.
         """
         return self._plays(year, 'receiving')
+
+    @decorators.memoized
+    def splits(self, year=None):
+        """Returns a DataFrame of splits data for a player-year.
+
+        :year: The year for the season in question. If None, returns career
+        splits.
+        :returns: A DataFrame of splits data.
+        """
+        # get the table
+        url = self._subPageURL('splits', year)
+        doc = pq(utils.getHTML(url))
+        table = doc('table#stats')
+        df = utils.parseTable(table)
+        # cleaning the data
+        df.split_id.fillna(method='ffill', inplace=True)
+        df.set_index(['split_id', 'split_value'], inplace=True)
+        return df
