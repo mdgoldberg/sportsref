@@ -12,13 +12,13 @@ from . import PSF_URL, PSF_CONSTANTS_FILENAME
 @decorators.memoized
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
-    
+
     if 'offset' not in kwargs:
         kwargs['offset'] = 0
 
     playerSeasons = []
     while True:
-        querystring = kwArgsToQS(**kwargs)
+        querystring = _kwargs_to_qs(**kwargs)
         url = '{}?{}'.format(PSF_URL, querystring)
         if kwargs.get('verbose', False):
             print url
@@ -36,18 +36,18 @@ def PlayerSeasonFinder(**kwargs):
 
     return playerSeasons
 
-def kwArgsToQS(**kwargs):
+def _kwargs_to_qs(**kwargs):
     """Converts kwargs given to PSF to a querystring.
 
     :returns: the querystring.
     """
     # start with defaults
-    inpOptDef = getInputsOptionsDefaults()
+    inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
         for name, dct in inpOptDef.iteritems()
     }
-    
+
     # clean up keys and values
     for k, v in kwargs.items():
         del kwargs[k]
@@ -86,7 +86,7 @@ def kwArgsToQS(**kwargs):
                 v = [v]
             kwargs['draft_pos'] = v
         # if not one of these cases, put it back in kwargs
-        else: 
+        else:
             kwargs[k] = v
 
     # reset opts values to blank for defined kwargs
@@ -138,7 +138,7 @@ def kwArgsToQS(**kwargs):
     return qs
 
 @decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
-def getInputsOptionsDefaults():
+def inputs_options_defaults():
     """Handles scraping options for player-season finder form.
 
     :returns: {'name1': {'value': val, 'options': [opt1, ...] }, ... }
@@ -206,7 +206,7 @@ def getInputsOptionsDefaults():
                 def_dict[name]['value'].add(
                     sel('option')[0].attrib.get('value', '')
                 )
-                
+
             # deal with options
             def_dict[name]['options'] = {
                 opt.attrib['value'] for opt in sel('option')
@@ -231,5 +231,5 @@ def getInputsOptionsDefaults():
                         list(def_dict[k]['options'])
                     )
             json.dump(def_dict, f)
-    
+
     return def_dict

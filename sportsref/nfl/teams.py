@@ -10,14 +10,14 @@ from .. import decorators, utils
 from . import NFL_BASE_URL
 
 __all__ = [
-    'teamNames',
-    'teamIDs',
-    'listTeams',
+    'team_names',
+    'team_ids',
+    'list_teams',
     'Team',
 ]
 
 @decorators.memoized
-def teamNames(year):
+def team_names(year):
     """Returns a mapping from team ID to full team name for a given season.
     Example of a full team name: "New England Patriots"
 
@@ -44,24 +44,24 @@ def teamNames(year):
     return series[mask].to_dict()
 
 @decorators.memoized
-def teamIDs(year):
+def team_ids(year):
     """Returns a mapping from team name to team ID for a given season. Inverse
-    mapping of teamNames. Example of a full team name: "New England Patriots"
+    mapping of team_names. Example of a full team name: "New England Patriots"
 
     :year: The year of the season in question (as an int).
     :returns: A dictionary with full team name keys and teamID values.
     """
-    names = teamNames(year)
+    names = team_names(year)
     return {v: k for k, v in names.iteritems()}
 
 @decorators.memoized
-def listTeams(year):
+def list_teams(year):
     """Returns a list of team IDs for a given season.
 
     :year: The year of the season in question (as an int).
     :returns: A list of team IDs.
     """
-    return teamNames(year).keys()
+    return team_names(year).keys()
 
 @decorators.memoized
 class Team:
@@ -79,19 +79,19 @@ class Team:
         return Team, (self.teamID,)
 
     @decorators.memoized
-    def teamYearURL(self, yr_str):
+    def team_year_url(self, yr_str):
         return NFL_BASE_URL + '/teams/{}/{}.htm'.format(self.teamID, yr_str)
 
     @decorators.memoized
-    def getMainDoc(self):
+    def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = NFL_BASE_URL + relURL
         mainDoc = pq(utils.getHTML(teamURL))
         return mainDoc
 
     @decorators.memoized
-    def getYearDoc(self, yr_str):
-        return pq(utils.getHTML(self.teamYearURL(yr_str)))
+    def get_year_doc(self, yr_str):
+        return pq(utils.getHTML(self.team_year_url(yr_str)))
 
     @decorators.memoized
     def name(self):
@@ -103,7 +103,7 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         headerwords = doc('div#meta h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
@@ -116,7 +116,7 @@ class Team:
         :year: The year for which we want the roster; defaults to current year.
         :returns: A DataFrame containing roster information for that year.
         """
-        doc = self.getYearDoc('{}_roster'.format(year))
+        doc = self.get_year_doc('{}_roster'.format(year))
         table = doc('table#games_played_team')
         df = utils.parseTable(table)
         return df
@@ -130,7 +130,7 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         table = doc('table#games')
         df = utils.parseTable(table)
         if df.empty:
@@ -142,7 +142,7 @@ class Team:
     # TODO: BoxScore needs a gameNum function to do this?
 
     @decorators.memoized
-    def headCoachesByGame(self, year):
+    def head_coaches_by_game(self, year):
         """Returns head coach data by game.
 
         :year: An int representing the season in question.
@@ -150,7 +150,7 @@ class Team:
         played (including playoffs). Each entry is the head coach's ID for that
         game in the season.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         coaches = (doc('div#meta p')
                    .filter(lambda i,e: 'Coach:' in e.text_content()))
         coachStr = utils.flattenLinks(coaches)
@@ -176,7 +176,7 @@ class Team:
         :year: The year for the season in question.
         :returns: A float of SRS.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         srsText = (doc('div#meta p')
                    .filter(lambda i,e: 'SRS' in e.text_content())
                    .text())
@@ -194,7 +194,7 @@ class Team:
         :year: The year for the season in question.
         :returns: A float of SOS.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         sosText = (doc('div#meta p')
                    .filter(lambda i,e: 'SOS' in e.text_content())
                    .text())
@@ -212,48 +212,48 @@ class Team:
         :year: The year in question.
         :returns: A string representing the stadium ID.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         anchor = (doc('div#meta p')
                   .filter(lambda i,e: 'Stadium' in e.text_content())
                  )('a')
         return utils.relURLToID(anchor.attr['href'])
 
     @decorators.memoized
-    def teamStats(self, year):
+    def team_stats(self, year):
         """Returns a Series (dict-like) of team stats from the team-season
         page.
 
         :year: Int representing the season.
         :returns: A Series of team stats.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = utils.parseTable(table)
         return df.ix[df.playerID == 'Team Stats'].iloc[0]
 
     @decorators.memoized
-    def oppStats(self, year):
+    def opp_stats(self, year):
         """Returns a Series (dict-like) of the team's opponent's stats from the
         team-season page.
 
         :year: Int representing the season.
         :returns: A Series of team stats.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = utils.parseTable(table)
         return df.ix[df.playerID == 'Opp. Stats'].iloc[0]
 
     @decorators.memoized
     def passing(self, year):
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         table = doc('table#passing')
         df = utils.parseTable(table)
         return df
 
     @decorators.memoized
-    def rushingAndReceiving(self, year):
-        doc = self.getYearDoc(year)
+    def rushing_and_receiving(self, year):
+        doc = self.get_year_doc(year)
         table = doc('#rushing_and_receiving')
         df = utils.parseTable(table)
         return df

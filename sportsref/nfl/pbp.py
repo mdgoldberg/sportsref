@@ -17,7 +17,7 @@ PASS_OPTS = {
     'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
 }
 
-def expandDetails(df, detailCol='detail'):
+def expand_details(df, detailCol='detail'):
     """Expands the details column of the given dataframe and returns the
     resulting DataFrame.
 
@@ -27,7 +27,7 @@ def expandDetails(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.nfl.pbp.parsePlayDetails, df['detail'])
+    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
@@ -39,19 +39,19 @@ def expandDetails(df, detailCol='detail'):
     errors = [i for i, d in enumerate(dicts) if d is None]
     df['isError'] = False
     df.loc[errors, 'isError'] = True
-    # fill in some NaN's necessary for cleanFeatures
+    # fill in some NaN's necessary for clean_features
     df.ix[0, 'qtr_time_remain'] = '15:00'
     df.qtr_time_remain.fillna(method='bfill', inplace=True)
     df.qtr_time_remain.fillna(
         pd.Series(np.where(df.quarter == 4, '0:00', '15:00')),
         inplace=True
     )
-    # use cleanFeatures to clean up and add columns
-    new_df = df.apply(cleanFeatures, axis=1)
+    # use clean_features to clean up and add columns
+    new_df = df.apply(clean_features, axis=1)
     return new_df
 
 @sportsref.decorators.memoized
-def parsePlayDetails(details):
+def parse_play_details(details):
     """Parses play details from play-by-play string and returns structured
     data.
 
@@ -323,7 +323,7 @@ def parsePlayDetails(details):
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
         struct['twoPointSuccess'] = match.group('twoPointSuccess')
-        realPlay = sportsref.nfl.pbp.parsePlayDetails(match.group('twoPoint'))
+        realPlay = sportsref.nfl.pbp.parse_play_details(match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
         return struct
@@ -356,8 +356,8 @@ def parsePlayDetails(details):
     return None
 
 @sportsref.decorators.memoized
-def cleanFeatures(struct):
-    """Cleans up the features collected in parsePlayDetails.
+def clean_features(struct):
+    """Cleans up the features collected in parse_play_details.
 
     :struct: Pandas Series of features parsed from details string.
     :returns: the same dict, but with cleaner features (e.g., convert bools,
@@ -457,7 +457,7 @@ def cleanFeatures(struct):
     if struct['isXP']:
         struct['fieldSide'] = struct['ydLine'] = np.nan
     else:
-        fieldSide, ydline = locToFeatures(struct.get('location'))
+        fieldSide, ydline = loc_to_features(struct.get('location'))
         struct['fieldSide'] = fieldSide
         struct['ydLine'] = ydline
     # creating secsElapsed (in entire game) from qtr_time_remain and quarter
@@ -476,7 +476,7 @@ def cleanFeatures(struct):
     return pd.Series(struct)
 
 @sportsref.decorators.memoized
-def locToFeatures(l):
+def loc_to_features(l):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
 
@@ -497,7 +497,7 @@ def locToFeatures(l):
         r = (np.nan, np.nan)
     return r
 
-def addTeamColumns(features):
+def add_team_columns(features):
     """Function that adds 'team' and 'opp' columns to the features by iterating
     through the rows in order. A precondition is that the features dicts are in
     order in a continuous game sense and that all rows are from the same game.
@@ -513,9 +513,9 @@ def addTeamColumns(features):
         # if it's a kickoff or the play after a kickoff,
         # figure out who has possession manually
         if row['isKickoff'] or playAfterKickoff:
-            curTm, curOpp = teamAndOpp(row)
+            curTm, curOpp = team_and_opp(row)
         else:
-            curTm, curOpp = teamAndOpp(row, curTm, curOpp)
+            curTm, curOpp = team_and_opp(row, curTm, curOpp)
         row['team'], row['opp'] = curTm, curOpp
         # set playAfterKickoff
         playAfterKickoff = row['isKickoff']
@@ -529,7 +529,7 @@ def addTeamColumns(features):
     return features
 
 @sportsref.decorators.memoized
-def teamAndOpp(struct, curTm=None, curOpp=None):
+def team_and_opp(struct, curTm=None, curOpp=None):
     """Given a dict representing a play and the current team with the ball,
     returns (team, opp) where team is the team with the ball and opp is the
     team without the ball at the end of the play.
@@ -584,12 +584,12 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
     else:
         return curTm, curOpp
 
-def addTeamFeatures(row):
+def add_team_features(row):
     """Adds extra convenience features based on teams with and without
     possession, with the precondition that the there are 'team' and 'opp'
     specified in row.
 
-    :row: A Series representing one play after cleanFeatures has been called
+    :row: A Series representing one play after clean_features has been called
     and 'team' and 'opp' have been added.
     :returns: A dict with new features in addition to previous features.
     """

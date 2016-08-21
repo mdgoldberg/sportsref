@@ -14,14 +14,14 @@ from . import GPF_URL, GPF_CONSTANTS_FILENAME
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 
-    querystring = kwArgsToQS(**kwargs)
+    querystring = _kwargs_to_qs(**kwargs)
     url = '{}?{}'.format(GPF_URL, querystring)
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
     html = utils.getHTML(url)
     doc = pq(html)
-    
+
     # parse
     table = doc('table#all_plays')
     plays = utils.parseTable(table)
@@ -45,13 +45,13 @@ def GamePlayFinder(**kwargs):
 
     return plays
 
-def kwArgsToQS(**kwargs):
+def _kwargs_to_qs(**kwargs):
     """Converts kwargs given to GPF to a querystring.
 
     :returns: the querystring.
     """
     # start with defaults
-    inpOptDef = getInputsOptionsDefaults()
+    inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
         for name, dct in inpOptDef.iteritems()
@@ -142,14 +142,14 @@ def kwArgsToQS(**kwargs):
                 opts[k].append(val)
 
     opts['request'] = [1]
-    
+
     qs = '&'.join('{}={}'.format(name, val)
                   for name, vals in sorted(opts.iteritems()) for val in vals)
 
     return qs
 
 @decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
-def getInputsOptionsDefaults():
+def inputs_options_defaults():
     """Handles scraping options for play finder form.
 
     :returns: {'name1': {'value': val, 'options': [opt1, ...] }, ... }
@@ -174,7 +174,7 @@ def getInputsOptionsDefaults():
 
         html = utils.getHTML(GPF_URL)
         doc = pq(html)
-        
+
         def_dict = {}
         # start with input elements
         for inp in doc('form#play_finder input[name]'):
@@ -210,7 +210,7 @@ def getInputsOptionsDefaults():
                     'options': set(),
                     'type': 'select'
                 }
-            
+
             # deal with default value
             defaultOpt = sel('option[selected]')
             if len(defaultOpt):
@@ -226,7 +226,7 @@ def getInputsOptionsDefaults():
                 opt.attrib['value'] for opt in sel('option')
                 if opt.attrib.get('value')
             }
-        
+
         # ignore QB kneels by default
         def_dict['include_kneels']['value'] = ['0']
 

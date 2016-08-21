@@ -28,7 +28,7 @@ class BoxScore:
         BoxScore, (self.bsID,)
 
     @decorators.memoized
-    def getDoc(self):
+    def get_doc(self):
         url = NFL_BASE_URL + '/boxscores/{}.htm'.format(self.bsID)
         doc = pq(utils.getHTML(url))
         return doc
@@ -60,7 +60,7 @@ class BoxScore:
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table.linescore')
         relURL = table('tr').eq(1)('a').eq(2).attr['href']
         home = utils.relURLToID(relURL)
@@ -71,37 +71,37 @@ class BoxScore:
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table.linescore')
         relURL = table('tr').eq(2)('a').eq(2).attr['href']
         away = utils.relURLToID(relURL)
         return away
 
     @decorators.memoized
-    def homeScore(self):
+    def home_score(self):
         """Returns score of the home team.
         :returns: int of the home score.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table.linescore')
-        homeScore = table('tr').eq(1)('td')[-1].text_content()
-        return int(homeScore)
+        home_score = table('tr').eq(1)('td')[-1].text_content()
+        return int(home_score)
 
     @decorators.memoized
-    def awayScore(self):
+    def away_score(self):
         """Returns score of the away team.
         :returns: int of the away score.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table.linescore')
-        awayScore = table('tr').eq(2)('td')[-1].text_content()
-        return int(awayScore)
+        away_score = table('tr').eq(2)('td')[-1].text_content()
+        return int(away_score)
 
     @decorators.memoized
     def winner(self):
         """Returns the team ID of the winning team. Returns NaN if a tie."""
-        hmScore = self.homeScore()
-        awScore = self.awayScore()
+        hmScore = self.home_score()
+        awScore = self.away_score()
         if hmScore > awScore:
             return self.home()
         elif hmScore < awScore:
@@ -115,7 +115,7 @@ class BoxScore:
         is Div round, 20 is CC round, 21 is SB.
         :returns: Integer from 1 to 21.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
         match = re.search(r'Week (\d+)', rawTxt)
         if match:
@@ -131,20 +131,20 @@ class BoxScore:
 
         :returns: An int representing the year of the season.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
         match = re.search(r'Week \d+ (\d{4})', rawTxt)
         if match:
             return int(match.group(1))
         else:
             # super bowl happens in calendar year after the season's year
-            return self.date().year - 1 
+            return self.date().year - 1
 
     @decorators.memoized
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
         from PFR.
-        
+
         The columns are:
         * playerID - the PFR player ID for the player (note that this column is
         not necessarily all unique; that is, one player can be a starter in
@@ -159,7 +159,7 @@ class BoxScore:
 
         :returns: A pandas DataFrame. See the description for details.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         a = doc('table#vis_starters')
         h = doc('table#home_starters')
         data = []
@@ -180,7 +180,7 @@ class BoxScore:
 
     @decorators.memoized
     def line(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#game_info')
         giTable = utils.parseInfoTable(table)
         line_text = giTable.get('vegas_line', None)
@@ -205,7 +205,7 @@ class BoxScore:
         :returns: string representing the type of surface. Returns np.nan if
         not avaiable.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#game_info')
         giTable = utils.parseInfoTable(table)
         return giTable.get('surface', np.nan)
@@ -216,7 +216,7 @@ class BoxScore:
         Returns the over/under for the game as a float, or np.nan if not
         available.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#game_info')
         giTable = utils.parseInfoTable(table)
         if 'over_under' in giTable:
@@ -226,7 +226,7 @@ class BoxScore:
             return np.nan
 
     @decorators.memoized
-    def coinToss(self):
+    def coin_toss(self):
         """Gets information relating to the opening coin toss.
 
         Keys are:
@@ -235,7 +235,7 @@ class BoxScore:
 
         :returns: Dictionary of coin toss-related info.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#game_info')
         giTable = utils.parseInfoTable(table)
         if 'Won Toss' in giTable:
@@ -243,7 +243,7 @@ class BoxScore:
             pass
         else:
             return np.nan
-        
+
 
     @decorators.memoized
     def weather(self):
@@ -257,7 +257,7 @@ class BoxScore:
 
         :returns: Dict of weather data.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#game_info')
         giTable = utils.parseInfoTable(table)
         if 'weather' in giTable:
@@ -295,7 +295,7 @@ class BoxScore:
 
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#pbp')
         pbp = utils.parseTable(table)
         # make the following features conveniently available on each row
@@ -350,23 +350,23 @@ class BoxScore:
         return df
 
     @decorators.memoized
-    def refInfo(self):
+    def ref_info(self):
         """Gets a dictionary of ref positions and the ref IDs of the refs for
         that game.
 
         :returns: A dictionary of ref positions and IDs.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#officials')
         return utils.parseInfoTable(table)
 
     @decorators.memoized
-    def playerStats(self):
+    def player_stats(self):
         """Gets the stats for offense, defense, returning, and kicking of
         individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         tableIDs = ('player_offense', 'player_defense', 'returns', 'kicking')
         dfs = []
         for tID in tableIDs:

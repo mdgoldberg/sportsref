@@ -30,7 +30,7 @@ class Player:
     def __reduce__(self):
         return Player, (self.pID,)
 
-    def _subPageURL(self, page, year=None):
+    def _subpage_url(self, page, year=None):
         # if no year, return career version
         if year is None:
             return urlparse.urljoin(
@@ -43,19 +43,19 @@ class Player:
             )
 
     @decorators.memoized
-    def getDoc(self):
+    def get_doc(self):
         doc = pq(utils.getHTML(self.mainURL))
         return doc
 
     @decorators.memoized
     def name(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         name = doc('div#meta h1:first').text()
         return name
 
     @decorators.memoized
     def age(self, year, month=9, day=1):
-        doc = self.getDoc()
+        doc = self.get_doc()
         span = doc('div#meta span#necro-birth')
         birthstring = span.attr('data-birth')
         try:
@@ -71,7 +71,7 @@ class Player:
 
     @decorators.memoized
     def position(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = (doc('div#meta p')
                    .filter(lambda i,e: 'Position' in e.text_content())
                    .text())
@@ -83,7 +83,7 @@ class Player:
 
     @decorators.memoized
     def height(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="height"]').text()
         try:
             feet, inches = map(int, rawText.split('-'))
@@ -93,7 +93,7 @@ class Player:
 
     @decorators.memoized
     def weight(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="weight"]').text()
         try:
             weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
@@ -103,7 +103,7 @@ class Player:
 
     @decorators.memoized
     def hand(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         try:
             rawText = (doc('div#meta p')
                        .filter(lambda i,e: 'Throws' in e.text_content())
@@ -114,8 +114,8 @@ class Player:
         return rawHand[0] # 'L' or 'R'
 
     @decorators.memoized
-    def currentTeam(self):
-        doc = self.getDoc()
+    def current_team(self):
+        doc = self.get_doc()
         team = (doc('div#meta p')
                 .filter(lambda i,e: 'Team' in e.text_content()))
         text = utils.flattenLinks(team)
@@ -126,8 +126,8 @@ class Player:
             return np.nan
 
     @decorators.memoized
-    def draftPick(self):
-        doc = self.getDoc()
+    def draft_pick(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i,e: 'Draft' in e.text_content())
                     .text())
@@ -139,8 +139,8 @@ class Player:
             return int(m.group(1))
 
     @decorators.memoized
-    def draftClass(self):
-        doc = self.getDoc()
+    def draft_class(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i,e: 'Draft' in e.text_content())
                     .text())
@@ -151,8 +151,8 @@ class Player:
             return int(m.group(1))
 
     @decorators.memoized
-    def draftTeam(self):
-        doc = self.getDoc()
+    def draft_team(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i,e: 'Draft' in e.text_content()))
         try:
@@ -164,7 +164,7 @@ class Player:
 
     @decorators.memoized
     def college(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i,e: 'College' in e.text_content())
                     .text())
@@ -173,8 +173,8 @@ class Player:
         return college
 
     @decorators.memoized
-    def highSchool(self):
-        doc = self.getDoc()
+    def high_school(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i,e: 'High School' in e.text_content())
                     .text())
@@ -192,7 +192,7 @@ class Player:
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        url = self._subPageURL('gamelog', None) # year is filtered later
+        url = self._subpage_url('gamelog', None) # year is filtered later
         doc = pq(utils.getHTML(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
         df = utils.parseTable(table)
@@ -208,7 +208,7 @@ class Player:
         :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
         :returns: Pandas DataFrame with passing stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
         df = utils.parseTable(table)
         return df
@@ -221,7 +221,7 @@ class Player:
         :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
         :returns: Pandas DataFrame with rushing/receiving stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = (doc('#rushing_and_receiving') if kind == 'R'
                  else doc('#rushing_and_receiving_playoffs'))
         if not table:
@@ -237,14 +237,18 @@ class Player:
         :year: The year for the season.
         :play_type: A type of play for which there are plays (as of this
         writing, either "passing", "rushing", or "receiving")
-        :returns: A DataFrame of plays, each row is a play.
+        :returns: A DataFrame of plays, each row is a play. Returns None if
+        there were no such plays in that year.
         """
-        url = self._subPageURL('{}-plays'.format(play_type), year)
+        url = self._subpage_url('{}-plays'.format(play_type), year)
         doc = pq(utils.getHTML(url))
         table = doc('table#all_plays')
-        plays = pbp.expandDetails(utils.parseTable(table),
-                                  detailCol='description')
-        return plays
+        if table:
+            plays = pbp.expandDetails(utils.parseTable(table),
+                                      detailCol='description')
+            return plays
+        else:
+            return None
 
     @decorators.memoized
     def passing_plays(self, year):
@@ -282,9 +286,27 @@ class Player:
         :returns: A DataFrame of splits data.
         """
         # get the table
-        url = self._subPageURL('splits', year)
+        url = self._subpage_url('splits', year)
         doc = pq(utils.getHTML(url))
         table = doc('table#stats')
+        df = utils.parseTable(table)
+        # cleaning the data
+        df.split_id.fillna(method='ffill', inplace=True)
+        df.set_index(['split_id', 'split_value'], inplace=True)
+        return df
+
+    @decorators.memoized
+    def advanced_splits(self, year=None):
+        """Returns a DataFrame of advanced splits data for a player-year.
+
+        :year: The year for the season in question. If None, returns career
+        advanced splits.
+        :returns: A DataFrame of advanced splits data.
+        """
+        # get the table
+        url = self._subpage_url('splits', year)
+        doc = pq(utils.getHTML(url))
+        table = doc('table#advanced_splits')
         df = utils.parseTable(table)
         # cleaning the data
         df.split_id.fillna(method='ffill', inplace=True)

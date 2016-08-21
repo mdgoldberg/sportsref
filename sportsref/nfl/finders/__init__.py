@@ -23,7 +23,7 @@ __all__ = [
 # Fill in PlayerSeasonFinder docstring
 import PSF
 
-IOD = PSF.getInputsOptionsDefaults()
+IOD = PSF.inputs_options_defaults()
 
 paramStr = '\n'.join(
     ':param {}: default="{}"'.format(
@@ -68,7 +68,7 @@ del IOD, paramStr, optsStr
 # Fill in GamePlayFinder docstring
 import GPF
 
-IOD = GPF.getInputsOptionsDefaults()
+IOD = GPF.inputs_options_defaults()
 
 paramStr = '\n'.join(
     ':param {}: default="{}"'.format(
