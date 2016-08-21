@@ -20,20 +20,20 @@ class Team:
         return hash(self.teamID)
 
     @sportsref.decorators.memoized
-    def teamYearURL(self, yr_str):
+    def team_year_url(self, yr_str):
         return (sportsref.nba.BASE_URL +
                 '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
     @sportsref.decorators.memoized
-    def getMainDoc(self):
+    def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = sportsref.nba.BASE_URL + relURL
         mainDoc = pq(sportsref.utils.getHTML(teamURL))
         return mainDoc
 
     @sportsref.decorators.memoized
-    def getYearDoc(self, yr_str):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
+    def get_year_doc(self, yr_str):
+        return pq(sportsref.utils.getHTML(self.team_year_url(yr_str)))
 
     @sportsref.decorators.memoized
     def name(self):
@@ -45,7 +45,7 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         headerwords = doc('div#info_box h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
@@ -69,7 +69,7 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        doc = self.getYearDoc('{}_games'.format(year))
+        doc = self.get_year_doc('{}_games'.format(year))
         table = doc('table#teams_games')
         df = sportsref.utils.parseTable(table)
         if df.empty:

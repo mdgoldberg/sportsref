@@ -21,17 +21,18 @@ class BoxScore:
         return hash(self.bsID)
 
     @sportsref.decorators.memoized
-    def getMainDoc(self):
+    def get_main_doc(self):
         url = sportsref.nba.BASE_URL + 'boxscores/{}.html'.format(self.bsID)
         doc = pq(sportsref.utils.getHTML(url))
         return doc
 
     @sportsref.decorators.memoized
-    def getPBPDoc(self):
-        url = sportsref.nba.BASE_URL, 'boxscores/pbp/{}.html'.format(self.bsID)
+    def get_subpage_doc(self, page):
+        url = (sportsref.nba.BASE_URL +
+               'boxscores/{}/{}.html'.format(page, self.bsID))
         doc = pq(sportsref.utils.getHTML(url))
         return doc
-    
+
     @sportsref.decorators.memoized
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
@@ -55,7 +56,7 @@ class BoxScore:
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         table = doc('div#page_content div > div > table:eq(1) table')
         hm_href = table('tr td:eq(1) span a:eq(0)').attr['href']
         return sportsref.utils.relURLToID(hm_href)
@@ -65,28 +66,28 @@ class BoxScore:
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         table = doc('div#page_content div > div > table:eq(1) table')
         aw_href = table('tr td:eq(0) span a:eq(0)').attr['href']
         return sportsref.utils.relURLToID(aw_href)
 
     @sportsref.decorators.memoized
-    def homeScore(self):
+    def home_score(self):
         """Returns score of the home team.
         :returns: int of the home score.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         table = doc('div#page_content div > div > table:eq(1) table')
         hm_txt = table('tr td:eq(1) span:eq(0)').text()
         hm_sc = int(re.match(r'.*?(\d+)$', hm_txt).group(1))
         return hm_sc
 
     @sportsref.decorators.memoized
-    def awayScore(self):
+    def away_score(self):
         """Returns score of the away team.
         :returns: int of the away score.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         table = doc('div#page_content div > div > table:eq(1) table')
         aw_txt = table('tr td:eq(0) span:eq(0)').text()
         aw_sc = int(re.match(r'.*?(\d+)$', aw_txt).group(1))
@@ -95,8 +96,8 @@ class BoxScore:
     @sportsref.decorators.memoized
     def winner(self):
         """Returns the team ID of the winning team. Returns NaN if a tie."""
-        hmScore = self.homeScore()
-        awScore = self.awayScore()
+        hmScore = self.home_score()
+        awScore = self.away_score()
         if hmScore > awScore:
             return self.home()
         elif hmScore < awScore:
@@ -116,14 +117,14 @@ class BoxScore:
             return d.year + 1
         else:
             return d.year
-    
+
     @sportsref.decorators.memoized
     def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
 
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
-        doc = self.getPBPDoc()
+        doc = self.get_subpage_doc('pbp')
         table = doc('table.stats_table:last')
         rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
         data = []
