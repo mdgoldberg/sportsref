@@ -15,7 +15,7 @@ from pyquery import PyQuery as pq
 
 import sportsref
 
-def switchToDir(dirPath):
+def switch_to_dir(dirPath):
     """
     Decorator that switches to given directory before executing function, and
     then returning to orignal directory.
@@ -93,7 +93,7 @@ def _cacheValid_cfb(ct, mt, fn):
     # TODO: caching for CFB
     return True
 
-def cacheHTML(func):
+def cache_html(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
     the user cache determined by the appdirs package.
     """
@@ -138,7 +138,7 @@ def cacheHTML(func):
             with open(filename, 'w+') as f:
                 f.write(text.encode('ascii', 'replace'))
             return text
-    
+
     return wrapper
 
 def memoized(fun):
@@ -164,7 +164,7 @@ def memoized(fun):
                 return frozenset(sorted(items))
             else:
                 return arg
-        
+
         clean_args = tuple(map(deListify, args))
         clean_args = tuple(map(deDictify, clean_args))
         clean_kwargs = deDictify(kwargs)
@@ -190,7 +190,7 @@ def memoized(fun):
     cache = {}
     return wrapper
 
-def kindRPB(include_type=False):
+def kind_rpb(include_type=False):
     def decorator(fun):
         """Supports functions that return a DataFrame and have a `kind` keyword
         argument that specifies regular season ('R'), playoffs ('P'), or both

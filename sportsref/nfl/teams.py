@@ -24,11 +24,11 @@ def team_names(year):
     :year: The year of the season in question (as an int).
     :returns: A dictionary with teamID keys and full team name values.
     """
-    doc = pq(utils.getHTML(NFL_BASE_URL + '/teams/'))
+    doc = pq(utils.get_html(NFL_BASE_URL + '/teams/'))
     active_table = doc('table#teams_active')
-    active_df = utils.parseTable(active_table)
+    active_df = utils.parse_table(active_table)
     inactive_table = doc('table#teams_inactive')
-    inactive_df = utils.parseTable(inactive_table)
+    inactive_df = utils.parse_table(inactive_table)
     df = pd.concat((active_df, inactive_df))
     df = df.loc[~df['hasClass_partial_table']]
     ids = df.team_name.str[:3].values
@@ -86,12 +86,12 @@ class Team:
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = NFL_BASE_URL + relURL
-        mainDoc = pq(utils.getHTML(teamURL))
+        mainDoc = pq(utils.get_html(teamURL))
         return mainDoc
 
     @decorators.memoized
     def get_year_doc(self, yr_str):
-        return pq(utils.getHTML(self.team_year_url(yr_str)))
+        return pq(utils.get_html(self.team_year_url(yr_str)))
 
     @decorators.memoized
     def name(self):
@@ -118,7 +118,7 @@ class Team:
         """
         doc = self.get_year_doc('{}_roster'.format(year))
         table = doc('table#games_played_team')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df
 
     @decorators.memoized
@@ -132,7 +132,7 @@ class Team:
         """
         doc = self.get_year_doc(year)
         table = doc('table#games')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         if df.empty:
             return np.array([])
         return df.boxscore_word.dropna().values
@@ -153,7 +153,7 @@ class Team:
         doc = self.get_year_doc(year)
         coaches = (doc('div#meta p')
                    .filter(lambda i,e: 'Coach:' in e.text_content()))
-        coachStr = utils.flattenLinks(coaches)
+        coachStr = utils.flatten_links(coaches)
         regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
         coachAndTenure = []
         while coachStr:
@@ -216,7 +216,7 @@ class Team:
         anchor = (doc('div#meta p')
                   .filter(lambda i,e: 'Stadium' in e.text_content())
                  )('a')
-        return utils.relURLToID(anchor.attr['href'])
+        return utils.rel_url_to_id(anchor.attr['href'])
 
     @decorators.memoized
     def team_stats(self, year):
@@ -228,7 +228,7 @@ class Team:
         """
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df.ix[df.playerID == 'Team Stats'].iloc[0]
 
     @decorators.memoized
@@ -241,19 +241,19 @@ class Team:
         """
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df.ix[df.playerID == 'Opp. Stats'].iloc[0]
 
     @decorators.memoized
     def passing(self, year):
         doc = self.get_year_doc(year)
         table = doc('table#passing')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df
 
     @decorators.memoized
     def rushing_and_receiving(self, year):
         doc = self.get_year_doc(year)
         table = doc('#rushing_and_receiving')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df

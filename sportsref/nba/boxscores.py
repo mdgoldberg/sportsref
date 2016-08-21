@@ -23,14 +23,14 @@ class BoxScore:
     @sportsref.decorators.memoized
     def get_main_doc(self):
         url = sportsref.nba.BASE_URL + 'boxscores/{}.html'.format(self.bsID)
-        doc = pq(sportsref.utils.getHTML(url))
+        doc = pq(sportsref.utils.get_html(url))
         return doc
 
     @sportsref.decorators.memoized
     def get_subpage_doc(self, page):
         url = (sportsref.nba.BASE_URL +
                'boxscores/{}/{}.html'.format(page, self.bsID))
-        doc = pq(sportsref.utils.getHTML(url))
+        doc = pq(sportsref.utils.get_html(url))
         return doc
 
     @sportsref.decorators.memoized
@@ -59,7 +59,7 @@ class BoxScore:
         doc = self.get_main_doc()
         table = doc('div#page_content div > div > table:eq(1) table')
         hm_href = table('tr td:eq(1) span a:eq(0)').attr['href']
-        return sportsref.utils.relURLToID(hm_href)
+        return sportsref.utils.rel_url_to_id(hm_href)
 
     @sportsref.decorators.memoized
     def away(self):
@@ -69,7 +69,7 @@ class BoxScore:
         doc = self.get_main_doc()
         table = doc('div#page_content div > div > table:eq(1) table')
         aw_href = table('tr td:eq(0) span a:eq(0)').attr['href']
-        return sportsref.utils.relURLToID(aw_href)
+        return sportsref.utils.rel_url_to_id(aw_href)
 
     @sportsref.decorators.memoized
     def home_score(self):
@@ -160,7 +160,7 @@ class BoxScore:
                 elif desc.text().startswith('Jump ball: '):
                     # handle jump ball
                     p['isJumpBall'] = True
-                    jb_str = sportsref.utils.flattenLinks(desc)
+                    jb_str = sportsref.utils.flatten_links(desc)
                     n = None
                     p.update(sportsref.nba.pbp.parsePlay(jb_str, n, n, n, year))
                 else:
@@ -175,7 +175,7 @@ class BoxScore:
                 aw_desc, sc_desc, hm_desc = row.eq(1), row.eq(3), row.eq(5)
                 is_hm_play = bool(hm_desc.text())
                 desc = hm_desc if is_hm_play else aw_desc
-                desc = sportsref.utils.flattenLinks(desc)
+                desc = sportsref.utils.flatten_links(desc)
                 # update scores
                 scores = re.match(r'(\d+)\-(\d+)', sc_desc.text()).groups()
                 cur_aw_score, cur_hm_score = map(int, scores)

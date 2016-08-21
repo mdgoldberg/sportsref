@@ -33,14 +33,14 @@ class Season(object):
         """Returns PyQuery object for the main season URL.
         :returns: PyQuery object.
         """
-        return pq(sportsref.utils.getHTML(self._subpage_url(self._yr)))
+        return pq(sportsref.utils.get_html(self._subpage_url(self._yr)))
 
     @sportsref.decorators.memoized
     def get_schedule_doc(self):
         """Returns PyQuery object for the season schedule URL.
         :returns: PyQuery object.
         """
-        html = sportsref.utils.getHTML(
+        html = sportsref.utils.get_html(
             self._subpage_url('{}_games'.format(self._yr))
         )
         return pq(html)
@@ -51,7 +51,7 @@ class Season(object):
         :returns: List of team IDs.
         """
         doc = self.get_main_doc()
-        df = sportsref.utils.parseTable(doc('table#team'))
+        df = sportsref.utils.parse_table(doc('table#team'))
         if 'team_name' in df.columns:
             return df.team_name.tolist()
         else:
@@ -82,7 +82,7 @@ class Season(object):
         return {v:k for k,v in d.items()}
 
     @sportsref.decorators.memoized
-    @sportsref.decorators.kindRPB(include_type=False)
+    @sportsref.decorators.kind_rpb(include_type=False)
     def get_boxscore_ids(self, kind='R'):
         """Returns a list of BoxScore IDs for every game in the season.
         Only needs to handle 'R' or 'P' options because decorator handles 'B'.
@@ -93,7 +93,7 @@ class Season(object):
         doc = self.get_schedule_doc()
         tID = 'games' if kind == 'R' else 'games_playoffs'
         table = doc('table#{}'.format(tID))
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if 'box_score_text' not in df.columns:
             print 'ERROR: no boxscores found in season'
             return []
@@ -106,7 +106,7 @@ class Season(object):
         doc = self.get_main_doc()
         playoff_table = doc('div#all_playoffs > table')
         anchor = playoff_table('tr').eq(0)('td').eq(1)('a').eq(0)
-        href = sportsref.utils.relURLToID(anchor.attr['href'])
+        href = sportsref.utils.rel_url_to_id(anchor.attr['href'])
         return href
 
     def finals_loser(self):
@@ -116,7 +116,7 @@ class Season(object):
         doc = self.get_main_doc()
         playoff_table = doc('div#all_playoffs > table')
         anchor = playoff_table('tr').eq(0)('td').eq(1)('a').eq(1)
-        href = sportsref.utils.relURLToID(anchor.attr['href'])
+        href = sportsref.utils.rel_url_to_id(anchor.attr['href'])
         return href
 
     def playoff_series_results(self):
@@ -132,11 +132,11 @@ class Season(object):
         atags = [tr('td:eq(1) a')
                  for tr in p_table('tr:contains("Series Stats")').items()]
         relURLs = [(a.eq(0).attr['href'], a.eq(1).attr['href']) for a in atags]
-        wl = [tuple(map(sportsref.utils.relURLToID, ru)) for ru in relURLs]
+        wl = [tuple(map(sportsref.utils.rel_url_to_id, ru)) for ru in relURLs]
 
         # get home team
         atags = p_table('tr.hidden table tr:eq(0) td:eq(0) a')
-        bsIDs = [sportsref.utils.relURLToID(a.attrib['href']) for a in atags]
+        bsIDs = [sportsref.utils.rel_url_to_id(a.attrib['href']) for a in atags]
         home = np.array([sportsref.nba.BoxScore(bs).home() for bs in bsIDs])
 
         win, loss = map(np.array, zip(*wl))
@@ -152,7 +152,7 @@ class Season(object):
         """
         doc = self.get_main_doc()
         table = doc('table#team')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         return df.drop('ranker', axis=1).set_index('team_name')
 
     def opp_stats(self):
@@ -163,7 +163,7 @@ class Season(object):
         """
         doc = self.get_main_doc()
         table = doc('table#opponent')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         return df.drop('ranker', axis=1).set_index('team_name')
 
     def misc_stats(self, with_arena=False):
@@ -175,7 +175,7 @@ class Season(object):
         """
         doc = self.get_main_doc()
         table = doc('table#misc')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         df['attendance'] = (df['attendance']
                             .str.replace(',', '')
                             .astype(float))

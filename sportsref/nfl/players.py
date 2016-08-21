@@ -17,34 +17,34 @@ __all__ = [
 class Player:
 
     def __init__(self, playerID):
-        self.pID = playerID
+        self.playerID = playerID
         self.mainURL = (NFL_BASE_URL +
-                        '/players/{0[0]}/{0}.htm').format(self.pID)
+                        '/players/{0[0]}/{0}.htm').format(self.playerID)
 
     def __eq__(self, other):
-        return self.pID == other.pID
+        return self.playerID == other.playerID
 
     def __hash__(self):
-        return hash(self.pID)
+        return hash(self.playerID)
 
     def __reduce__(self):
-        return Player, (self.pID,)
+        return Player, (self.playerID,)
 
     def _subpage_url(self, page, year=None):
         # if no year, return career version
         if year is None:
             return urlparse.urljoin(
-                self.mainURL, '{}/{}/'.format(self.pID, page)
+                self.mainURL, '{}/{}/'.format(self.playerID, page)
             )
         # otherwise, return URL for a given year
         else:
             return urlparse.urljoin(
-                self.mainURL, '{}/{}/{}/'.format(self.pID, page, year)
+                self.mainURL, '{}/{}/{}/'.format(self.playerID, page, year)
             )
 
     @decorators.memoized
     def get_doc(self):
-        doc = pq(utils.getHTML(self.mainURL))
+        doc = pq(utils.get_html(self.mainURL))
         return doc
 
     @decorators.memoized
@@ -118,7 +118,7 @@ class Player:
         doc = self.get_doc()
         team = (doc('div#meta p')
                 .filter(lambda i,e: 'Team' in e.text_content()))
-        text = utils.flattenLinks(team)
+        text = utils.flatten_links(team)
         try:
             m = re.match(r'Team: (\w{3})', text)
             return m.group(1)
@@ -156,7 +156,7 @@ class Player:
         rawDraft = (doc('div#meta p')
                     .filter(lambda i,e: 'Draft' in e.text_content()))
         try:
-            draftStr = utils.flattenLinks(rawDraft)
+            draftStr = utils.flatten_links(rawDraft)
             m = re.search(r'Draft\W+(\w+)', draftStr)
             return m.group(1)
         except Exception:
@@ -165,25 +165,23 @@ class Player:
     @decorators.memoized
     def college(self):
         doc = self.get_doc()
-        rawDraft = (doc('div#meta p')
-                    .filter(lambda i,e: 'College' in e.text_content())
-                    .text())
-        cleanedText = utils.flattenLinks(rawText)
-        college = re.search(r'College: (\S+)', cleanedText).group(1)
+        rawText = (doc('div#meta p')
+                   .filter(lambda i,e: 'College' in e.text_content()))
+        cleanedText = utils.flatten_links(rawText)
+        college = re.search(r'College:\s*(\S+)', cleanedText).group(1)
         return college
 
     @decorators.memoized
     def high_school(self):
         doc = self.get_doc()
-        rawDraft = (doc('div#meta p')
-                    .filter(lambda i,e: 'High School' in e.text_content())
-                    .text())
-        cleanedText = utils.flattenLinks(rawText)
-        hs = re.search(r'High School: (\S+)', cleanedText).group(1)
+        rawText = (doc('div#meta p')
+                   .filter(lambda i,e: 'High School' in e.text_content()))
+        cleanedText = utils.flatten_links(rawText)
+        hs = re.search(r'High School:\s*(\S+)', cleanedText).group(1)
         return hs
 
     @decorators.memoized
-    @decorators.kindRPB(include_type=True)
+    @decorators.kind_rpb(include_type=True)
     def gamelog(self, kind='R', year=None):
         """Gets the career gamelog of the given player.
         :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
@@ -193,15 +191,15 @@ class Player:
         :returns: A DataFrame with the player's career gamelog.
         """
         url = self._subpage_url('gamelog', None) # year is filtered later
-        doc = pq(utils.getHTML(url))
+        doc = pq(utils.get_html(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         if year is not None:
             df = df.query('year == @year').reset_index(drop=True)
         return df
 
     @decorators.memoized
-    @decorators.kindRPB(include_type=True)
+    @decorators.kind_rpb(include_type=True)
     def passing(self, kind='R'):
         """Gets yearly passing stats for the player.
 
@@ -210,11 +208,11 @@ class Player:
         """
         doc = self.get_doc()
         table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df
 
     @decorators.memoized
-    @decorators.kindRPB(include_type=True)
+    @decorators.kind_rpb(include_type=True)
     def rushing_and_receiving(self, kind='R'):
         """Gets yearly rushing/receiving stats for the player.
 
@@ -227,7 +225,7 @@ class Player:
         if not table:
             table = (doc('#receiving_and_rushing') if kind == 'R'
                      else doc('#receiving_and_rushing_playoffs'))
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         return df
 
     def _plays(self, year, play_type):
@@ -241,11 +239,11 @@ class Player:
         there were no such plays in that year.
         """
         url = self._subpage_url('{}-plays'.format(play_type), year)
-        doc = pq(utils.getHTML(url))
+        doc = pq(utils.get_html(url))
         table = doc('table#all_plays')
         if table:
-            plays = pbp.expandDetails(utils.parseTable(table),
-                                      detailCol='description')
+            plays = pbp.expand_details(utils.parse_table(table),
+                                       detailCol='description')
             return plays
         else:
             return None
@@ -287,9 +285,9 @@ class Player:
         """
         # get the table
         url = self._subpage_url('splits', year)
-        doc = pq(utils.getHTML(url))
+        doc = pq(utils.get_html(url))
         table = doc('table#stats')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         # cleaning the data
         df.split_id.fillna(method='ffill', inplace=True)
         df.set_index(['split_id', 'split_value'], inplace=True)
@@ -305,10 +303,10 @@ class Player:
         """
         # get the table
         url = self._subpage_url('splits', year)
-        doc = pq(utils.getHTML(url))
+        doc = pq(utils.get_html(url))
         table = doc('table#advanced_splits')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         # cleaning the data
-        df.split_id.fillna(method='ffill', inplace=True)
-        df.set_index(['split_id', 'split_value'], inplace=True)
+        df.split_type.fillna(method='ffill', inplace=True)
+        df.set_index(['split_type', 'split_value'], inplace=True)
         return df

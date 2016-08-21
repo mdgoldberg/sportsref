@@ -19,12 +19,12 @@ def GamePlayFinder(**kwargs):
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
-    html = utils.getHTML(url)
+    html = utils.get_html(url)
     doc = pq(html)
 
     # parse
     table = doc('table#all_plays')
-    plays = utils.parseTable(table)
+    plays = utils.parse_table(table)
 
     # clean game date
     if 'game_date' in plays.columns:
@@ -66,7 +66,7 @@ def _kwargs_to_qs(**kwargs):
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
-                kwargs[k] = utils.relURLToID(v)
+                kwargs[k] = utils.rel_url_to_id(v)
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
@@ -148,7 +148,7 @@ def _kwargs_to_qs(**kwargs):
 
     return qs
 
-@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@decorators.switch_to_dir(os.path.dirname(os.path.realpath(__file__)))
 def inputs_options_defaults():
     """Handles scraping options for play finder form.
 
@@ -172,7 +172,7 @@ def inputs_options_defaults():
 
         print 'Regenerating GPFConstants file'
 
-        html = utils.getHTML(GPF_URL)
+        html = utils.get_html(GPF_URL)
         doc = pq(html)
 
         def_dict = {}

@@ -402,8 +402,9 @@ def clean_features(struct):
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
     year = struct.get('season', np.nan)
-    struct['timeoutTeam'] = sportsref.nfl.teams.teamIDs(year).get(
-        struct.get('timeoutTeam'), np.nan)
+    struct['timeoutTeam'] = sportsref.nfl.teams.team_ids(year).get(
+        struct.get('timeoutTeam'), np.nan
+    )
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
 

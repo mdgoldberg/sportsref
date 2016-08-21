@@ -22,10 +22,10 @@ def PlayerSeasonFinder(**kwargs):
         url = '{}?{}'.format(PSF_URL, querystring)
         if kwargs.get('verbose', False):
             print url
-        html = utils.getHTML(url)
+        html = utils.get_html(url)
         doc = pq(html)
         table = doc('table#results')
-        df = utils.parseTable(table)
+        df = utils.parse_table(table)
         thisSeason = zip(df.playerID, df.year)
         playerSeasons.extend(thisSeason)
 
@@ -137,7 +137,7 @@ def _kwargs_to_qs(**kwargs):
 
     return qs
 
-@decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
+@decorators.switch_to_dir(os.path.dirname(os.path.realpath(__file__)))
 def inputs_options_defaults():
     """Handles scraping options for player-season finder form.
 
@@ -160,7 +160,7 @@ def inputs_options_defaults():
 
         print 'Regenerating PSFConstants file'
 
-        html = utils.getHTML(PSF_URL)
+        html = utils.get_html(PSF_URL)
         doc = pq(html)
 
         def_dict = {}

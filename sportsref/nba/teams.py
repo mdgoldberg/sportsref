@@ -28,12 +28,12 @@ class Team:
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = sportsref.nba.BASE_URL + relURL
-        mainDoc = pq(sportsref.utils.getHTML(teamURL))
+        mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
     @sportsref.decorators.memoized
     def get_year_doc(self, yr_str):
-        return pq(sportsref.utils.getHTML(self.team_year_url(yr_str)))
+        return pq(sportsref.utils.get_html(self.team_year_url(yr_str)))
 
     @sportsref.decorators.memoized
     def name(self):
@@ -71,7 +71,7 @@ class Team:
         """
         doc = self.get_year_doc('{}_games'.format(year))
         table = doc('table#teams_games')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if df.empty:
             return np.array([])
         return df.box_score_text.dropna().values

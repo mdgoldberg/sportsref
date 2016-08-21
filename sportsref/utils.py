@@ -8,8 +8,8 @@ from selenium import webdriver
 import sportsref
 
 @sportsref.decorators.memoized
-@sportsref.decorators.cacheHTML
-def getHTML(url):
+@sportsref.decorators.cache_html
+def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
     Incorporates an exponential timeout starting with 2 seconds.
@@ -34,7 +34,7 @@ def getHTML(url):
         time.sleep(0.001)
     return html
 
-def parseTable(table):
+def parse_table(table):
     """Parses a table from SR into a pandas dataframe.
 
     :table: the PyQuery object representing the HTML table
@@ -51,7 +51,7 @@ def parseTable(table):
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flattenLinks(td) for td in row.items('th,td')]
+        [flatten_links(td) for td in row.items('th,td')]
         for row in rows
     ]
 
@@ -96,7 +96,7 @@ def parseTable(table):
 
     return df
 
-def parseInfoTable(table):
+def parse_info_table(table):
     """Parses an info table, like the "Game Info" table or the "Officials"
     table on the PFR Boxscore page. Keys are lower case and have spaces/special
     characters converted to underscores.
@@ -109,11 +109,11 @@ def parseInfoTable(table):
         th, td = tr('th, td').items()
         key = th.text().lower()
         key = re.sub(r'\W', '_', key)
-        val = sportsref.utils.flattenLinks(td)
+        val = sportsref.utils.flatten_links(td)
         ret[key] = val
     return ret
 
-def flattenLinks(td):
+def flatten_links(td, _recurse=False):
     """Flattens relative URLs within text of a table cell to IDs and returns
     the result.
 
@@ -126,19 +126,19 @@ def flattenLinks(td):
         if isinstance(c, basestring):
             return c
         elif 'href' in c.attrib:
-            cID = relURLToID(c.attrib['href'])
+            cID = rel_url_to_id(c.attrib['href'])
             return cID if cID else c.text_content()
         else:
-            return flattenLinks(pq(c))
+            return flatten_links(pq(c), _recurse=True)
 
     # if there's no text, just return None
     if not td or not td.text():
-        return None
+        return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
 
 @sportsref.decorators.memoized
-def relURLToID(url):
+def rel_url_to_id(url):
     """Converts a relative URL to a unique ID.
 
     Here, 'ID' refers generally to the unique ID for a given 'type' that a
