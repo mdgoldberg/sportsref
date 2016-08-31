@@ -34,11 +34,13 @@ def switch_to_dir(dirPath):
     return decorator
 
 def _cacheValid_pfr(ct, mt, fn):
+    # TODO: this is not comprehensive, can be a problem
     # first, if we can ensure that the file won't change,
     # then we're safe caching it
+    import ipdb; ipdb.set_trace()
     if 'boxscore' in fn:
         return True
-    # if it's currently the offseason, then we're also good
+    # if it's currently the offseason, then we're good
     today = datetime.date.today()
     endOfSeason = datetime.date(today.year, 2, 18)
     startOfSeason = datetime.date(today.year, 8, 25)
@@ -65,6 +67,7 @@ def _cacheValid_pfr(ct, mt, fn):
     return modDay >= lastGameDay
 
 def _cacheValid_bkref(ct, mt, fn):
+    # TODO: this might not be comprehensive
     # first, if we can ensure that the file won't change,
     # then we're safe caching it
     if 'boxscore' in fn:
@@ -107,7 +110,8 @@ def cache_html(func):
     @functools.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
-        sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' + parsed.netloc)
+        sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' +
+                                          parsed.netloc)
         if sport == None:
             for ncaaSport in ('cfb', 'cbb'):
                 if ncaaSport in url:
@@ -123,12 +127,13 @@ def cache_html(func):
 
         # set time variables (in seconds)
         if os.path.isfile(filename):
-            modtime = int(os.path.getmtime(filename))
             curtime = int(time.time())
+            modtime = int(os.path.getmtime(filename))
+            time_since_mod = datetime.timedelta(seconds=(curtime - modtime))
+            cacheValid = time_since_mod <= datetime.timedelta(days=12)
 
         # if file found and caching is valid, read from file
-        cacheValid = cacheValidFuncs(sport)
-        if os.path.isfile(filename) and cacheValid(curtime, modtime, filename):
+        if os.path.isfile(filename) and cacheValid:
             with open(filename, 'r') as f:
                 text = f.read()
             return text
