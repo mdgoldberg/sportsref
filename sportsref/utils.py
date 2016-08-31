@@ -8,8 +8,8 @@ from selenium import webdriver
 import sportsref
 
 @sportsref.decorators.memoized
-@sportsref.decorators.cacheHTML
-def getHTML(url):
+@sportsref.decorators.cache_html
+def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
     Incorporates an exponential timeout starting with 2 seconds.
@@ -24,9 +24,9 @@ def getHTML(url):
     d.set_window_size(10000, 10000)
     d.get(url)
     html = d.page_source
+    d.quit()
     if html == '<html><head></head><body></body></html>':
         raise Exception("Received HTML empty response")
-    d.quit()
     timeOnRequest = time.time() - start
     timeRemaining = int(1000*(TOTAL_TIME - timeOnRequest)) # in milliseconds
     for _ in xrange(timeRemaining):
@@ -34,7 +34,7 @@ def getHTML(url):
         time.sleep(0.001)
     return html
 
-def parseTable(table):
+def parse_table(table):
     """Parses a table from SR into a pandas dataframe.
 
     :table: the PyQuery object representing the HTML table
@@ -42,6 +42,7 @@ def parseTable(table):
     """
     if not len(table):
         return pd.DataFrame()
+
     # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr:not([class]) th[data-stat]')]
@@ -51,7 +52,7 @@ def parseTable(table):
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flattenLinks(td) for td in row.items('th,td')]
+        [flatten_links(td) for td in row.items('th,td')]
         for row in rows
     ]
 
@@ -83,9 +84,18 @@ def parseTable(table):
         else:
             df.year = df.year.astype(int)
 
-    # game_date -> bsID
-    if 'game_date' in df.columns:
-        df.rename(columns={'game_date': 'bsID'}, inplace=True)
+    # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
+    bs_id_col = None
+    if 'boxscore_word' in df.columns:
+        bs_id_col = 'boxscore_word'
+    elif 'game_date' in df.columns:
+        bs_id_col = 'game_date'
+    if bs_id_col:
+        df = df.loc[df[bs_id_col].notnull()] # drop bye weeks
+        df['year'] = df[bs_id_col].str[:4].astype(int)
+        df['month'] = df[bs_id_col].str[4:6].astype(int)
+        df['day'] = df[bs_id_col].str[6:8].astype(int)
+        df.rename(columns={bs_id_col: 'boxscoreID'}, inplace=True)
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
@@ -96,7 +106,7 @@ def parseTable(table):
 
     return df
 
-def parseInfoTable(table):
+def parse_info_table(table):
     """Parses an info table, like the "Game Info" table or the "Officials"
     table on the PFR Boxscore page. Keys are lower case and have spaces/special
     characters converted to underscores.
@@ -109,17 +119,16 @@ def parseInfoTable(table):
         th, td = tr('th, td').items()
         key = th.text().lower()
         key = re.sub(r'\W', '_', key)
-        val = sportsref.utils.flattenLinks(td)
+        val = sportsref.utils.flatten_links(td)
         ret[key] = val
     return ret
 
-def flattenLinks(td):
+def flatten_links(td, _recurse=False):
     """Flattens relative URLs within text of a table cell to IDs and returns
     the result.
 
     :td: the PyQuery object for the HTML to convert
     :returns: the string with the links flattened to IDs
-
     """
 
     # helper function to flatten individual strings/links
@@ -127,19 +136,19 @@ def flattenLinks(td):
         if isinstance(c, basestring):
             return c
         elif 'href' in c.attrib:
-            cID = relURLToID(c.attrib['href'])
+            cID = rel_url_to_id(c.attrib['href'])
             return cID if cID else c.text_content()
         else:
-            return c.text_content()
+            return flatten_links(pq(c), _recurse=True)
 
     # if there's no text, just return None
-    if not td.text():
-        return None
+    if not td or not td.text():
+        return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
 
 @sportsref.decorators.memoized
-def relURLToID(url):
+def rel_url_to_id(url):
     """Converts a relative URL to a unique ID.
 
     Here, 'ID' refers generally to the unique ID for a given 'type' that a
@@ -190,4 +199,3 @@ def relURLToID(url):
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
     return 'noIDer00'
-

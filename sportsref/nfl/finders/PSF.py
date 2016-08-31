@@ -5,67 +5,60 @@ import time
 
 from pyquery import PyQuery as pq
 
-import sportsref
+from ... import decorators, utils
+from .. import players
+from . import PSF_URL, PSF_CONSTANTS_FILENAME
 
-PLAYER_SEASON_URL = ('http://www.pro-football-reference.com/'
-                     'play-index/psl_finder.cgi')
-
-CONSTANTS_FN = 'PSFConstants.json'
-
+@decorators.memoized
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
-    
+
     if 'offset' not in kwargs:
         kwargs['offset'] = 0
 
-    playerseasons = []
+    playerSeasons = []
     while True:
-        querystring = kwArgsToQS(**kwargs)
-        url = '{}?{}'.format(PLAYER_SEASON_URL, querystring)
+        querystring = _kwargs_to_qs(**kwargs)
+        url = '{}?{}'.format(PSF_URL, querystring)
         if kwargs.get('verbose', False):
             print url
-        html = sportsref.utils.getHTML(url)
+        html = utils.get_html(url)
         doc = pq(html)
-        table = doc('table#stats')
-        yearTh = table('thead tr[class=""] th[data-stat="year_id"]')[0]
-        yearIdx = table('thead tr[class=""] th').index(yearTh)
-        for row in table('tbody tr[class=""]').items():
-            relURL = row('a[href*="/players/"]').attr.href
-            playerID = sportsref.utils.relURLToID(relURL)
-            year = int(row('td')[yearIdx].text)
-            playerseasons.append((playerID, year))
+        table = doc('table#results')
+        df = utils.parse_table(table)
+        thisSeason = zip(df.playerID, df.year)
+        playerSeasons.extend(thisSeason)
 
-        if doc('*:contains("Next page")'):
+        if doc('*:contains("Next Page")'):
             kwargs['offset'] += 100
         else:
             break
 
-    return playerseasons
+    return playerSeasons
 
-def kwArgsToQS(**kwargs):
+def _kwargs_to_qs(**kwargs):
     """Converts kwargs given to PSF to a querystring.
 
     :returns: the querystring.
     """
     # start with defaults
-    inpOptDef = getInputsOptionsDefaults()
+    inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
         for name, dct in inpOptDef.iteritems()
     }
-    
+
     # clean up keys and values
     for k, v in kwargs.items():
+        del kwargs[k]
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
         # tm, team => team_id
-        if k.lower() in ('tm', 'team'):
-            del kwargs[k]
+        elif k.lower() in ('tm', 'team'):
             kwargs['team_id'] = v
         # yr, year, yrs, years => year_min, year_max
-        if k.lower() in ('yr', 'year', 'yrs', 'years'):
-            del kwargs[k]
+        elif k.lower() in ('yr', 'year', 'yrs', 'years'):
             if isinstance(v, collections.Iterable):
                 lst = list(v)
                 kwargs['year_min'] = min(lst)
@@ -78,26 +71,23 @@ def kwArgsToQS(**kwargs):
                 kwargs['year_min'] = v
                 kwargs['year_max'] = v
         # pos, position, positions => pos_is_X
-        if k.lower() in ('pos', 'position', 'positions'):
-            del kwargs[k]
-            # make sure value is list, splitting strings on commas
+        elif k.lower() in ('position', 'positions'):
             if isinstance(v, basestring):
                 v = v.split(',')
-            if not isinstance(v, collections.Iterable):
+            elif not isinstance(v, collections.Iterable):
                 v = [v]
-            for pos in v:
-                kwargs['pos_is_' + pos] = 'Y'
+            kwargs['pos'] = v
         # draft_pos, ... => draft_pos_is_X
-        if k.lower() in ('draftpos', 'draftposition', 'draftpositions',
-                         'draft_pos', 'draft_position', 'draft_positions'):
-            del kwargs[k]
-            # make sure value is list, splitting strings on commas
+        elif k.lower() in ('draftpos', 'draftposition', 'draftpositions',
+                           'draft_position', 'draft_positions'):
             if isinstance(v, basestring):
                 v = v.split(',')
-            if not isinstance(v, collections.Iterable):
+            elif not isinstance(v, collections.Iterable):
                 v = [v]
-            for pos in v:
-                kwargs['draft_pos_is_' + pos] = 'Y'
+            kwargs['draft_pos'] = v
+        # if not one of these cases, put it back in kwargs
+        else:
+            kwargs[k] = v
 
     # reset opts values to blank for defined kwargs
     for k in kwargs:
@@ -116,6 +106,7 @@ def kwArgsToQS(**kwargs):
             for k in opts:
                 if k.startswith('draft_pos_is'):
                     opts[k] = ['N']
+
 
     # update based on kwargs
     for k, v in kwargs.iteritems():
@@ -137,6 +128,7 @@ def kwArgsToQS(**kwargs):
                 opts[k] = ('Y' if any([val in ('Y', 'y') for val in opts[k]])
                            else 'N')
 
+
     opts['request'] = [1]
     opts['offset'] = [kwargs.get('offset', 0)]
 
@@ -145,21 +137,22 @@ def kwArgsToQS(**kwargs):
 
     return qs
 
-@sportsref.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
-def getInputsOptionsDefaults():
+@decorators.switch_to_dir(os.path.dirname(os.path.realpath(__file__)))
+def inputs_options_defaults():
     """Handles scraping options for player-season finder form.
 
     :returns: {'name1': {'value': val, 'options': [opt1, ...] }, ... }
     """
     # set time variables
-    if os.path.isfile(CONSTANTS_FN):
-        modtime = int(os.path.getmtime(CONSTANTS_FN))
+    if os.path.isfile(PSF_CONSTANTS_FILENAME):
+        modtime = int(os.path.getmtime(PSF_CONSTANTS_FILENAME))
         curtime = int(time.time())
     # if file found and it's been <= a week
-    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 7*24*60*60:
+    if (os.path.isfile(PSF_CONSTANTS_FILENAME)
+            and curtime - modtime <= 7*24*60*60):
 
         # just read the dict from cached file
-        with open(CONSTANTS_FN, 'r') as const_f:
+        with open(PSF_CONSTANTS_FILENAME, 'r') as const_f:
             def_dict = json.load(const_f)
 
     # otherwise, we must regenerate the dict and rewrite it
@@ -167,7 +160,7 @@ def getInputsOptionsDefaults():
 
         print 'Regenerating PSFConstants file'
 
-        html = sportsref.utils.getHTML(PLAYER_SEASON_URL)
+        html = utils.get_html(PSF_URL)
         doc = pq(html)
 
         def_dict = {}
@@ -213,7 +206,7 @@ def getInputsOptionsDefaults():
                 def_dict[name]['value'].add(
                     sel('option')[0].attrib.get('value', '')
                 )
-                
+
             # deal with options
             def_dict[name]['options'] = {
                 opt.attrib['value'] for opt in sel('option')
@@ -223,7 +216,7 @@ def getInputsOptionsDefaults():
         def_dict.pop('request', None)
         def_dict.pop('use_favorites', None)
 
-        with open(CONSTANTS_FN, 'w+') as f:
+        with open(PSF_CONSTANTS_FILENAME, 'w+') as f:
             for k in def_dict:
                 try:
                     def_dict[k]['value'] = sorted(
@@ -232,11 +225,11 @@ def getInputsOptionsDefaults():
                     def_dict[k]['options'] = sorted(
                         list(def_dict[k]['options']), key=int
                     )
-                except:
+                except Exception:
                     def_dict[k]['value'] = sorted(list(def_dict[k]['value']))
                     def_dict[k]['options'] = sorted(
                         list(def_dict[k]['options'])
                     )
             json.dump(def_dict, f)
-    
+
     return def_dict

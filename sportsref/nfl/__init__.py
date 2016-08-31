@@ -1,4 +1,4 @@
-BASE_URL = 'http://www.pro-football-reference.com'
+NFL_BASE_URL = 'http://www.pro-football-reference.com'
 
 import finders
 import teams

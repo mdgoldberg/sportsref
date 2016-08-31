@@ -9,5 +9,3 @@ import decorators
 import utils
 import nfl
 import nba
-import ncaaf
-import ncaab
