@@ -75,6 +75,12 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
+    def __repr__(self):
+        return 'Team({})'.format(self.teamID)
+
+    def __str__(self):
+        return self.name()
+
     def __reduce__(self):
         return Team, (self.teamID,)
 
@@ -135,7 +141,7 @@ class Team:
         df = utils.parse_table(table)
         if df.empty:
             return np.array([])
-        return df.boxscore_word.dropna().values
+        return df.boxscoreID.values
 
     # TODO: add functions for OC, DC, PF, PA, W-L, etc.
     # TODO: Also give a function at BoxScore.homeCoach and BoxScore.awayCoach

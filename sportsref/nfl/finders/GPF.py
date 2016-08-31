@@ -26,14 +26,6 @@ def GamePlayFinder(**kwargs):
     table = doc('table#all_plays')
     plays = utils.parse_table(table)
 
-    # clean game date
-    if 'game_date' in plays.columns:
-        plays['year'] = plays.game_date.str[:4].astype(int)
-        plays['month'] = plays.game_date.str[4:6].astype(int)
-        plays['day'] = plays.game_date.str[6:8].astype(int)
-    # rename game_date to bsID
-    if 'game_date' in plays.columns:
-        plays = plays.rename(columns={'game_date': 'bsID'})
     # parse score column
     if 'score' in plays.columns:
         oScore, dScore = zip(*plays.score.apply(lambda s: s.split('-')))

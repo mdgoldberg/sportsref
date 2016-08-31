@@ -42,6 +42,7 @@ def parse_table(table):
     """
     if not len(table):
         return pd.DataFrame()
+
     # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr:not([class]) th[data-stat]')]
@@ -83,9 +84,18 @@ def parse_table(table):
         else:
             df.year = df.year.astype(int)
 
-    # game_date -> bsID
-    if 'game_date' in df.columns:
-        df.rename(columns={'game_date': 'bsID'}, inplace=True)
+    # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
+    bs_id_col = None
+    if 'boxscore_word' in df.columns:
+        bs_id_col = 'boxscore_word'
+    elif 'game_date' in df.columns:
+        bs_id_col = 'game_date'
+    if bs_id_col:
+        df = df.loc[df[bs_id_col].notnull()] # drop bye weeks
+        df['year'] = df[bs_id_col].str[:4].astype(int)
+        df['month'] = df[bs_id_col].str[4:6].astype(int)
+        df['day'] = df[bs_id_col].str[6:8].astype(int)
+        df.rename(columns={bs_id_col: 'boxscoreID'}, inplace=True)
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
@@ -189,4 +199,3 @@ def rel_url_to_id(url):
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
     return 'noIDer00'
-

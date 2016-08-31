@@ -27,6 +27,12 @@ class Player:
     def __hash__(self):
         return hash(self.playerID)
 
+    def __repr__(self):
+        return 'Player({})'.format(self.playerID)
+
+    def __str__(self):
+        return self.name()
+
     def __reduce__(self):
         return Player, (self.playerID,)
 
@@ -182,7 +188,7 @@ class Player:
 
     @decorators.memoized
     @decorators.kind_rpb(include_type=True)
-    def gamelog(self, kind='R', year=None):
+    def gamelog(self, year=None, kind='R'):
         """Gets the career gamelog of the given player.
         :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
         Case-insensitive; defaults to 'R'.
@@ -289,8 +295,9 @@ class Player:
         table = doc('table#stats')
         df = utils.parse_table(table)
         # cleaning the data
-        df.split_id.fillna(method='ffill', inplace=True)
-        df.set_index(['split_id', 'split_value'], inplace=True)
+        if not df.empty:
+            df.split_id.fillna(method='ffill', inplace=True)
+            df.set_index(['split_id', 'split_value'], inplace=True)
         return df
 
     @decorators.memoized
@@ -307,6 +314,7 @@ class Player:
         table = doc('table#advanced_splits')
         df = utils.parse_table(table)
         # cleaning the data
-        df.split_type.fillna(method='ffill', inplace=True)
-        df.set_index(['split_type', 'split_value'], inplace=True)
+        if not df.empty:
+            df.split_type.fillna(method='ffill', inplace=True)
+            df.set_index(['split_type', 'split_value'], inplace=True)
         return df

@@ -15,21 +15,29 @@ __all__ = [
 @decorators.memoized
 class BoxScore:
 
-    def __init__(self, bsID):
-        self.bsID = bsID
+    def __init__(self, boxscoreID):
+        self.boxscoreID = boxscoreID
 
     def __eq__(self, other):
-        return self.bsID == other.bsID
+        return self.boxscoreID == other.boxscoreID
 
     def __hash__(self):
-        return hash(self.bsID)
+        return hash(self.boxscoreID)
+
+    def __repr__(self):
+        return 'BoxScore({})'.format(self.boxscoreID)
+
+    def __str__(self):
+        return '{} Week {}: {} @ {}'.format(
+            self.season(), self.week(), self.away(), self.home()
+        )
 
     def __reduce__(self):
-        BoxScore, (self.bsID,)
+        return BoxScore, (self.boxscoreID,)
 
     @decorators.memoized
     def get_doc(self):
-        url = NFL_BASE_URL + '/boxscores/{}.htm'.format(self.bsID)
+        url = NFL_BASE_URL + '/boxscores/{}.htm'.format(self.boxscoreID)
         doc = pq(utils.get_html(url))
         return doc
 
@@ -39,7 +47,7 @@ class BoxScore:
         for more.
         :returns: A datetime.date object with year, month, and day attributes.
         """
-        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.bsID)
+        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.boxscoreID)
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
@@ -137,7 +145,8 @@ class BoxScore:
         if match:
             return int(match.group(1))
         else:
-            # super bowl happens in calendar year after the season's year
+            # else, it's the super bowl; super bowl happens in calendar year
+            # after the season's year
             return self.date().year - 1
 
     @decorators.memoized
@@ -299,7 +308,7 @@ class BoxScore:
         table = doc('table#pbp')
         df = utils.parse_table(table)
         # make the following features conveniently available on each row
-        df['bsID'] = self.bsID
+        df['boxscoreID'] = self.boxscoreID
         df['home'] = self.home()
         df['away'] = self.away()
         df['season'] = self.season()
