@@ -1,11 +1,10 @@
 import re
-import urlparse
 
 import numpy as np
-import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
+
 
 @sportsref.decorators.memoized
 class Season(object):
@@ -25,7 +24,7 @@ class Season(object):
     def __hash__(self):
         return hash(self._yr)
 
-    def _subpage_url(page):
+    def _subpage_url(self, page):
         return sportsref.nba.BASE_URL + '/leagues/NBA_{}.html'.format(page)
 
     @sportsref.decorators.memoized
@@ -79,7 +78,7 @@ class Season(object):
         :returns: Dictionary with tean names as keys and team IDs as values.
         """
         d = self.team_ids_to_names()
-        return {v:k for k,v in d.items()}
+        return {v: k for k, v in d.items()}
 
     @sportsref.decorators.memoized
     @sportsref.decorators.kind_rpb(include_type=False)
@@ -136,7 +135,8 @@ class Season(object):
 
         # get home team
         atags = p_table('tr.hidden table tr:eq(0) td:eq(0) a')
-        bsIDs = [sportsref.utils.rel_url_to_id(a.attrib['href']) for a in atags]
+        bsIDs = [sportsref.utils.rel_url_to_id(a.attrib['href'])
+                 for a in atags]
         home = np.array([sportsref.nba.BoxScore(bs).home() for bs in bsIDs])
 
         win, loss = map(np.array, zip(*wl))
