@@ -3,7 +3,6 @@ import re
 import urlparse
 
 import numpy as np
-import pandas as pd
 from pyquery import PyQuery as pq
 
 from .. import decorators, utils
@@ -12,6 +11,7 @@ from . import NFL_BASE_URL, pbp
 __all__ = [
     'Player',
 ]
+
 
 @decorators.memoized
 class Player:
@@ -79,7 +79,7 @@ class Player:
     def position(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
-                   .filter(lambda i,e: 'Position' in e.text_content())
+                   .filter(lambda i, e: 'Position' in e.text_content())
                    .text())
         rawPos = re.search(r'Position\W*(\S+)', rawText, re.I).group(1)
         allPositions = rawPos.split('-')
@@ -112,18 +112,18 @@ class Player:
         doc = self.get_doc()
         try:
             rawText = (doc('div#meta p')
-                       .filter(lambda i,e: 'Throws' in e.text_content())
+                       .filter(lambda i, e: 'Throws' in e.text_content())
                        .text())
             rawHand = re.search(r'Throws\W+(\S+)', rawText, re.I).group(1)
         except AttributeError:
             return np.nan
-        return rawHand[0] # 'L' or 'R'
+        return rawHand[0]  # 'L' or 'R'
 
     @decorators.memoized
     def current_team(self):
         doc = self.get_doc()
         team = (doc('div#meta p')
-                .filter(lambda i,e: 'Team' in e.text_content()))
+                .filter(lambda i, e: 'Team' in e.text_content()))
         text = utils.flatten_links(team)
         try:
             m = re.match(r'Team: (\w{3})', text)
@@ -135,7 +135,7 @@ class Player:
     def draft_pick(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
-                    .filter(lambda i,e: 'Draft' in e.text_content())
+                    .filter(lambda i, e: 'Draft' in e.text_content())
                     .text())
         m = re.search(r'Draft.*? round \((\d+).*?overall\)', rawDraft, re.I)
         # if not drafted or taken in supplemental draft, return NaN
@@ -148,7 +148,7 @@ class Player:
     def draft_class(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
-                    .filter(lambda i,e: 'Draft' in e.text_content())
+                    .filter(lambda i, e: 'Draft' in e.text_content())
                     .text())
         m = re.search(r'Draft.*?of the (\d{4}) NFL', rawDraft, re.I)
         if not m:
@@ -160,7 +160,7 @@ class Player:
     def draft_team(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
-                    .filter(lambda i,e: 'Draft' in e.text_content()))
+                    .filter(lambda i, e: 'Draft' in e.text_content()))
         try:
             draftStr = utils.flatten_links(rawDraft)
             m = re.search(r'Draft\W+(\w+)', draftStr)
@@ -172,7 +172,7 @@ class Player:
     def college(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
-                   .filter(lambda i,e: 'College' in e.text_content()))
+                   .filter(lambda i, e: 'College' in e.text_content()))
         cleanedText = utils.flatten_links(rawText)
         college = re.search(r'College:\s*(\S+)', cleanedText).group(1)
         return college
@@ -181,7 +181,7 @@ class Player:
     def high_school(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
-                   .filter(lambda i,e: 'High School' in e.text_content()))
+                   .filter(lambda i, e: 'High School' in e.text_content()))
         cleanedText = utils.flatten_links(rawText)
         hs = re.search(r'High School:\s*(\S+)', cleanedText).group(1)
         return hs
@@ -196,7 +196,7 @@ class Player:
         return entire career gamelog. Defaults to None.
         :returns: A DataFrame with the player's career gamelog.
         """
-        url = self._subpage_url('gamelog', None) # year is filtered later
+        url = self._subpage_url('gamelog', None)  # year is filtered later
         doc = pq(utils.get_html(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
         df = utils.parse_table(table)

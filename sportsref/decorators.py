@@ -15,6 +15,7 @@ from pyquery import PyQuery as pq
 
 import sportsref
 
+
 def switch_to_dir(dirPath):
     """
     Decorator that switches to given directory before executing function, and
@@ -33,11 +34,13 @@ def switch_to_dir(dirPath):
 
     return decorator
 
+
 def _cacheValid_pfr(ct, mt, fn):
     # TODO: this is not comprehensive, can be a problem
     # first, if we can ensure that the file won't change,
     # then we're safe caching it
-    import ipdb; ipdb.set_trace()
+    import ipdb
+    ipdb.set_trace()
     if 'boxscore' in fn:
         return True
     # if it's currently the offseason, then we're good
@@ -60,11 +63,12 @@ def _cacheValid_pfr(ct, mt, fn):
         return True
     # otherwise, check if new data could have been updated since mod
     # (assumed that new game data is added the day after that game)
-    modDay = today - datetime.timedelta(seconds=ct-mt)
+    modDay = today - datetime.timedelta(seconds=ct - mt)
     lastGameDay = today
     while (lastGameDay.weekday() + 1) % 7 not in (0, 1, 2, 5):
         lastGameDay = lastGameDay - datetime.timedelta(days=1)
     return modDay >= lastGameDay
+
 
 def _cacheValid_bkref(ct, mt, fn):
     # TODO: this might not be comprehensive
@@ -89,12 +93,14 @@ def _cacheValid_bkref(ct, mt, fn):
         return True
     # otherwise, check if new data could have been updated since mod
     # (assumed that new game data is added the day after that game)
-    modDay = today - datetime.timedelta(seconds=ct-mt)
+    modDay = today - datetime.timedelta(seconds=ct - mt)
     return modDay >= today
+
 
 def _cacheValid_cfb(ct, mt, fn):
     # TODO: caching for CFB
     return True
+
 
 def cache_html(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
@@ -146,6 +152,7 @@ def cache_html(func):
 
     return wrapper
 
+
 def memoized(fun):
     """A simple memoize decorator."""
     @functools.wraps(fun)
@@ -153,6 +160,7 @@ def memoized(fun):
 
         # deal with lists in args
         isList = lambda a: isinstance(a, list) or isinstance(a, np.ndarray)
+
         def deListify(arg):
             if isList(arg):
                 return tuple(map(deListify, arg))
@@ -162,6 +170,7 @@ def memoized(fun):
         # deal with dicts in args
         def isDict(d):
             return isinstance(d, dict) or isinstance(d, pd.Series)
+
         def deDictify(arg):
             if isDict(arg):
                 items = dict(arg).items()
@@ -194,6 +203,7 @@ def memoized(fun):
 
     cache = {}
     return wrapper
+
 
 def kind_rpb(include_type=False):
     def decorator(fun):

@@ -1,12 +1,12 @@
 import datetime
 import re
-import urlparse
 
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
+
 
 @sportsref.decorators.memoized
 class BoxScore:
@@ -119,6 +119,18 @@ class BoxScore:
             return d.year
 
     @sportsref.decorators.memoized
+    def basic_stats(self):
+        """Returns a DataFrame of basic player stats from the game."""
+        # TODO: include a "is_starter" column
+        pass
+
+    @sportsref.decorators.memoized
+    def advanced_stats(self):
+        """Returns a DataFrame of advanced player stats from the game."""
+        # TODO: include a "is_starter" column
+        pass
+
+    @sportsref.decorators.memoized
     def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
 
@@ -139,9 +151,9 @@ class BoxScore:
             t_str = row.eq(0).text()
             t_regex = r'(\d+):(\d+)\.(\d+)'
             mins, secs, tenths = map(int, re.match(t_regex, t_str).groups())
-            endQ = (12*60*min(cur_qtr, 4) +
-                    5*60*(cur_qtr - 4 if cur_qtr > 4 else 0))
-            secsElapsed = endQ - (60*mins + secs + 0.1*tenths)
+            endQ = (12 * 60 * min(cur_qtr, 4) +
+                    5 * 60 * (cur_qtr - 4 if cur_qtr > 4 else 0))
+            secsElapsed = endQ - (60 * mins + secs + 0.1 * tenths)
             p['secsElapsed'] = secsElapsed
 
             # add scores to entry
@@ -162,7 +174,9 @@ class BoxScore:
                     p['isJumpBall'] = True
                     jb_str = sportsref.utils.flatten_links(desc)
                     n = None
-                    p.update(sportsref.nba.pbp.parsePlay(jb_str, n, n, n, year))
+                    p.update(
+                        sportsref.nba.pbp.parsePlay(jb_str, n, n, n, year)
+                    )
                 else:
                     # if another case, continue
                     if not desc.text().lower().startswith('start of '):
@@ -182,7 +196,9 @@ class BoxScore:
                 # get home and away
                 hm, aw = self.home(), self.away()
                 # handle the play
-                new_p = sportsref.nba.pbp.parsePlay(desc, hm, aw, is_hm_play, year)
+                new_p = sportsref.nba.pbp.parsePlay(
+                    desc, hm, aw, is_hm_play, year
+                )
                 if new_p == -1:
                     continue
                 elif new_p.get('isError'):
@@ -193,7 +209,7 @@ class BoxScore:
             # otherwise, I don't know what this was
             else:
                 raise Exception(("don't know how to handle row of length {}"
-                       .format(row.length)))
+                                 .format(row.length)))
 
             data.append(p)
 

@@ -9,6 +9,7 @@ from ... import decorators, utils
 from .. import players
 from . import PSF_URL, PSF_CONSTANTS_FILENAME
 
+
 @decorators.memoized
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
@@ -35,6 +36,7 @@ def PlayerSeasonFinder(**kwargs):
             break
 
     return playerSeasons
+
 
 def _kwargs_to_qs(**kwargs):
     """Converts kwargs given to PSF to a querystring.
@@ -107,7 +109,6 @@ def _kwargs_to_qs(**kwargs):
                 if k.startswith('draft_pos_is'):
                     opts[k] = ['N']
 
-
     # update based on kwargs
     for k, v in kwargs.iteritems():
         # if overwriting a default, overwrite it (with a list so the
@@ -128,7 +129,6 @@ def _kwargs_to_qs(**kwargs):
                 opts[k] = ('Y' if any([val in ('Y', 'y') for val in opts[k]])
                            else 'N')
 
-
     opts['request'] = [1]
     opts['offset'] = [kwargs.get('offset', 0)]
 
@@ -136,6 +136,7 @@ def _kwargs_to_qs(**kwargs):
                   for name, vals in sorted(opts.iteritems()) for val in vals)
 
     return qs
+
 
 @decorators.switch_to_dir(os.path.dirname(os.path.realpath(__file__)))
 def inputs_options_defaults():
@@ -149,7 +150,7 @@ def inputs_options_defaults():
         curtime = int(time.time())
     # if file found and it's been <= a week
     if (os.path.isfile(PSF_CONSTANTS_FILENAME)
-            and curtime - modtime <= 7*24*60*60):
+            and curtime - modtime <= 7 * 24 * 60 * 60):
 
         # just read the dict from cached file
         with open(PSF_CONSTANTS_FILENAME, 'r') as const_f:
