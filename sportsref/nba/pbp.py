@@ -6,6 +6,7 @@ import pandas as pd
 
 import sportsref
 
+
 @sportsref.decorators.memoized
 def parse_play(details, hm, aw, is_hm, yr):
     """Parse play details from a play-by-play string describing a play; returns
@@ -70,7 +71,7 @@ def parse_play(details, hm, aw, is_hm, yr):
         p.update(m.groupdict())
         p['isOReb'] = p['isOReb'] == 'Offensive'
         p['isDReb'] = not p['isOReb']
-        p['rebTeam'], other = (hm,aw) if is_hm else (aw,hm)
+        p['rebTeam'], other = (hm, aw) if is_hm else (aw, hm)
         p['team'] = p['rebTeam'] if p['isOReb'] else other
         p['opp'] = p['rebTeam'] if p['isDReb'] else other
         return p
@@ -292,6 +293,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     p['isError'] = True
     return p
+
 
 def clean_features(df):
     """Fixes up columns of the passed DataFrame, such as casting T/F columns to

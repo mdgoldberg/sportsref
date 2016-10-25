@@ -16,6 +16,7 @@ __all__ = [
     'Team',
 ]
 
+
 @decorators.memoized
 def team_names(year):
     """Returns a mapping from team ID to full team name for a given season.
@@ -43,6 +44,7 @@ def team_names(year):
     # filter, convert to a dict, and return
     return series[mask].to_dict()
 
+
 @decorators.memoized
 def team_ids(year):
     """Returns a mapping from team name to team ID for a given season. Inverse
@@ -54,6 +56,7 @@ def team_ids(year):
     names = team_names(year)
     return {v: k for k, v in names.iteritems()}
 
+
 @decorators.memoized
 def list_teams(year):
     """Returns a list of team IDs for a given season.
@@ -62,6 +65,7 @@ def list_teams(year):
     :returns: A list of team IDs.
     """
     return team_names(year).keys()
+
 
 @decorators.memoized
 class Team:
@@ -158,7 +162,7 @@ class Team:
         """
         doc = self.get_year_doc(year)
         coaches = (doc('div#meta p')
-                   .filter(lambda i,e: 'Coach:' in e.text_content()))
+                   .filter(lambda i, e: 'Coach:' in e.text_content()))
         coachStr = utils.flatten_links(coaches)
         regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
         coachAndTenure = []
@@ -171,7 +175,7 @@ class Team:
             coachAndTenure.append((coachID, tenure))
 
         coachIDs = [[cID for _ in xrange(games)]
-                   for cID, games in coachAndTenure]
+                    for cID, games in coachAndTenure]
         coachIDs = [cID for sublist in coachIDs for cID in sublist]
         return np.array(coachIDs[::-1])
 
@@ -184,7 +188,7 @@ class Team:
         """
         doc = self.get_year_doc(year)
         srsText = (doc('div#meta p')
-                   .filter(lambda i,e: 'SRS' in e.text_content())
+                   .filter(lambda i, e: 'SRS' in e.text_content())
                    .text())
         m = re.match(r'SRS\s*?:\s*?(\S+)', srsText)
         if m:
@@ -202,7 +206,7 @@ class Team:
         """
         doc = self.get_year_doc(year)
         sosText = (doc('div#meta p')
-                   .filter(lambda i,e: 'SOS' in e.text_content())
+                   .filter(lambda i, e: 'SOS' in e.text_content())
                    .text())
         m = re.search(r'SOS\s*?:\s*?(\S+)', sosText)
         if m:
@@ -220,8 +224,8 @@ class Team:
         """
         doc = self.get_year_doc(year)
         anchor = (doc('div#meta p')
-                  .filter(lambda i,e: 'Stadium' in e.text_content())
-                 )('a')
+                  .filter(lambda i, e: 'Stadium' in e.text_content())
+                  )('a')
         return utils.rel_url_to_id(anchor.attr['href'])
 
     @decorators.memoized

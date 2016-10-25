@@ -3,6 +3,7 @@ from scipy.stats import norm
 
 import sportsref
 
+
 def initialWinProb(line):
     """Gets the initial win probability of a game given its Vegas line.
 
@@ -14,6 +15,7 @@ def initialWinProb(line):
     probWin = 1. - norm.cdf(0.5, -line, 13.86)
     probTie = norm.cdf(0.5, -line, 13.86) - norm.cdf(-0.5, -line, 13.86)
     return 100. * (probWin + 0.5 * probTie)
+
 
 def winProb(line, margin, secsElapsed, expPts):
     line = float(line)
@@ -28,4 +30,4 @@ def winProb(line, margin, secsElapsed, expPts):
     probWin = 1. - norm.cdf(-expMargin + 0.5, adjMean, adjStd)
     probTie = (norm.cdf(-expMargin + 0.5, adjMean, adjStd) -
                norm.cdf(-expMargin - 0.5, adjMean, adjStd))
-    return 100. * (probWin + 0.5*probTie)
+    return 100. * (probWin + 0.5 * probTie)

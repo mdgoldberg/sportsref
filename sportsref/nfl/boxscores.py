@@ -12,6 +12,7 @@ __all__ = [
     'BoxScore',
 ]
 
+
 @decorators.memoized
 class BoxScore:
 
@@ -129,7 +130,7 @@ class BoxScore:
         if match:
             return int(match.group(1))
         else:
-            return 21 # super bowl is week 21
+            return 21  # super bowl is week 21
 
     @decorators.memoized
     def season(self):
@@ -253,7 +254,6 @@ class BoxScore:
         else:
             return np.nan
 
-
     @decorators.memoized
     def weather(self):
         """Returns a dictionary of weather-related info.
@@ -332,7 +332,7 @@ class BoxScore:
         for i in firstPlaysOfGame:
             initwp = winProb.initialWinProb(line)
             df.ix[i, 'home_wp'] = initwp
-            df.ix[i, 'home_wpa'] = df.ix[i+1, 'home_wp'] - initwp
+            df.ix[i, 'home_wpa'] = df.ix[i + 1, 'home_wp'] - initwp
         # fix last play border after diffing/shifting for WP and WPA
         lastPlayIdx = df.iloc[-1].name
         lastPlayWP = df.ix[lastPlayIdx, 'home_wp']
@@ -345,16 +345,16 @@ class BoxScore:
         for to in timeouts:
             df.ix[to, 'home_wpa'] = 0.
             if to + 2 in df.index:
-                wpa = df.ix[to+2, 'home_wp'] - df.ix[to+1, 'home_wp']
+                wpa = df.ix[to + 2, 'home_wp'] - df.ix[to + 1, 'home_wp']
             else:
-                wpa = finalWP - df.ix[to+1, 'home_wp']
-            df.ix[to+1, 'home_wpa'] = wpa
+                wpa = finalWP - df.ix[to + 1, 'home_wp']
+            df.ix[to + 1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
         df = df.apply(pbp.add_team_features, axis=1)
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)
-        df.distToGoal.fillna(method='ffill', inplace=True) # for last play
+        df.distToGoal.fillna(method='ffill', inplace=True)  # for last play
 
         return df
 

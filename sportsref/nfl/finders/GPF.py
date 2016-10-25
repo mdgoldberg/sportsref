@@ -10,6 +10,7 @@ from ... import decorators, utils
 from .. import pbp
 from . import GPF_URL, GPF_CONSTANTS_FILENAME
 
+
 @decorators.memoized
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
@@ -36,6 +37,7 @@ def GamePlayFinder(**kwargs):
         plays = pbp.expandDetails(plays, detailCol='description')
 
     return plays
+
 
 def _kwargs_to_qs(**kwargs):
     """Converts kwargs given to GPF to a querystring.
@@ -140,6 +142,7 @@ def _kwargs_to_qs(**kwargs):
 
     return qs
 
+
 @decorators.switch_to_dir(os.path.dirname(os.path.realpath(__file__)))
 def inputs_options_defaults():
     """Handles scraping options for play finder form.
@@ -153,7 +156,7 @@ def inputs_options_defaults():
         curtime = int(time.time())
     # if file found and it's been <= a week
     if (os.path.isfile(GPF_CONSTANTS_FILENAME)
-            and curtime - modtime <= 7*24*60*60):
+            and curtime - modtime <= 7 * 24 * 60 * 60):
 
         # just read the dict from the cached file
         with open(GPF_CONSTANTS_FILENAME, 'r') as const_f:
@@ -190,7 +193,6 @@ def inputs_options_defaults():
             # handle other types of inputs (only other type is hidden?)
             else:
                 def_dict[name]['value'].add(val)
-
 
         # for dropdowns (select elements)
         for sel in doc.items('form#play_finder select[name]'):

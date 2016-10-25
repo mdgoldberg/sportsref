@@ -7,6 +7,7 @@ from selenium import webdriver
 
 import sportsref
 
+
 @sportsref.decorators.memoized
 @sportsref.decorators.cache_html
 def get_html(url):
@@ -17,7 +18,7 @@ def get_html(url):
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
     """
-    TOTAL_TIME = 0.4 # num of secs we we wait between last request & return
+    TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
     start = time.time()
     d = webdriver.PhantomJS(service_args=['--load-images=false'],
                             service_log_path='/dev/null')
@@ -28,11 +29,12 @@ def get_html(url):
     if html == '<html><head></head><body></body></html>':
         raise Exception("Received HTML empty response")
     timeOnRequest = time.time() - start
-    timeRemaining = int(1000*(TOTAL_TIME - timeOnRequest)) # in milliseconds
+    timeRemaining = int(1000 * (TOTAL_TIME - timeOnRequest))  # in milliseconds
     for _ in xrange(timeRemaining):
         # wait one millisecond
         time.sleep(0.001)
     return html
+
 
 def parse_table(table):
     """Parses a table from SR into a pandas dataframe.
@@ -91,7 +93,7 @@ def parse_table(table):
     elif 'game_date' in df.columns:
         bs_id_col = 'game_date'
     if bs_id_col:
-        df = df.loc[df[bs_id_col].notnull()] # drop bye weeks
+        df = df.loc[df[bs_id_col].notnull()]  # drop bye weeks
         df['year'] = df[bs_id_col].str[:4].astype(int)
         df['month'] = df[bs_id_col].str[4:6].astype(int)
         df['day'] = df[bs_id_col].str[6:8].astype(int)
@@ -105,6 +107,7 @@ def parse_table(table):
         df.rename(columns={'player': 'playerID'}, inplace=True)
 
     return df
+
 
 def parse_info_table(table):
     """Parses an info table, like the "Game Info" table or the "Officials"
@@ -122,6 +125,7 @@ def parse_info_table(table):
         val = sportsref.utils.flatten_links(td)
         ret[key] = val
     return ret
+
 
 def flatten_links(td, _recurse=False):
     """Flattens relative URLs within text of a table cell to IDs and returns
@@ -146,6 +150,7 @@ def flatten_links(td, _recurse=False):
         return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
+
 
 @sportsref.decorators.memoized
 def rel_url_to_id(url):

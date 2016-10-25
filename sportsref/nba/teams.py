@@ -7,6 +7,7 @@ from pyquery import PyQuery as pq
 
 import sportsref
 
+
 @sportsref.decorators.memoized
 class Team:
 

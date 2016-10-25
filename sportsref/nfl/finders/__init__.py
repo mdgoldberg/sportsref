@@ -1,7 +1,7 @@
 # Constants
 
 PSF_URL = ('http://www.pro-football-reference.com/'
-                     'play-index/psl_finder.cgi')
+           'play-index/psl_finder.cgi')
 
 PSF_CONSTANTS_FILENAME = 'PSFConstants.json'
 

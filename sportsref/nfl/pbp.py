@@ -17,6 +17,7 @@ PASS_OPTS = {
     'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
 }
 
+
 def expand_details(df, detailCol='detail'):
     """Expands the details column of the given dataframe and returns the
     resulting DataFrame.
@@ -49,6 +50,7 @@ def expand_details(df, detailCol='detail'):
     # use clean_features to clean up and add columns
     new_df = df.apply(clean_features, axis=1)
     return new_df
+
 
 @sportsref.decorators.memoized
 def parse_play_details(details):
@@ -143,7 +145,8 @@ def parse_play_details(details):
     # create throw RE
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
-    targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
+    targetedRE = r"(?: (?:to |intended for )?(?P<target>{0}))?".format(
+        playerRE)
     passYardsRE = r"(?: for (?:(?P<passYds>\-?\d+) yards?|no gain))"
     intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE)
              + r'(?:(?P<intFieldSide>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?'
@@ -197,7 +200,7 @@ def parse_play_details(details):
         r'(?P<fgBlocker>{0}))?'.format(playerRE) +
         r'(?:, recovered by (?P<fgBlockRecoverer>{0}))?'.format(playerRE) +
         r'(?: and returned for (?:(?P<fgBlockRetYds>\-?\d+) yards?|no gain))?'
-        )
+    )
     fgREstr = r'{}{}{}{}{}'.format(fgKickerRE, fgBaseRE,
                                    fgBlockRE, tdSafetyRE, penaltyRE)
     fgRE = re.compile(fgREstr, re.IGNORECASE)
@@ -216,7 +219,7 @@ def parse_play_details(details):
     nextREs.append(r', (?P<oob>out of bounds)')
     nextREs.append(
         (r'(?P<isMuffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
-        r' recovered by (?P<muffRecoverer>{0})').format(playerRE) +
+         r' recovered by (?P<muffRecoverer>{0})').format(playerRE) +
         r' and returned for ' +
         r'(?:(?P<muffRetYds>\d+) yards|no gain)'
     )
@@ -323,7 +326,8 @@ def parse_play_details(details):
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
         struct['twoPointSuccess'] = match.group('twoPointSuccess')
-        realPlay = sportsref.nfl.pbp.parse_play_details(match.group('twoPoint'))
+        realPlay = sportsref.nfl.pbp.parse_play_details(
+            match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
         return struct
@@ -352,8 +356,8 @@ def parse_play_details(details):
         struct.update(match.groupdict())
         return struct
 
-
     return None
+
 
 @sportsref.decorators.memoized
 def clean_features(struct):
@@ -385,7 +389,7 @@ def clean_features(struct):
     struct['isSack'] = pd.notnull(struct.get('sackYds'))
     struct['isSafety'] = (struct.get('isSafety') == ', safety' or
                           (struct.get('detail') and
-                          'enforced in end zone, safety' in struct['detail']))
+                           'enforced in end zone, safety' in struct['detail']))
     struct['isTD'] = struct.get('isTD') == ', touchdown'
     struct['isTouchback'] = struct.get('isTouchback') == ', touchback'
     struct['oob'] = pd.notnull(struct.get('oob'))
@@ -396,7 +400,8 @@ def clean_features(struct):
     if pd.notnull(struct['penalty']):
         struct['penalty'] = struct['penalty'].strip()
     struct['penDeclined'] = struct.get('penDeclined') == 'Declined'
-    if struct['quarter'] == 'OT': struct['quarter'] = 5
+    if struct['quarter'] == 'OT':
+        struct['quarter'] = 5
     struct['rushDir'] = RUSH_OPTS.get(struct.get('rushDir'), np.nan)
     if struct['isRun']:
         ryds = struct['rushYds']
@@ -465,7 +470,7 @@ def clean_features(struct):
     if pd.notnull(struct.get('qtr_time_remain')):
         qtr = struct['quarter']
         mins, secs = map(int, struct['qtr_time_remain'].split(':'))
-        struct['secsElapsed'] = qtr*900 - mins*60 - secs
+        struct['secsElapsed'] = qtr * 900 - mins * 60 - secs
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
     struct['isFumble'] = pd.notnull(struct.get('fumbler'))
@@ -475,6 +480,7 @@ def clean_features(struct):
     struct['team_epa'] = struct['exp_pts_after'] - struct['exp_pts_before']
     struct['opp_epa'] = struct['exp_pts_before'] - struct['exp_pts_after']
     return pd.Series(struct)
+
 
 @sportsref.decorators.memoized
 def loc_to_features(l):
@@ -497,6 +503,7 @@ def loc_to_features(l):
     else:
         r = (np.nan, np.nan)
     return r
+
 
 def add_team_columns(features):
     """Function that adds 'team' and 'opp' columns to the features by iterating
@@ -528,6 +535,7 @@ def add_team_columns(features):
     features.team.fillna(method='ffill', inplace=True)
     features.opp.fillna(method='ffill', inplace=True)
     return features
+
 
 @sportsref.decorators.memoized
 def team_and_opp(struct, curTm=None, curOpp=None):
@@ -586,6 +594,7 @@ def team_and_opp(struct, curTm=None, curOpp=None):
         return curOpp, curTm
     else:
         return curTm, curOpp
+
 
 def add_team_features(row):
     """Adds extra convenience features based on teams with and without
