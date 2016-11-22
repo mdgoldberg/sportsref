@@ -1,6 +1,4 @@
-import datetime
 import re
-import urlparse
 
 import numpy as np
 import pandas as pd

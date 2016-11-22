@@ -6,7 +6,6 @@ import time
 from pyquery import PyQuery as pq
 
 from ... import decorators, utils
-from .. import players
 from . import PSF_URL, PSF_CONSTANTS_FILENAME
 
 

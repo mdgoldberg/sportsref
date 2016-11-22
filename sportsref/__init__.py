@@ -1,3 +1,8 @@
+import decorators
+import utils
+import nfl
+import nba
+
 SITE_ABBREV = {
     'http://www.pro-football-reference.com': 'pfr',
     'http://www.basketball-reference.com': 'bkref',
@@ -5,7 +10,4 @@ SITE_ABBREV = {
     'http://www.sports-reference.com/cbb': 'ncaab',
 }
 
-import decorators
-import utils
-import nfl
-import nba
+__all__ = ['decorators', 'utils', 'nfl', 'nba', 'SITE_ABBREV']

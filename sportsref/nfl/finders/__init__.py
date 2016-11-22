@@ -1,3 +1,9 @@
+import GPF
+import PSF
+
+from PSF import PlayerSeasonFinder
+from GPF import GamePlayFinder
+
 # Constants
 
 PSF_URL = ('http://www.pro-football-reference.com/'
@@ -21,7 +27,6 @@ __all__ = [
 ]
 
 # Fill in PlayerSeasonFinder docstring
-import PSF
 
 IOD = PSF.inputs_options_defaults()
 
@@ -48,9 +53,10 @@ optsStr = '\n'.join(
 PSF.PlayerSeasonFinder.__doc__ = """
 Finds player-seasons that match criteria supplied by keyword arguments.
 
-Can use tm or team for team_id.
-Can use yr, year, yrs, or years for year_min, year_max.
-Can use [draft_]pos, [draft_]position, [draft_]positions for a shortcut for [draft_]positions.
+* Can use tm or team for team_id.
+* Can use yr, year, yrs, or years for year_min, year_max.
+* Can use [draft_]pos, [draft_]position, [draft_]positions for a shortcut for
+[draft_]positions.
 
 Options for inputs:
 {}
@@ -66,7 +72,6 @@ del IOD, paramStr, optsStr
 
 
 # Fill in GamePlayFinder docstring
-import GPF
 
 IOD = GPF.inputs_options_defaults()
 
@@ -95,10 +100,12 @@ optsStr = '\n'.join(
 GPF.GamePlayFinder.__doc__ = """
 Finds plays that match criteria supplied by keyword arguments.
 
-Can use tm or team instead of team_id.
-Can use yr, year, yrs, or years instead of year_min, year_max.
-For multi-valued options (like down or rush direction), separate values with commas or use a list.
-For options that are yes/no/either or yes/no/any, -1 is either/any, 0 is no, 1 is yes.
+* Can use tm or team instead of team_id.
+* Can use yr, year, yrs, or years instead of year_min, year_max.
+* For multi-valued options (like down or rush direction), separate values with
+commas or use a list.
+* For options that are yes/no/either or yes/no/any, -1 is either/any, 0 is no,
+1 is yes.
 
 Options for the inputs:
 {}
@@ -110,6 +117,3 @@ Options for the inputs:
 
 # clean up namespace
 del IOD, paramStr, optsStr
-
-from PSF import PlayerSeasonFinder
-from GPF import GamePlayFinder
