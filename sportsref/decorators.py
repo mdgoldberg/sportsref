@@ -220,16 +220,16 @@ def kind_rpb(include_type=False):
                 kwargs['kind'] = 'R'
                 reg = fun(*args, **kwargs)
                 if include_type:
-                    reg['game_type'] = 'R'
+                    reg['is_playoffs'] = False
                 kwargs['kind'] = 'P'
                 poffs = fun(*args, **kwargs)
                 if include_type:
-                    poffs['game_type'] = 'P'
+                    poffs['is_playoffs'] = True
                 return pd.concat((reg, poffs), ignore_index=True)
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df['game_type'] = kind
+                    df['is_playoffs'] = (kind == 'P')
                 return df
         return wrapper
     return decorator
