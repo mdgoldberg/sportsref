@@ -105,32 +105,61 @@ class Player:
         hand = re.search(r'Shoots:\s*(L|R)', doc.text()).group(1)
         return hand
 
+    @sportsref.decorators.memoized
     def draft_pick(self):
         """Returns when in the draft the player was picked.
         :returns: TODO
         """
         raise Exception('not yet implemented - nba.Player.draft_pick')
 
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def _get_stats_table(self, table_id, kind='R'):
+        """Gets a stats table from the player page; helper function that does
+        the work for per-game, per-100-poss, etc. stats.
+
+        :table_id: the ID of the HTML table.
+        :kind: specifies regular season, playoffs, or both. One of 'R', 'P',
+        'B'.
+        :returns: A DataFrame of stats.
+        """
+        doc = self.get_doc()
+        table_id = 'table#{}{}'.format(
+            'playoffs_' if kind == 'P' else '', table_id)
+        table = doc(table_id)
+        df = sportsref.utils.parse_table(table)
+        return df
+
     @sportsref.decorators.memoized
-    def per100_stats(self):
+    def per_game_stats(self, kind='R'):
+        """Returns a DataFrame of per-game box score stats."""
+        return self._get_stats_table('per_game', kind=kind)
+
+    @sportsref.decorators.memoized
+    def totals_stats(self, kind='R'):
+        """Returns a DataFrame of total box score statistics by season."""
+        return self._get_stats_table('totals', kind=kind)
+
+    @sportsref.decorators.memoized
+    def per36_stats(self, kind='R'):
+        """Returns a DataFrame of per-36-minutes stats."""
+        return self._get_stats_table('per_minute', kind=kind)
+
+    @sportsref.decorators.memoized
+    def per100_stats(self, kind='R'):
         """Returns a DataFrame of per-100-possession stats."""
-        doc = self.get_doc()
-        table = doc('table#per_poss')
-        df = sportsref.utils.parse_table(table)
-        return df
+        return self._get_stats_table('per_poss', kind=kind)
 
     @sportsref.decorators.memoized
-    def shooting_stats(self):
+    def advanced_stats(self, kind='R'):
+        """Returns a DataFrame of advanced stats."""
+        return self._get_stats_table('advanced', kind=kind)
+
+    @sportsref.decorators.memoized
+    def shooting_stats(self, kind='R'):
         """Returns a DataFrame of shooting stats."""
-        doc = self.get_doc()
-        table = doc('table#shooting')
-        df = sportsref.utils.parse_table(table)
-        return df
+        return self._get_stats_table('shooting', kind=kind)
 
     @sportsref.decorators.memoized
-    def pbp_stats(self):
+    def pbp_stats(self, kind='R'):
         """Returns a DataFrame of play-by-play stats."""
-        doc = self.get_doc()
-        table = doc('table#advanced_pbp')
-        df = sportsref.utils.parse_table(table)
-        return df
+        return self._get_stats_table('advanced_pbp', kind=kind)
