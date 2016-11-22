@@ -176,6 +176,7 @@ def rel_url_to_id(url):
     * boxscores/...
     * teams/...
     * years/...
+    * leagues/...
     * coaches/...
     * officials/...
     * schools/...
@@ -193,6 +194,7 @@ def rel_url_to_id(url):
     collegeRegex = r'.*/schools/(\S+?)/.*'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    leagueRegex = r'.*/leagues/(.*_\d{4}).*'
 
     regexes = [
         yearRegex,
@@ -205,6 +207,7 @@ def rel_url_to_id(url):
         collegeRegex,
         hsRegex,
         bsDateRegex,
+        leagueRegex,
     ]
 
     for regex in regexes:
