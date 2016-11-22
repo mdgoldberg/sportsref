@@ -1,4 +1,3 @@
-import collections
 import copy
 import datetime
 import hashlib
@@ -111,14 +110,15 @@ def cache_html(func):
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
 
-    cacheValidFuncs = lambda s: eval('_cacheValid_' + s)
+    def cacheValidFuncs(s):
+        return eval('_cacheValid_' + s)
 
     @functools.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
         sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' +
                                           parsed.netloc)
-        if sport == None:
+        if sport is None:
             for ncaaSport in ('cfb', 'cbb'):
                 if ncaaSport in url:
                     sport = ncaaSport
@@ -159,7 +159,8 @@ def memoized(fun):
     def wrapper(*args, **kwargs):
 
         # deal with lists in args
-        isList = lambda a: isinstance(a, list) or isinstance(a, np.ndarray)
+        def isList(a):
+            return isinstance(a, list) or isinstance(a, np.ndarray)
 
         def deListify(arg):
             if isList(arg):
