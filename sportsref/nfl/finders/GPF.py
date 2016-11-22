@@ -7,7 +7,11 @@ from pyquery import PyQuery as pq
 
 from ... import decorators, utils
 from .. import pbp
-from . import GPF_URL, GPF_CONSTANTS_FILENAME
+
+GPF_URL = ('http://www.pro-football-reference.com/'
+           'play-index/play_finder.cgi')
+
+GPF_CONSTANTS_FILENAME = 'GPFConstants.json'
 
 
 @decorators.memoized

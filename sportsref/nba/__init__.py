@@ -8,7 +8,7 @@ from seasons import Season
 from teams import Team
 from players import Player
 
-NBA_BASE_URL = 'http://www.basketball-reference.com'
+BASE_URL = 'http://www.basketball-reference.com'
 
 __all__ = [
     'BASE_URL',

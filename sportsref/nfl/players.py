@@ -5,20 +5,19 @@ import urlparse
 import numpy as np
 from pyquery import PyQuery as pq
 
-from .. import decorators, utils
-from . import NFL_BASE_URL, pbp
+import sportsref
 
 __all__ = [
     'Player',
 ]
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 class Player:
 
     def __init__(self, playerID):
         self.playerID = playerID
-        self.mainURL = (NFL_BASE_URL +
+        self.mainURL = (sportsref.nfl.BASE_URL +
                         '/players/{0[0]}/{0}.htm').format(self.playerID)
 
     def __eq__(self, other):
@@ -48,18 +47,18 @@ class Player:
                 self.mainURL, '{}/{}/{}/'.format(self.playerID, page, year)
             )
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def get_doc(self):
-        doc = pq(utils.get_html(self.mainURL))
+        doc = pq(sportsref.utils.get_html(self.mainURL))
         return doc
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def name(self):
         doc = self.get_doc()
         name = doc('div#meta h1:first').text()
         return name
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def age(self, year, month=9, day=1):
         doc = self.get_doc()
         span = doc('div#meta span#necro-birth')
@@ -75,7 +74,7 @@ class Player:
         except Exception:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def position(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
@@ -87,7 +86,7 @@ class Player:
         # multiple positions
         return allPositions[0]
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def height(self):
         doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="height"]').text()
@@ -97,7 +96,7 @@ class Player:
         except ValueError:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def weight(self):
         doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="weight"]').text()
@@ -107,7 +106,7 @@ class Player:
         except AttributeError:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def hand(self):
         doc = self.get_doc()
         try:
@@ -119,19 +118,19 @@ class Player:
             return np.nan
         return rawHand[0]  # 'L' or 'R'
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def current_team(self):
         doc = self.get_doc()
         team = (doc('div#meta p')
                 .filter(lambda i, e: 'Team' in e.text_content()))
-        text = utils.flatten_links(team)
+        text = sportsref.utils.flatten_links(team)
         try:
             m = re.match(r'Team: (\w{3})', text)
             return m.group(1)
         except Exception:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def draft_pick(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
@@ -144,7 +143,7 @@ class Player:
         else:
             return int(m.group(1))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def draft_class(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
@@ -156,38 +155,38 @@ class Player:
         else:
             return int(m.group(1))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def draft_team(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i, e: 'Draft' in e.text_content()))
         try:
-            draftStr = utils.flatten_links(rawDraft)
+            draftStr = sportsref.utils.flatten_links(rawDraft)
             m = re.search(r'Draft\W+(\w+)', draftStr)
             return m.group(1)
         except Exception:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def college(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
                    .filter(lambda i, e: 'College' in e.text_content()))
-        cleanedText = utils.flatten_links(rawText)
+        cleanedText = sportsref.utils.flatten_links(rawText)
         college = re.search(r'College:\s*(\S+)', cleanedText).group(1)
         return college
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def high_school(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
                    .filter(lambda i, e: 'High School' in e.text_content()))
-        cleanedText = utils.flatten_links(rawText)
+        cleanedText = sportsref.utils.flatten_links(rawText)
         hs = re.search(r'High School:\s*(\S+)', cleanedText).group(1)
         return hs
 
-    @decorators.memoized
-    @decorators.kind_rpb(include_type=True)
+    @sportsref.decorators.memoized
+    @sportsref.decorators.kind_rpb(include_type=True)
     def gamelog(self, year=None, kind='R'):
         """Gets the career gamelog of the given player.
         :kind: One of 'R', 'P', or 'B' (for regular season, playoffs, or both).
@@ -197,15 +196,15 @@ class Player:
         :returns: A DataFrame with the player's career gamelog.
         """
         url = self._subpage_url('gamelog', None)  # year is filtered later
-        doc = pq(utils.get_html(url))
+        doc = pq(sportsref.utils.get_html(url))
         table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         if year is not None:
             df = df.query('year == @year').reset_index(drop=True)
         return df
 
-    @decorators.memoized
-    @decorators.kind_rpb(include_type=True)
+    @sportsref.decorators.memoized
+    @sportsref.decorators.kind_rpb(include_type=True)
     def passing(self, kind='R'):
         """Gets yearly passing stats for the player.
 
@@ -214,11 +213,11 @@ class Player:
         """
         doc = self.get_doc()
         table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
-    @decorators.memoized
-    @decorators.kind_rpb(include_type=True)
+    @sportsref.decorators.memoized
+    @sportsref.decorators.kind_rpb(include_type=True)
     def rushing_and_receiving(self, kind='R'):
         """Gets yearly rushing/receiving stats for the player.
 
@@ -231,7 +230,7 @@ class Player:
         if not table:
             table = (doc('#receiving_and_rushing') if kind == 'R'
                      else doc('#receiving_and_rushing_playoffs'))
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
     def _plays(self, year, play_type):
@@ -245,16 +244,17 @@ class Player:
         there were no such plays in that year.
         """
         url = self._subpage_url('{}-plays'.format(play_type), year)
-        doc = pq(utils.get_html(url))
+        doc = pq(sportsref.utils.get_html(url))
         table = doc('table#all_plays')
         if table:
-            plays = pbp.expand_details(utils.parse_table(table),
-                                       detailCol='description')
+            plays = sportsref.nfl.pbp.expand_details(
+                sportsref.utils.parse_table(table), detailCol='description'
+            )
             return plays
         else:
             return None
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def passing_plays(self, year):
         """Returns a pbp DataFrame of a player's passing plays in a season.
 
@@ -263,7 +263,7 @@ class Player:
         """
         return self._plays(year, 'passing')
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def rushing_plays(self, year):
         """Returns a pbp DataFrame of a player's rushing plays in a season.
 
@@ -272,7 +272,7 @@ class Player:
         """
         return self._plays(year, 'rushing')
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def receiving_plays(self, year):
         """Returns a pbp DataFrame of a player's receiving plays in a season.
 
@@ -281,7 +281,7 @@ class Player:
         """
         return self._plays(year, 'receiving')
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def splits(self, year=None):
         """Returns a DataFrame of splits data for a player-year.
 
@@ -291,16 +291,16 @@ class Player:
         """
         # get the table
         url = self._subpage_url('splits', year)
-        doc = pq(utils.get_html(url))
+        doc = pq(sportsref.utils.get_html(url))
         table = doc('table#stats')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         # cleaning the data
         if not df.empty:
             df.split_id.fillna(method='ffill', inplace=True)
             df.set_index(['split_id', 'split_value'], inplace=True)
         return df
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def advanced_splits(self, year=None):
         """Returns a DataFrame of advanced splits data for a player-year.
 
@@ -310,9 +310,9 @@ class Player:
         """
         # get the table
         url = self._subpage_url('splits', year)
-        doc = pq(utils.get_html(url))
+        doc = pq(sportsref.utils.get_html(url))
         table = doc('table#advanced_splits')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         # cleaning the data
         if not df.empty:
             df.split_type.fillna(method='ffill', inplace=True)

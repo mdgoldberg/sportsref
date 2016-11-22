@@ -6,7 +6,11 @@ import time
 from pyquery import PyQuery as pq
 
 from ... import decorators, utils
-from . import PSF_URL, PSF_CONSTANTS_FILENAME
+
+PSF_URL = ('http://www.pro-football-reference.com/'
+           'play-index/psl_finder.cgi')
+
+PSF_CONSTANTS_FILENAME = 'PSFConstants.json'
 
 
 @decorators.memoized
@@ -26,6 +30,9 @@ def PlayerSeasonFinder(**kwargs):
         doc = pq(html)
         table = doc('table#results')
         df = utils.parse_table(table)
+        if df.empty:
+            break
+
         thisSeason = zip(df.playerID, df.year)
         playerSeasons.extend(thisSeason)
 

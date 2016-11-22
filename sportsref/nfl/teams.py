@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-from .. import decorators, utils
-from . import NFL_BASE_URL
+import sportsref
 
 __all__ = [
     'team_names',
@@ -15,7 +14,7 @@ __all__ = [
 ]
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 def team_names(year):
     """Returns a mapping from team ID to full team name for a given season.
     Example of a full team name: "New England Patriots"
@@ -23,11 +22,11 @@ def team_names(year):
     :year: The year of the season in question (as an int).
     :returns: A dictionary with teamID keys and full team name values.
     """
-    doc = pq(utils.get_html(NFL_BASE_URL + '/teams/'))
+    doc = pq(sportsref.utils.get_html(sportsref.nfl.BASE_URL + '/teams/'))
     active_table = doc('table#teams_active')
-    active_df = utils.parse_table(active_table)
+    active_df = sportsref.utils.parse_table(active_table)
     inactive_table = doc('table#teams_inactive')
-    inactive_df = utils.parse_table(inactive_table)
+    inactive_df = sportsref.utils.parse_table(inactive_table)
     df = pd.concat((active_df, inactive_df))
     df = df.loc[~df['hasClass_partial_table']]
     ids = df.team_name.str[:3].values
@@ -43,7 +42,7 @@ def team_names(year):
     return series[mask].to_dict()
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 def team_ids(year):
     """Returns a mapping from team name to team ID for a given season. Inverse
     mapping of team_names. Example of a full team name: "New England Patriots"
@@ -55,7 +54,7 @@ def team_ids(year):
     return {v: k for k, v in names.iteritems()}
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 def list_teams(year):
     """Returns a list of team IDs for a given season.
 
@@ -65,7 +64,7 @@ def list_teams(year):
     return team_names(year).keys()
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 class Team:
 
     def __init__(self, teamID):
@@ -86,22 +85,23 @@ class Team:
     def __reduce__(self):
         return Team, (self.teamID,)
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def team_year_url(self, yr_str):
-        return NFL_BASE_URL + '/teams/{}/{}.htm'.format(self.teamID, yr_str)
+        return (sportsref.nfl.BASE_URL +
+                '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
-        teamURL = NFL_BASE_URL + relURL
-        mainDoc = pq(utils.get_html(teamURL))
+        teamURL = sportsref.nfl.BASE_URL + relURL
+        mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def get_year_doc(self, yr_str):
-        return pq(utils.get_html(self.team_year_url(yr_str)))
+        return pq(sportsref.utils.get_html(self.team_year_url(yr_str)))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def name(self):
         """Returns the real name of the franchise given the team ID.
 
@@ -117,7 +117,7 @@ class Team:
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def roster(self, year):
         """Returns the roster table for the given year.
 
@@ -126,10 +126,10 @@ class Team:
         """
         doc = self.get_year_doc('{}_roster'.format(year))
         table = doc('table#games_played_team')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
@@ -140,7 +140,7 @@ class Team:
         """
         doc = self.get_year_doc(year)
         table = doc('table#games')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         if df.empty:
             return np.array([])
         return df.boxscoreID.values
@@ -149,7 +149,7 @@ class Team:
     # TODO: Also give a function at BoxScore.homeCoach and BoxScore.awayCoach
     # TODO: BoxScore needs a gameNum function to do this?
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def head_coaches_by_game(self, year):
         """Returns head coach data by game.
 
@@ -161,7 +161,7 @@ class Team:
         doc = self.get_year_doc(year)
         coaches = (doc('div#meta p')
                    .filter(lambda i, e: 'Coach:' in e.text_content()))
-        coachStr = utils.flatten_links(coaches)
+        coachStr = sportsref.utils.flatten_links(coaches)
         regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
         coachAndTenure = []
         while coachStr:
@@ -177,7 +177,7 @@ class Team:
         coachIDs = [cID for sublist in coachIDs for cID in sublist]
         return np.array(coachIDs[::-1])
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def srs(self, year):
         """Returns the SRS (Simple Rating System) for a team in a year.
 
@@ -194,7 +194,7 @@ class Team:
         else:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def sos(self, year):
         """Returns the SOS (Strength of Schedule) for a team in a year, based
         on SRS.
@@ -212,7 +212,7 @@ class Team:
         else:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def stadium(self, year):
         """Returns the ID for the stadium in which the team played in a given
         year.
@@ -224,9 +224,9 @@ class Team:
         anchor = (doc('div#meta p')
                   .filter(lambda i, e: 'Stadium' in e.text_content())
                   )('a')
-        return utils.rel_url_to_id(anchor.attr['href'])
+        return sportsref.utils.rel_url_to_id(anchor.attr['href'])
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def team_stats(self, year):
         """Returns a Series (dict-like) of team stats from the team-season
         page.
@@ -236,10 +236,10 @@ class Team:
         """
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df.ix[df.playerID == 'Team Stats'].iloc[0]
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def opp_stats(self, year):
         """Returns a Series (dict-like) of the team's opponent's stats from the
         team-season page.
@@ -249,19 +249,19 @@ class Team:
         """
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df.ix[df.playerID == 'Opp. Stats'].iloc[0]
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def passing(self, year):
         doc = self.get_year_doc(year)
         table = doc('table#passing')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def rushing_and_receiving(self, year):
         doc = self.get_year_doc(year)
         table = doc('#rushing_and_receiving')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df

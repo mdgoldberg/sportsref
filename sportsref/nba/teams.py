@@ -1,10 +1,10 @@
 import numpy as np
 from pyquery import PyQuery as pq
 
-from sportsref import decorators, nba, utils
+import sportsref
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 class Team:
 
     def __init__(self, teamID):
@@ -16,22 +16,23 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def team_year_url(self, yr_str):
-        return nba.BASE_URL + '/teams/{}/{}.htm'.format(self.teamID, yr_str)
+        return (sportsref.nba.BASE_URL +
+                '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
-        teamURL = nba.BASE_URL + relURL
-        mainDoc = pq(utils.get_html(teamURL))
+        teamURL = sportsref.nba.BASE_URL + relURL
+        mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def get_year_doc(self, yr_str):
-        return pq(utils.get_html(self.team_year_url(yr_str)))
+        return pq(sportsref.utils.get_html(self.team_year_url(yr_str)))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def name(self):
         """Returns the real name of the franchise given the team ID.
 
@@ -47,7 +48,7 @@ class Team:
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def roster(self, year):
         """Returns the roster table for the given year.
 
@@ -56,7 +57,7 @@ class Team:
         """
         raise NotImplementedError('roster')
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
@@ -67,7 +68,7 @@ class Team:
         """
         doc = self.get_year_doc('{}_games'.format(year))
         table = doc('table#teams_games')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         if df.empty:
             return np.array([])
         return df.box_score_text.dropna().values

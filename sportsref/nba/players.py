@@ -4,20 +4,19 @@ import re
 import numpy as np
 from pyquery import PyQuery as pq
 
-from .. import decorators, utils
-from . import NBA_BASE_URL
+import sportsref
 
 __all__ = [
     'Player',
 ]
 
 
-@decorators.memoized
+@sportsref.decorators.memoized
 class Player:
 
     def __init__(self, player_id):
         self.player_id = player_id
-        self.main_url = (NBA_BASE_URL +
+        self.main_url = (sportsref.nba.BASE_URL +
                          '/players/{0[0]}/{0}.htm').format(self.player_id)
 
     def __eq__(self, other):
@@ -35,17 +34,17 @@ class Player:
     def __reduce__(self):
         return Player, (self.player_id,)
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def get_doc(self):
-        return pq(utils.get_html(self.main_url))
+        return pq(sportsref.utils.get_html(self.main_url))
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def name(self):
         """Returns the name of the player as a string."""
         doc = self.get_doc()
         return doc('h1[itemprop="name"]').text()
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def age(self, year, month=10, day=1):
         """Returns the age of the player on a given date.
 
@@ -64,14 +63,14 @@ class Player:
         age = delta.days / 365.
         return age
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def position(self):
         """TODO: Docstring for position.
         :returns: TODO
         """
         raise Exception('not yet implemented - nba.Player.position')
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def height(self):
         """Returns the player's height (in inches).
         :returns: An int representing a player's height in inches.
@@ -84,7 +83,7 @@ class Player:
         except ValueError:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def weight(self):
         """Returns the player's weight (in pounds).
         :returns: An int representing a player's weight in pounds.
@@ -97,7 +96,7 @@ class Player:
         except ValueError:
             return np.nan
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def hand(self):
         """Returns the player's handedness.
         :returns: 'L' for left-handed, 'R' for right-handed.
@@ -112,27 +111,27 @@ class Player:
         """
         pass
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def per100_stats(self):
         """Returns a DataFrame of per-100-possession stats."""
         doc = self.get_doc()
         table = doc('table#per_poss')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def shooting_stats(self):
         """Returns a DataFrame of shooting stats."""
         doc = self.get_doc()
         table = doc('table#shooting')
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def pbp_stats(self):
         """Returns a DataFrame of play-by-play stats."""
         doc = self.get_doc()
         table = doc('table#advanced_pbp')
         # TODO: parse percentages as ints/floats
-        df = utils.parse_table(table)
+        df = sportsref.utils.parse_table(table)
         return df
