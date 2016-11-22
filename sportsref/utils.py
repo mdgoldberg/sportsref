@@ -86,6 +86,10 @@ def parse_table(table):
         else:
             df.year = df.year.astype(int)
 
+    # season -> int
+    if 'season' in df.columns:
+        df['season'] = df['season'].astype(int)
+
     # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
     bs_id_col = None
     if 'boxscore_word' in df.columns:
@@ -105,6 +109,12 @@ def parse_table(table):
     # player -> playerID
     if 'player' in df.columns:
         df.rename(columns={'player': 'playerID'}, inplace=True)
+
+    # (number%) -> float(number * 0.01)
+    def convertPct(val):
+        m = re.search(r'([-\d]+)\%', str(val))
+        return float(m.group(1)) / 100. if m else val
+    df = df.applymap(convertPct)
 
     return df
 
@@ -200,7 +210,7 @@ def rel_url_to_id(url):
     for regex in regexes:
         match = re.match(regex, url, re.I)
         if match:
-            return match.group(1)
+            return filter(None, match.groups())[0]
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
     return 'noIDer00'

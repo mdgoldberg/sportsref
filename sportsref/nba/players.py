@@ -109,7 +109,7 @@ class Player:
         """Returns when in the draft the player was picked.
         :returns: TODO
         """
-        pass
+        raise Exception('not yet implemented - nba.Player.draft_pick')
 
     @sportsref.decorators.memoized
     def per100_stats(self):
@@ -132,6 +132,5 @@ class Player:
         """Returns a DataFrame of play-by-play stats."""
         doc = self.get_doc()
         table = doc('table#advanced_pbp')
-        # TODO: parse percentages as ints/floats
         df = sportsref.utils.parse_table(table)
         return df
