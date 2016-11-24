@@ -1,5 +1,3 @@
-import re
-
 import numpy as np
 from pyquery import PyQuery as pq
 
@@ -49,10 +47,9 @@ class Season(object):
         """Returns a list of the team IDs for the given year.
         :returns: List of team IDs.
         """
-        doc = self.get_main_doc()
-        df = sportsref.utils.parse_table(doc('table#team'))
-        if 'team_name' in df.columns:
-            return df.team_name.tolist()
+        df = self.team_stats()
+        if not df.empty:
+            return df.index.tolist()
         else:
             print 'ERROR: no teams found'
             return []
@@ -64,13 +61,13 @@ class Season(object):
         values.
         """
         doc = self.get_main_doc()
-        table = doc('table#team')
-        teamNames = [re.sub(r'\s\*', '', tr('td').eq(1).text())
-                     for tr in table('tbody tr[class=""]').items()]
-        teamIDs = self.get_team_ids()
-        if len(teamNames) != len(teamIDs):
+        team_ids = sportsref.utils.parse_table(
+            doc('table#team-stats-per_game'), flatten=True)['team_name']
+        team_names = sportsref.utils.parse_table(
+            doc('table#team-stats-per_game'), flatten=False)['team_name']
+        if len(team_names) != len(team_ids):
             raise Exception("team names and team IDs don't align")
-        return dict(zip(teamIDs, teamNames))
+        return dict(zip(team_ids, team_names))
 
     @sportsref.decorators.memoized
     def team_names_to_ids(self):
@@ -89,14 +86,8 @@ class Season(object):
         :kind: 'R' for regular season, 'P' for playoffs, 'B' for both.
         :returns: List of IDs for nba.BoxScore objects.
         """
-        doc = self.get_schedule_doc()
-        tID = 'games' if kind == 'R' else 'games_playoffs'
-        table = doc('table#{}'.format(tID))
-        df = sportsref.utils.parse_table(table)
-        if 'box_score_text' not in df.columns:
-            print 'ERROR: no boxscores found in season'
-            return []
-        return df.box_score_text
+        doc = self.get_schedule_doc() # noqa
+        raise Exception('not yet implemented - nba.Season.get_boxscore_ids')
 
     def finals_winner(self):
         """Returns the team ID for the winner of that year's NBA Finals.
@@ -125,20 +116,22 @@ class Season(object):
         (home team ID, away team ID, bool(home team won)).
         """
         doc = self.get_main_doc()
-        p_table = doc('div#all_playoffs > table')
+        table = doc('table#all_playoffs')
 
         # get winners/losers
         atags = [tr('td:eq(1) a')
-                 for tr in p_table('tr:contains("Series Stats")').items()]
+                 for tr in table.items('tr')
+                 if len(tr('td')) == 3]
         relURLs = [(a.eq(0).attr['href'], a.eq(1).attr['href']) for a in atags]
         wl = [tuple(map(sportsref.utils.rel_url_to_id, ru)) for ru in relURLs]
 
         # get home team
-        atags = p_table('tr.hidden table tr:eq(0) td:eq(0) a')
+        atags = table('tr.toggleable table tr:eq(0) td:eq(0) a')
         bsIDs = [sportsref.utils.rel_url_to_id(a.attrib['href'])
                  for a in atags]
         home = np.array([sportsref.nba.BoxScore(bs).home() for bs in bsIDs])
 
+        # get winners and losers
         win, loss = map(np.array, zip(*wl))
         homeWon = home == win
         ret = zip(home, np.where(homeWon, loss, win), homeWon)
@@ -151,9 +144,11 @@ class Season(object):
         :returns: Pandas DataFrame of team stats, with team ID as index.
         """
         doc = self.get_main_doc()
-        table = doc('table#team')
+        table = doc('table#team-stats-per_game')
         df = sportsref.utils.parse_table(table)
-        return df.drop('ranker', axis=1).set_index('team_name')
+        df = df.drop('ranker', axis=1).set_index('team_name')
+        df.index.name = 'team_id'
+        return df
 
     def opp_stats(self):
         """Returns a Pandas DataFrame of each team's opponent's basic stat

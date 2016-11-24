@@ -36,10 +36,12 @@ def get_html(url):
     return html
 
 
-def parse_table(table):
+def parse_table(table, flatten=True):
     """Parses a table from SR into a pandas dataframe.
 
     :table: the PyQuery object representing the HTML table
+    :flatten: if True, flattens relative URLs to IDs. otherwise, leaves as
+    text.
     :returns: Pandas dataframe
     """
     if not len(table):
@@ -54,7 +56,8 @@ def parse_table(table):
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flatten_links(td) for td in row.items('th,td')]
+        [flatten_links(td) if flatten else td.text()
+         for td in row.items('th,td')]
         for row in rows
     ]
 
@@ -105,6 +108,9 @@ def parse_table(table):
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
+    for col in df.columns:
+        if hasattr(df[col], 'str'):
+            df.ix[:, col] = df.ix[:, col].str.strip()
 
     # player -> playerID
     if 'player' in df.columns:
