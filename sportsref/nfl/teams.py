@@ -6,28 +6,30 @@ import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
-import sportsref
+from .. import decorators, utils
+from . import NFL_BASE_URL
 
 __all__ = [
-    'teamNames',
-    'teamIDs',
-    'listTeams',
+    'team_names',
+    'team_ids',
+    'list_teams',
     'Team',
 ]
 
-@sportsref.decorators.memoized
-def teamNames(year):
+
+@decorators.memoized
+def team_names(year):
     """Returns a mapping from team ID to full team name for a given season.
     Example of a full team name: "New England Patriots"
 
     :year: The year of the season in question (as an int).
     :returns: A dictionary with teamID keys and full team name values.
     """
-    doc = pq(sportsref.utils.getHTML(sportsref.nfl.BASE_URL + '/teams/'))
+    doc = pq(utils.get_html(NFL_BASE_URL + '/teams/'))
     active_table = doc('table#teams_active')
-    active_df = sportsref.utils.parseTable(active_table)
+    active_df = utils.parse_table(active_table)
     inactive_table = doc('table#teams_inactive')
-    inactive_df = sportsref.utils.parseTable(inactive_table)
+    inactive_df = utils.parse_table(inactive_table)
     df = pd.concat((active_df, inactive_df))
     df = df.loc[~df['hasClass_partial_table']]
     ids = df.team_name.str[:3].values
@@ -42,27 +44,30 @@ def teamNames(year):
     # filter, convert to a dict, and return
     return series[mask].to_dict()
 
-@sportsref.decorators.memoized
-def teamIDs(year):
+
+@decorators.memoized
+def team_ids(year):
     """Returns a mapping from team name to team ID for a given season. Inverse
-    mapping of teamNames. Example of a full team name: "New England Patriots"
+    mapping of team_names. Example of a full team name: "New England Patriots"
 
     :year: The year of the season in question (as an int).
     :returns: A dictionary with full team name keys and teamID values.
     """
-    names = teamNames(year)
+    names = team_names(year)
     return {v: k for k, v in names.iteritems()}
 
-@sportsref.decorators.memoized
-def listTeams(year):
+
+@decorators.memoized
+def list_teams(year):
     """Returns a list of team IDs for a given season.
 
     :year: The year of the season in question (as an int).
     :returns: A list of team IDs.
     """
-    return teamNames(year).keys()
+    return team_names(year).keys()
 
-@sportsref.decorators.memoized
+
+@decorators.memoized
 class Team:
 
     def __init__(self, teamID):
@@ -74,23 +79,31 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @sportsref.decorators.memoized
-    def teamYearURL(self, yr_str):
-        return (sportsref.nfl.BASE_URL +
-                '/teams/{}/{}.htm'.format(self.teamID, yr_str))
+    def __repr__(self):
+        return 'Team({})'.format(self.teamID)
 
-    @sportsref.decorators.memoized
-    def getMainDoc(self):
+    def __str__(self):
+        return self.name()
+
+    def __reduce__(self):
+        return Team, (self.teamID,)
+
+    @decorators.memoized
+    def team_year_url(self, yr_str):
+        return NFL_BASE_URL + '/teams/{}/{}.htm'.format(self.teamID, yr_str)
+
+    @decorators.memoized
+    def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
-        teamURL = sportsref.nfl.BASE_URL + relURL
-        mainDoc = pq(sportsref.utils.getHTML(teamURL))
+        teamURL = NFL_BASE_URL + relURL
+        mainDoc = pq(utils.get_html(teamURL))
         return mainDoc
 
-    @sportsref.decorators.memoized
-    def getYearDoc(self, yr_str):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
+    @decorators.memoized
+    def get_year_doc(self, yr_str):
+        return pq(utils.get_html(self.team_year_url(yr_str)))
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def name(self):
         """Returns the real name of the franchise given the team ID.
 
@@ -100,13 +113,13 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         headerwords = doc('div#meta h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def injuryStatus(self, year):
         """Returns the player's injury status each week of the given year.
 
@@ -164,14 +177,14 @@ class Team:
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def roster(self, year):
         """Returns the roster table for the given year.
 
         :year: The year for which we want the roster;
         :returns: A DataFrame containing roster information for that year.
         """
-        doc = self.getYearDoc(str(year) + '_roster')
+        doc = self.get_year_doc('{}_roster'.format(year))
         table = doc('table#games_played_team')
         df = sportsref.utils.parseTable(table)
         if not df.empty:
@@ -199,7 +212,7 @@ class Team:
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @decorators.memoized
     def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
@@ -208,25 +221,130 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         table = doc('table#games')
-        df = sportsref.utils.parseTable(table)
+        df = utils.parse_table(table)
         if df.empty:
             return np.array([])
-        return df.boxscore_word.dropna().values
+        return df.boxscoreID.values
 
-    @sportsref.decorators.memoized
+    # TODO: add functions for OC, DC, PF, PA, W-L, etc.
+    # TODO: Also give a function at BoxScore.homeCoach and BoxScore.awayCoach
+    # TODO: BoxScore needs a gameNum function to do this?
+
+    @decorators.memoized
+    def head_coaches_by_game(self, year):
+        """Returns head coach data by game.
+
+        :year: An int representing the season in question.
+        :returns: An array with an entry per game of the season that the team
+        played (including playoffs). Each entry is the head coach's ID for that
+        game in the season.
+        """
+        doc = self.get_year_doc(year)
+        coaches = (doc('div#meta p')
+                   .filter(lambda i, e: 'Coach:' in e.text_content()))
+        coachStr = utils.flatten_links(coaches)
+        regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
+        coachAndTenure = []
+        while coachStr:
+            m = re.search(regex, coachStr)
+            coachID, wins, losses, ties = m.groups()
+            nextIndex = m.end(4) + 1
+            coachStr = coachStr[nextIndex:]
+            tenure = int(wins) + int(losses) + int(ties)
+            coachAndTenure.append((coachID, tenure))
+
+        coachIDs = [[cID for _ in xrange(games)]
+                    for cID, games in coachAndTenure]
+        coachIDs = [cID for sublist in coachIDs for cID in sublist]
+        return np.array(coachIDs[::-1])
+
+    @decorators.memoized
+    def srs(self, year):
+        """Returns the SRS (Simple Rating System) for a team in a year.
+
+        :year: The year for the season in question.
+        :returns: A float of SRS.
+        """
+        doc = self.get_year_doc(year)
+        srsText = (doc('div#meta p')
+                   .filter(lambda i, e: 'SRS' in e.text_content())
+                   .text())
+        m = re.match(r'SRS\s*?:\s*?(\S+)', srsText)
+        if m:
+            return float(m.group(1))
+        else:
+            return np.nan
+
+    @decorators.memoized
+    def sos(self, year):
+        """Returns the SOS (Strength of Schedule) for a team in a year, based
+        on SRS.
+
+        :year: The year for the season in question.
+        :returns: A float of SOS.
+        """
+        doc = self.get_year_doc(year)
+        sosText = (doc('div#meta p')
+                   .filter(lambda i, e: 'SOS' in e.text_content())
+                   .text())
+        m = re.search(r'SOS\s*?:\s*?(\S+)', sosText)
+        if m:
+            return float(m.group(1))
+        else:
+            return np.nan
+
+    @decorators.memoized
+    def stadium(self, year):
+        """Returns the ID for the stadium in which the team played in a given
+        year.
+
+        :year: The year in question.
+        :returns: A string representing the stadium ID.
+        """
+        doc = self.get_year_doc(year)
+        anchor = (doc('div#meta p')
+                  .filter(lambda i, e: 'Stadium' in e.text_content())
+                  )('a')
+        return utils.rel_url_to_id(anchor.attr['href'])
+
+    @decorators.memoized
+    def team_stats(self, year):
+        """Returns a Series (dict-like) of team stats from the team-season
+        page.
+
+        :year: Int representing the season.
+        :returns: A Series of team stats.
+        """
+        doc = self.get_year_doc(year)
+        table = doc('table#team_stats')
+        df = utils.parse_table(table)
+        return df.ix[df.playerID == 'Team Stats'].iloc[0]
+
+    @decorators.memoized
+    def opp_stats(self, year):
+        """Returns a Series (dict-like) of the team's opponent's stats from the
+        team-season page.
+
+        :year: Int representing the season.
+        :returns: A Series of team stats.
+        """
+        doc = self.get_year_doc(year)
+        table = doc('table#team_stats')
+        df = utils.parse_table(table)
+        return df.ix[df.playerID == 'Opp. Stats'].iloc[0]
+
+    @decorators.memoized
     def passing(self, year):
-        doc = self.getYearDoc(year)
+        doc = self.get_year_doc(year)
         table = doc('table#passing')
-        df = sportsref.utils.parseTable(table)
+        df = utils.parse_table(table)
         return df
 
-    @sportsref.decorators.memoized
-    def rushingAndReceiving(self, year):
-        doc = self.getYearDoc(year)
+    @decorators.memoized
+    def rushing_and_receiving(self, year):
+        doc = self.get_year_doc(year)
         table = doc('#rushing_and_receiving')
-        df = sportsref.utils.parseTable(table)
+        df = utils.parse_table(table)
         return df
-
-    # TODO: add functions for HC, OC, DC, SRS, SOS, PF, PA, W-L, etc.

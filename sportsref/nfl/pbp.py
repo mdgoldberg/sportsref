@@ -17,7 +17,8 @@ PASS_OPTS = {
     'deep left': 'DL', 'deep middle': 'DM', 'deep right': 'DR',
 }
 
-def expandDetails(df, detailCol='detail'):
+
+def expand_details(df, detailCol='detail'):
     """Expands the details column of the given dataframe and returns the
     resulting DataFrame.
 
@@ -27,7 +28,7 @@ def expandDetails(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.nfl.pbp.parsePlayDetails, df['detail'])
+    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'])
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
@@ -39,19 +40,20 @@ def expandDetails(df, detailCol='detail'):
     errors = [i for i, d in enumerate(dicts) if d is None]
     df['isError'] = False
     df.loc[errors, 'isError'] = True
-    # fill in some NaN's necessary for cleanFeatures
+    # fill in some NaN's necessary for clean_features
     df.ix[0, 'qtr_time_remain'] = '15:00'
     df.qtr_time_remain.fillna(method='bfill', inplace=True)
     df.qtr_time_remain.fillna(
         pd.Series(np.where(df.quarter == 4, '0:00', '15:00')),
         inplace=True
     )
-    # use cleanFeatures to clean up and add columns
-    new_df = df.apply(cleanFeatures, axis=1)
+    # use clean_features to clean up and add columns
+    new_df = df.apply(clean_features, axis=1)
     return new_df
 
+
 @sportsref.decorators.memoized
-def parsePlayDetails(details):
+def parse_play_details(details):
     """Parses play details from play-by-play string and returns structured
     data.
 
@@ -143,7 +145,8 @@ def parsePlayDetails(details):
     # create throw RE
     completeRE = r"pass (?P<isComplete>(?:in)?complete)"
     passOptRE = r"(?: {})?".format(passOptRE)
-    targetedRE=r"(?: (?:to |intended for )?(?P<target>{0}))?".format(playerRE)
+    targetedRE = r"(?: (?:to |intended for )?(?P<target>{0}))?".format(
+        playerRE)
     passYardsRE = r"(?: for (?:(?P<passYds>\-?\d+) yards?|no gain))"
     intRE = (r'(?: is intercepted by (?P<interceptor>{0}) at '.format(playerRE)
              + r'(?:(?P<intFieldSide>[a-z]*)?\-?(?P<intYdLine>\-?\d*))?'
@@ -197,7 +200,7 @@ def parsePlayDetails(details):
         r'(?P<fgBlocker>{0}))?'.format(playerRE) +
         r'(?:, recovered by (?P<fgBlockRecoverer>{0}))?'.format(playerRE) +
         r'(?: and returned for (?:(?P<fgBlockRetYds>\-?\d+) yards?|no gain))?'
-        )
+    )
     fgREstr = r'{}{}{}{}{}'.format(fgKickerRE, fgBaseRE,
                                    fgBlockRE, tdSafetyRE, penaltyRE)
     fgRE = re.compile(fgREstr, re.IGNORECASE)
@@ -216,7 +219,7 @@ def parsePlayDetails(details):
     nextREs.append(r', (?P<oob>out of bounds)')
     nextREs.append(
         (r'(?P<isMuffedCatch>, muffed catch by )(?P<muffedBy>{0}),'
-        r' recovered by (?P<muffRecoverer>{0})').format(playerRE) +
+         r' recovered by (?P<muffRecoverer>{0})').format(playerRE) +
         r' and returned for ' +
         r'(?:(?P<muffRetYds>\d+) yards|no gain)'
     )
@@ -323,7 +326,8 @@ def parsePlayDetails(details):
         # parse as a 2-point conversion
         struct['isTwoPoint'] = True
         struct['twoPointSuccess'] = match.group('twoPointSuccess')
-        realPlay = sportsref.nfl.pbp.parsePlayDetails(match.group('twoPoint'))
+        realPlay = sportsref.nfl.pbp.parse_play_details(
+            match.group('twoPoint'))
         if realPlay:
             struct.update(realPlay)
         return struct
@@ -352,12 +356,12 @@ def parsePlayDetails(details):
         struct.update(match.groupdict())
         return struct
 
-
     return None
 
+
 @sportsref.decorators.memoized
-def cleanFeatures(struct):
-    """Cleans up the features collected in parsePlayDetails.
+def clean_features(struct):
+    """Cleans up the features collected in parse_play_details.
 
     :struct: Pandas Series of features parsed from details string.
     :returns: the same dict, but with cleaner features (e.g., convert bools,
@@ -385,7 +389,7 @@ def cleanFeatures(struct):
     struct['isSack'] = pd.notnull(struct.get('sackYds'))
     struct['isSafety'] = (struct.get('isSafety') == ', safety' or
                           (struct.get('detail') and
-                          'enforced in end zone, safety' in struct['detail']))
+                           'enforced in end zone, safety' in struct['detail']))
     struct['isTD'] = struct.get('isTD') == ', touchdown'
     struct['isTouchback'] = struct.get('isTouchback') == ', touchback'
     struct['oob'] = pd.notnull(struct.get('oob'))
@@ -396,14 +400,16 @@ def cleanFeatures(struct):
     if pd.notnull(struct['penalty']):
         struct['penalty'] = struct['penalty'].strip()
     struct['penDeclined'] = struct.get('penDeclined') == 'Declined'
-    if struct['quarter'] == 'OT': struct['quarter'] = 5
+    if struct['quarter'] == 'OT':
+        struct['quarter'] = 5
     struct['rushDir'] = RUSH_OPTS.get(struct.get('rushDir'), np.nan)
     if struct['isRun']:
         ryds = struct['rushYds']
         struct['rushYds'] = ryds if pd.notnull(ryds) else 0
-    year = struct['season']
-    struct['timeoutTeam'] = sportsref.nfl.teams.teamIDs(year).get(
-        struct.get('timeoutTeam'), np.nan)
+    year = struct.get('season', np.nan)
+    struct['timeoutTeam'] = sportsref.nfl.teams.team_ids(year).get(
+        struct.get('timeoutTeam'), np.nan
+    )
     struct['twoPointSuccess'] = struct.get('twoPointSuccess') == 'succeeds'
     struct['xpGood'] = struct.get('xpGood') == 'good'
 
@@ -457,14 +463,14 @@ def cleanFeatures(struct):
     if struct['isXP']:
         struct['fieldSide'] = struct['ydLine'] = np.nan
     else:
-        fieldSide, ydline = locToFeatures(struct.get('location'))
+        fieldSide, ydline = loc_to_features(struct.get('location'))
         struct['fieldSide'] = fieldSide
         struct['ydLine'] = ydline
     # creating secsElapsed (in entire game) from qtr_time_remain and quarter
     if pd.notnull(struct.get('qtr_time_remain')):
         qtr = struct['quarter']
         mins, secs = map(int, struct['qtr_time_remain'].split(':'))
-        struct['secsElapsed'] = qtr*900 - mins*60 - secs
+        struct['secsElapsed'] = qtr * 900 - mins * 60 - secs
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
     struct['isFumble'] = pd.notnull(struct.get('fumbler'))
@@ -475,8 +481,9 @@ def cleanFeatures(struct):
     struct['opp_epa'] = struct['exp_pts_before'] - struct['exp_pts_after']
     return pd.Series(struct)
 
+
 @sportsref.decorators.memoized
-def locToFeatures(l):
+def loc_to_features(l):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
 
@@ -497,7 +504,8 @@ def locToFeatures(l):
         r = (np.nan, np.nan)
     return r
 
-def addTeamColumns(features):
+
+def add_team_columns(features):
     """Function that adds 'team' and 'opp' columns to the features by iterating
     through the rows in order. A precondition is that the features dicts are in
     order in a continuous game sense and that all rows are from the same game.
@@ -513,9 +521,9 @@ def addTeamColumns(features):
         # if it's a kickoff or the play after a kickoff,
         # figure out who has possession manually
         if row['isKickoff'] or playAfterKickoff:
-            curTm, curOpp = teamAndOpp(row)
+            curTm, curOpp = team_and_opp(row)
         else:
-            curTm, curOpp = teamAndOpp(row, curTm, curOpp)
+            curTm, curOpp = team_and_opp(row, curTm, curOpp)
         row['team'], row['opp'] = curTm, curOpp
         # set playAfterKickoff
         playAfterKickoff = row['isKickoff']
@@ -528,8 +536,9 @@ def addTeamColumns(features):
     features.opp.fillna(method='ffill', inplace=True)
     return features
 
+
 @sportsref.decorators.memoized
-def teamAndOpp(struct, curTm=None, curOpp=None):
+def team_and_opp(struct, curTm=None, curOpp=None):
     """Given a dict representing a play and the current team with the ball,
     returns (team, opp) where team is the team with the ball and opp is the
     team without the ball at the end of the play.
@@ -563,15 +572,17 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
         else:
             pID = None
         curTm = curOpp = np.nan
-        bs = sportsref.nfl.boxscores.BoxScore(struct['bsID'])
+        bs = sportsref.nfl.boxscores.BoxScore(struct['boxscoreID'])
         if pID and len(pID) == 3:
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
             player = sportsref.nfl.players.Player(pID)
             glog = player.gamelog(kind='B')
-            if 'bsID' in glog.columns:
-                narrowed = glog.loc[glog.bsID == struct['bsID'], 'team']
+            if 'boxscoreID' in glog.columns:
+                narrowed = glog.loc[
+                    glog.boxscoreID == struct['boxscoreID'], 'team'
+                ]
                 if not narrowed.empty:
                     curTm = narrowed.item()
                     curOpp = bs.home() if bs.home() != curTm else bs.away()
@@ -584,18 +595,19 @@ def teamAndOpp(struct, curTm=None, curOpp=None):
     else:
         return curTm, curOpp
 
-def addTeamFeatures(row):
+
+def add_team_features(row):
     """Adds extra convenience features based on teams with and without
     possession, with the precondition that the there are 'team' and 'opp'
     specified in row.
 
-    :row: A Series representing one play after cleanFeatures has been called
+    :row: A Series representing one play after clean_features has been called
     and 'team' and 'opp' have been added.
     :returns: A dict with new features in addition to previous features.
     """
     # if team and opp haven't been added, return as is
     if pd.isnull(row.get('team')):
-        print 'ERROR: team is null', row['bsID'], row['detail']
+        print 'ERROR: team is null', row['boxscoreID'], row['detail']
         return row
     homeOnOff = row['team'] == row['home']
     # create column for distToGoal
@@ -609,7 +621,7 @@ def addTeamFeatures(row):
     row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
     row['opp_wpa'] = -row['team_wpa']
     # create column for offense and defense scores if not already there
-    bs = sportsref.nfl.boxscores.BoxScore(row['bsID'])
+    bs = sportsref.nfl.boxscores.BoxScore(row['boxscoreID'])
     if bs.home() == row['team']:
         row['team_score'] = row['pbp_score_hm']
         row['opp_score'] = row['pbp_score_aw']
