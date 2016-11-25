@@ -156,7 +156,7 @@ class BoxScore:
         from PFR.
 
         The columns are:
-        * playerID - the PFR player ID for the player (note that this column is
+        * player_id - the PFR player ID for the player (note that this column is
         not necessarily all unique; that is, one player can be a starter in
         multiple positions, in theory).
         * playerName - the listed name of the player; this too is not
@@ -177,7 +177,7 @@ class BoxScore:
             team = self.home() if h else self.away()
             for i, row in enumerate(table('tbody tr').items()):
                 datum = {}
-                datum['playerID'] = sportsref.utils.rel_url_to_id(
+                datum['player_id'] = sportsref.utils.rel_url_to_id(
                     row('a')[0].attrib['href']
                 )
                 datum['playerName'] = row('th').text()

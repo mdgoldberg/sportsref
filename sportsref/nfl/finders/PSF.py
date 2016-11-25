@@ -33,7 +33,7 @@ def PlayerSeasonFinder(**kwargs):
         if df.empty:
             break
 
-        thisSeason = zip(df.playerID, df.year)
+        thisSeason = zip(df.player_id, df.year)
         playerSeasons.extend(thisSeason)
 
         if doc('*:contains("Next Page")'):

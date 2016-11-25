@@ -64,7 +64,7 @@ def parse_table(table, flatten=True):
     # make DataFrame
     df = pd.DataFrame(data, columns=columns, dtype='float')
 
-    # add hasClass columns
+    # add has_class columns
     allClasses = set(
         cls
         for row in rows
@@ -72,7 +72,7 @@ def parse_table(table, flatten=True):
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
-        df['hasClass_' + cls] = [
+        df['has_class_' + cls] = [
             bool(row.attr['class'] and
                  cls in row.attr['class'].split())
             for row in rows
@@ -112,9 +112,9 @@ def parse_table(table, flatten=True):
         if hasattr(df[col], 'str'):
             df.ix[:, col] = df.ix[:, col].str.strip()
 
-    # player -> playerID
+    # player -> player_id
     if 'player' in df.columns:
-        df.rename(columns={'player': 'playerID'}, inplace=True)
+        df.rename(columns={'player': 'player_id'}, inplace=True)
 
     # (number%) -> float(number * 0.01)
     def convertPct(val):

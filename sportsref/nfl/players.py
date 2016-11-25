@@ -15,36 +15,36 @@ __all__ = [
 @sportsref.decorators.memoized
 class Player:
 
-    def __init__(self, playerID):
-        self.playerID = playerID
+    def __init__(self, player_id):
+        self.player_id = player_id
         self.mainURL = (sportsref.nfl.BASE_URL +
-                        '/players/{0[0]}/{0}.htm').format(self.playerID)
+                        '/players/{0[0]}/{0}.htm').format(self.player_id)
 
     def __eq__(self, other):
-        return self.playerID == other.playerID
+        return self.player_id == other.player_id
 
     def __hash__(self):
-        return hash(self.playerID)
+        return hash(self.player_id)
 
     def __repr__(self):
-        return 'Player({})'.format(self.playerID)
+        return 'Player({})'.format(self.player_id)
 
     def __str__(self):
         return self.name()
 
     def __reduce__(self):
-        return Player, (self.playerID,)
+        return Player, (self.player_id,)
 
     def _subpage_url(self, page, year=None):
         # if no year, return career version
         if year is None:
             return urlparse.urljoin(
-                self.mainURL, '{}/{}/'.format(self.playerID, page)
+                self.mainURL, '{}/{}/'.format(self.player_id, page)
             )
         # otherwise, return URL for a given year
         else:
             return urlparse.urljoin(
-                self.mainURL, '{}/{}/{}/'.format(self.playerID, page, year)
+                self.mainURL, '{}/{}/{}/'.format(self.player_id, page, year)
             )
 
     @sportsref.decorators.memoized

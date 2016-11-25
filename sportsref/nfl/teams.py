@@ -237,7 +237,7 @@ class Team:
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
-        return df.ix[df.playerID == 'Team Stats'].iloc[0]
+        return df.ix[df.player_id == 'Team Stats'].iloc[0]
 
     @sportsref.decorators.memoized
     def opp_stats(self, year):
@@ -250,7 +250,7 @@ class Team:
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
-        return df.ix[df.playerID == 'Opp. Stats'].iloc[0]
+        return df.ix[df.player_id == 'Opp. Stats'].iloc[0]
 
     @sportsref.decorators.memoized
     def passing(self, year):
