@@ -130,36 +130,36 @@ class Player:
         return df
 
     @sportsref.decorators.memoized
-    def per_game_stats(self, kind='R'):
+    def stats_per_game(self, kind='R'):
         """Returns a DataFrame of per-game box score stats."""
         return self._get_stats_table('per_game', kind=kind)
 
     @sportsref.decorators.memoized
-    def totals_stats(self, kind='R'):
+    def stats_totals(self, kind='R'):
         """Returns a DataFrame of total box score statistics by season."""
         return self._get_stats_table('totals', kind=kind)
 
     @sportsref.decorators.memoized
-    def per36_stats(self, kind='R'):
+    def stats_per36(self, kind='R'):
         """Returns a DataFrame of per-36-minutes stats."""
         return self._get_stats_table('per_minute', kind=kind)
 
     @sportsref.decorators.memoized
-    def per100_stats(self, kind='R'):
+    def stats_per100(self, kind='R'):
         """Returns a DataFrame of per-100-possession stats."""
         return self._get_stats_table('per_poss', kind=kind)
 
     @sportsref.decorators.memoized
-    def advanced_stats(self, kind='R'):
+    def stats_advanced(self, kind='R'):
         """Returns a DataFrame of advanced stats."""
         return self._get_stats_table('advanced', kind=kind)
 
     @sportsref.decorators.memoized
-    def shooting_stats(self, kind='R'):
+    def stats_shooting(self, kind='R'):
         """Returns a DataFrame of shooting stats."""
         return self._get_stats_table('shooting', kind=kind)
 
     @sportsref.decorators.memoized
-    def pbp_stats(self, kind='R'):
+    def stats_pbp(self, kind='R'):
         """Returns a DataFrame of play-by-play stats."""
         return self._get_stats_table('advanced_pbp', kind=kind)
