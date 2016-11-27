@@ -22,7 +22,7 @@ class BoxScore:
 
     @sportsref.decorators.memoized
     def get_main_doc(self):
-        url = sportsref.nba.BASE_URL + 'boxscores/{}.html'.format(self.bsID)
+        url = sportsref.nba.BASE_URL + '/boxscores/{}.html'.format(self.bsID)
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
@@ -52,46 +52,52 @@ class BoxScore:
         return days[wd]
 
     @sportsref.decorators.memoized
+    def linescore(self):
+        """Returns the linescore for the game as a DataFrame."""
+        doc = self.get_main_doc()
+        table = doc('table#line_score')
+
+        columns = [th.text() for th in table('tr.thead').items('th')]
+        columns[0] = 'team_id'
+
+        data = [
+            [sportsref.utils.flatten_links(td) for td in tr('td').items()]
+            for tr in table('tbody tr').not_('.thead').items()
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    @sportsref.decorators.memoized
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
-        doc = self.get_main_doc()
-        table = doc('div#page_content div > div > table:eq(1) table')
-        hm_href = table('tr td:eq(1) span a:eq(0)').attr['href']
-        return sportsref.utils.rel_url_to_id(hm_href)
+        linescore = self.linescore()
+        return linescore.ix[1, 'team_id']
 
     @sportsref.decorators.memoized
     def away(self):
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
         """
-        doc = self.get_main_doc()
-        table = doc('div#page_content div > div > table:eq(1) table')
-        aw_href = table('tr td:eq(0) span a:eq(0)').attr['href']
-        return sportsref.utils.rel_url_to_id(aw_href)
+        linescore = self.linescore()
+        return linescore.ix[0, 'team_id']
 
     @sportsref.decorators.memoized
     def home_score(self):
         """Returns score of the home team.
         :returns: int of the home score.
         """
-        doc = self.get_main_doc()
-        table = doc('div#page_content div > div > table:eq(1) table')
-        hm_txt = table('tr td:eq(1) span:eq(0)').text()
-        hm_sc = int(re.match(r'.*?(\d+)$', hm_txt).group(1))
-        return hm_sc
+        linescore = self.linescore()
+        return linescore.ix[1, 'T']
 
     @sportsref.decorators.memoized
     def away_score(self):
         """Returns score of the away team.
         :returns: int of the away score.
         """
-        doc = self.get_main_doc()
-        table = doc('div#page_content div > div > table:eq(1) table')
-        aw_txt = table('tr td:eq(0) span:eq(0)').text()
-        aw_sc = int(re.match(r'.*?(\d+)$', aw_txt).group(1))
-        return aw_sc
+        linescore = self.linescore()
+        return linescore.ix[0, 'T']
 
     @sportsref.decorators.memoized
     def winner(self):

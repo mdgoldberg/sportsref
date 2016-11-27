@@ -1,6 +1,5 @@
 import copy
 import re
-import sys
 
 import numpy as np
 import pandas as pd
@@ -285,7 +284,6 @@ def parse_play_details(details):
         # parse as a field goal
         struct['isFieldGoal'] = True
         struct.update(match.groupdict())
-        x = struct.get('fgBlocker')
         return struct
 
     # try parsing as a punt
@@ -443,16 +441,16 @@ def clean_features(struct):
         'xpKicker'
     ]
     for var in bool_vars:
-        struct[var] = struct.get(var) == True
+        struct[var] = struct.get(var) is True
     for var in int_vars:
         try:
             struct[var] = int(struct.get(var))
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             struct[var] = np.nan
     for var in float_vars:
         try:
             struct[var] = float(struct.get(var))
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             struct[var] = np.nan
     for var in string_vars:
         if var not in struct or pd.isnull(struct[var]) or var == '':

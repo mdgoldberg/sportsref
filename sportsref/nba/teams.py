@@ -1,8 +1,4 @@
-import re
-import urlparse
-
 import numpy as np
-import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
