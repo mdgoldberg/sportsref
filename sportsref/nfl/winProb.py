@@ -1,8 +1,6 @@
 import numpy as np
 from scipy.stats import norm
 
-import sportsref
-
 
 def initialWinProb(line):
     """Gets the initial win probability of a game given its Vegas line.

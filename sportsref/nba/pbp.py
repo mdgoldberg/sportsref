@@ -307,7 +307,7 @@ def clean_features(df):
     boolVals = set([True, False, None, np.nan])
     for c in df:
         if set(df[c].unique()[:5]) <= boolVals:
-            df[c] = (df[c] == True)
+            df[c] = df[c].map(lambda x: x is True)
 
     # fix free throw columns on technicals
     df.ix[df.isTechFT, ['ftNum', 'totFTAtt']] = 1

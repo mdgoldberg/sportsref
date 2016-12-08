@@ -37,10 +37,12 @@ def get_html(url):
     return html
 
 
-def parse_table(table):
+def parse_table(table, flatten=True):
     """Parses a table from SR into a pandas dataframe.
 
     :table: the PyQuery object representing the HTML table
+    :flatten: if True, flattens relative URLs to IDs. otherwise, leaves as
+    text.
     :returns: Pandas dataframe
     """
     if not len(table):
@@ -55,14 +57,15 @@ def parse_table(table):
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flatten_links(td) for td in row.items('th,td')]
+        [flatten_links(td) if flatten else td.text()
+         for td in row.items('th,td')]
         for row in rows
     ]
 
     # make DataFrame
     df = pd.DataFrame(data, columns=columns, dtype='float')
 
-    # add hasClass columns
+    # add has_class columns
     allClasses = set(
         cls
         for row in rows
@@ -70,7 +73,7 @@ def parse_table(table):
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
-        df['hasClass_' + cls] = [
+        df['has_class_' + cls] = [
             bool(row.attr['class'] and
                  cls in row.attr['class'].split())
             for row in rows
@@ -87,6 +90,10 @@ def parse_table(table):
         else:
             df.year = df.year.astype(int)
 
+    # season -> int
+    if 'season' in df.columns:
+        df['season'] = df['season'].astype(int)
+
     # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
     bs_id_col = None
     if 'boxscore_word' in df.columns:
@@ -102,10 +109,19 @@ def parse_table(table):
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
+    for col in df.columns:
+        if hasattr(df[col], 'str'):
+            df.ix[:, col] = df.ix[:, col].str.strip()
 
-    # player -> playerID
+    # player -> player_id
     if 'player' in df.columns:
-        df.rename(columns={'player': 'playerID'}, inplace=True)
+        df.rename(columns={'player': 'player_id'}, inplace=True)
+
+    # (number%) -> float(number * 0.01)
+    def convertPct(val):
+        m = re.search(r'([-\d]+)\%', str(val))
+        return float(m.group(1)) / 100. if m else val
+    df = df.applymap(convertPct)
 
     return df
 
@@ -167,6 +183,7 @@ def rel_url_to_id(url):
     * boxscores/...
     * teams/...
     * years/...
+    * leagues/...
     * coaches/...
     * officials/...
     * schools/...
@@ -184,6 +201,7 @@ def rel_url_to_id(url):
     collegeRegex = r'.*/schools/(\S+?)/.*'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    leagueRegex = r'.*/leagues/(.*_\d{4}).*'
 
     regexes = [
         yearRegex,
@@ -196,12 +214,13 @@ def rel_url_to_id(url):
         collegeRegex,
         hsRegex,
         bsDateRegex,
+        leagueRegex,
     ]
 
     for regex in regexes:
         match = re.match(regex, url, re.I)
         if match:
-            return match.group(1)
+            return filter(None, match.groups())[0]
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
     return 'noIDer00'
