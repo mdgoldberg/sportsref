@@ -1,4 +1,5 @@
 import re
+import signal
 import time
 
 import pandas as pd
@@ -20,12 +21,13 @@ def get_html(url):
     """
     TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
     start = time.time()
-    d = webdriver.PhantomJS(service_args=['--load-images=false'],
-                            service_log_path='/dev/null')
-    d.set_window_size(10000, 10000)
-    d.get(url)
-    html = d.page_source
-    d.quit()
+    browser = webdriver.PhantomJS(service_args=['--load-images=false'],
+                                  service_log_path='/dev/null')
+    browser.set_window_size(10000, 10000)
+    browser.get(url)
+    html = browser.page_source
+    browser.service.process.send_signal(signal.SIGTERM)
+    browser.quit()
     if html == '<html><head></head><body></body></html>':
         raise Exception("Received HTML empty response")
     timeOnRequest = time.time() - start
