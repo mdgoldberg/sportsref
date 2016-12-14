@@ -144,8 +144,7 @@ class Season(object):
         doc = self.get_main_doc()
         table = doc(selector)
         df = sportsref.utils.parse_table(table)
-        df = df.drop('ranker', axis=1).set_index('team_name')
-        df.index.name = 'team_id'
+        df = df.drop('ranker', axis=1)
         return df
 
     def team_stats_per_game(self):

@@ -297,7 +297,6 @@ class Player:
         # cleaning the data
         if not df.empty:
             df.split_id.fillna(method='ffill', inplace=True)
-            df.set_index(['split_id', 'split_value'], inplace=True)
         return df
 
     @sportsref.decorators.memoized

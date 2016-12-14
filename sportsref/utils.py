@@ -118,6 +118,10 @@ def parse_table(table, flatten=True):
     if 'player' in df.columns:
         df.rename(columns={'player': 'player_id'}, inplace=True)
 
+    # team_name -> team_id
+    if 'team_name' in df.columns:
+        df.rename(columns={'team_name': 'team_id'}, inplace=True)
+
     # (number%) -> float(number * 0.01)
     def convertPct(val):
         m = re.search(r'([-\d]+)\%', str(val))
