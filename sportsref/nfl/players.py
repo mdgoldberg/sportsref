@@ -315,5 +315,4 @@ class Player:
         # cleaning the data
         if not df.empty:
             df.split_type.fillna(method='ffill', inplace=True)
-            df.set_index(['split_type', 'split_value'], inplace=True)
         return df
