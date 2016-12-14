@@ -95,7 +95,7 @@ def parse_table(table, flatten=True):
     if 'season' in df.columns:
         df['season'] = df['season'].astype(int)
 
-    # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
+    # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
     bs_id_col = None
     if 'boxscore_word' in df.columns:
         bs_id_col = 'boxscore_word'
@@ -106,7 +106,7 @@ def parse_table(table, flatten=True):
         df['year'] = df[bs_id_col].str[:4].astype(int)
         df['month'] = df[bs_id_col].str[4:6].astype(int)
         df['day'] = df[bs_id_col].str[6:8].astype(int)
-        df.rename(columns={bs_id_col: 'boxscoreID'}, inplace=True)
+        df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)

@@ -15,17 +15,17 @@ __all__ = [
 @sportsref.decorators.memoized
 class BoxScore:
 
-    def __init__(self, boxscoreID):
-        self.boxscoreID = boxscoreID
+    def __init__(self, boxscore_id):
+        self.boxscore_id = boxscore_id
 
     def __eq__(self, other):
-        return self.boxscoreID == other.boxscoreID
+        return self.boxscore_id == other.boxscore_id
 
     def __hash__(self):
-        return hash(self.boxscoreID)
+        return hash(self.boxscore_id)
 
     def __repr__(self):
-        return 'BoxScore({})'.format(self.boxscoreID)
+        return 'BoxScore({})'.format(self.boxscore_id)
 
     def __str__(self):
         return '{} Week {}: {} @ {}'.format(
@@ -33,12 +33,12 @@ class BoxScore:
         )
 
     def __reduce__(self):
-        return BoxScore, (self.boxscoreID,)
+        return BoxScore, (self.boxscore_id,)
 
     @sportsref.decorators.memoized
     def get_doc(self):
         url = (sportsref.nfl.BASE_URL +
-               '/boxscores/{}.htm'.format(self.boxscoreID))
+               '/boxscores/{}.htm'.format(self.boxscore_id))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
@@ -48,7 +48,7 @@ class BoxScore:
         for more.
         :returns: A datetime.date object with year, month, and day attributes.
         """
-        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.boxscoreID)
+        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.boxscore_id)
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
@@ -156,8 +156,8 @@ class BoxScore:
         from PFR.
 
         The columns are:
-        * player_id - the PFR player ID for the player (note that this column is
-        not necessarily all unique; that is, one player can be a starter in
+        * player_id - the PFR player ID for the player (note that this column
+        is not necessarily all unique; that is, one player can be a starter in
         multiple positions, in theory).
         * playerName - the listed name of the player; this too is not
         necessarily unique.
@@ -308,7 +308,7 @@ class BoxScore:
         table = doc('table#pbp')
         df = sportsref.utils.parse_table(table)
         # make the following features conveniently available on each row
-        df['boxscoreID'] = self.boxscoreID
+        df['boxscore_id'] = self.boxscore_id
         df['home'] = self.home()
         df['away'] = self.away()
         df['season'] = self.season()

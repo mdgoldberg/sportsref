@@ -570,16 +570,16 @@ def team_and_opp(struct, curTm=None, curOpp=None):
         else:
             pID = None
         curTm = curOpp = np.nan
-        bs = sportsref.nfl.boxscores.BoxScore(struct['boxscoreID'])
+        bs = sportsref.nfl.boxscores.BoxScore(struct['boxscore_id'])
         if pID and len(pID) == 3:
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
             player = sportsref.nfl.players.Player(pID)
             glog = player.gamelog(kind='B')
-            if 'boxscoreID' in glog.columns:
+            if 'boxscore_id' in glog.columns:
                 narrowed = glog.loc[
-                    glog.boxscoreID == struct['boxscoreID'], 'team'
+                    glog.boxscore_id == struct['boxscore_id'], 'team'
                 ]
                 if not narrowed.empty:
                     curTm = narrowed.item()
@@ -605,7 +605,7 @@ def add_team_features(row):
     """
     # if team and opp haven't been added, return as is
     if pd.isnull(row.get('team')):
-        print 'ERROR: team is null', row['boxscoreID'], row['detail']
+        print 'ERROR: team is null', row['boxscore_id'], row['detail']
         return row
     homeOnOff = row['team'] == row['home']
     # create column for distToGoal
@@ -619,7 +619,7 @@ def add_team_features(row):
     row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
     row['opp_wpa'] = -row['team_wpa']
     # create column for offense and defense scores if not already there
-    bs = sportsref.nfl.boxscores.BoxScore(row['boxscoreID'])
+    bs = sportsref.nfl.boxscores.BoxScore(row['boxscore_id'])
     if bs.home() == row['team']:
         row['team_score'] = row['pbp_score_hm']
         row['opp_score'] = row['pbp_score_aw']
