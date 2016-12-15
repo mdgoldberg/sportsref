@@ -91,10 +91,6 @@ def parse_table(table, flatten=True):
         else:
             df.year = df.year.astype(int)
 
-    # season -> int
-    if 'season' in df.columns:
-        df['season'] = df['season'].astype(int)
-
     # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
     bs_id_col = None
     if 'boxscore_word' in df.columns:
@@ -121,6 +117,11 @@ def parse_table(table, flatten=True):
     # team_name -> team_id
     if 'team_name' in df.columns:
         df.rename(columns={'team_name': 'team_id'}, inplace=True)
+        df = df.ix[~df['team_id'].isin(['XXX'])]
+
+    # season -> int
+    if 'season' in df.columns:
+        df['season'] = df['season'].astype(int)
 
     # (number%) -> float(number * 0.01)
     def convertPct(val):
