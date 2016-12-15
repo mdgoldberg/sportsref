@@ -224,7 +224,7 @@ class Team:
         df = sportsref.utils.parse_table(table)
         if df.empty:
             return np.array([])
-        return df.boxscoreID.values
+        return df.boxscore_id.values
 
     # TODO: add functions for OC, DC, PF, PA, W-L, etc.
     # TODO: Also give a function at BoxScore.homeCoach and BoxScore.awayCoach

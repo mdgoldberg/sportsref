@@ -144,8 +144,7 @@ class Season(object):
         doc = self.get_main_doc()
         table = doc(selector)
         df = sportsref.utils.parse_table(table)
-        df = df.drop('ranker', axis=1).set_index('team_name')
-        df.index.name = 'team_id'
+        df = df.drop('ranker', axis=1)
         return df
 
     def team_stats_per_game(self):
@@ -193,7 +192,7 @@ class Season(object):
         doc = self.get_doc(identifier)
         table = doc('table#{}_stats'.format(identifier))
         df = sportsref.utils.parse_table(table)
-        df = df.drop('ranker', axis=1).set_index('player_id')
+        df = df.drop('ranker', axis=1)
         return df
 
     def player_stats_per_game(self):

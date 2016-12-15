@@ -1,4 +1,5 @@
 import re
+import signal
 import time
 
 import pandas as pd
@@ -20,16 +21,13 @@ def get_html(url):
     """
     TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
     start = time.time()
-    d = webdriver.PhantomJS(executable_path=r'/Users/phil/projects/phantomjs-2.1.1-macosx/bin/phantomjs',
-                            service_args=['--load-images=false'],
-                            service_log_path='/dev/null')
-    # d = webdriver.PhantomJS(executable_path=r'C:\Users\Phil\projects\phantomjs-2.1.1-windows\bin\phantomjs.exe',
-    #                         service_args=['--load-images=false'],
-    #                         service_log_path='NUL')
-    d.set_window_size(10000, 10000)
-    d.get(url)
-    html = d.page_source
-    d.quit()
+    browser = webdriver.PhantomJS(service_args=['--load-images=false'],
+                                  service_log_path='/dev/null')
+    browser.set_window_size(10000, 10000)
+    browser.get(url)
+    html = browser.page_source
+    browser.service.process.send_signal(signal.SIGTERM)
+    browser.quit()
     if html == '<html><head></head><body></body></html>':
         raise Exception("Received HTML empty response")
     timeOnRequest = time.time() - start
@@ -93,11 +91,7 @@ def parse_table(table, flatten=True):
         else:
             df.year = df.year.astype(int)
 
-    # season -> int
-    if 'season' in df.columns:
-        df['season'] = df['season'].astype(int)
-
-    # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
+    # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
     bs_id_col = None
     if 'boxscore_word' in df.columns:
         bs_id_col = 'boxscore_word'
@@ -108,7 +102,7 @@ def parse_table(table, flatten=True):
         df['year'] = df[bs_id_col].str[:4].astype(int)
         df['month'] = df[bs_id_col].str[4:6].astype(int)
         df['day'] = df[bs_id_col].str[6:8].astype(int)
-        df.rename(columns={bs_id_col: 'boxscoreID'}, inplace=True)
+        df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
@@ -119,6 +113,18 @@ def parse_table(table, flatten=True):
     # player -> player_id
     if 'player' in df.columns:
         df.rename(columns={'player': 'player_id'}, inplace=True)
+
+    # team_name -> team_id
+    if 'team_name' in df.columns:
+        df.rename(columns={'team_name': 'team_id'}, inplace=True)
+
+    # get rid of faulty rows
+    if 'team_id' in df.columns:
+        df = df.ix[~df['team_id'].isin(['XXX'])]
+
+    # season -> int
+    if 'season' in df.columns:
+        df['season'] = df['season'].astype(int)
 
     # (number%) -> float(number * 0.01)
     def convertPct(val):

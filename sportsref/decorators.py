@@ -133,10 +133,11 @@ def cache_html(func):
 
         # set time variables (in seconds)
         if os.path.isfile(filename):
-            curtime = int(time.time())
-            modtime = int(os.path.getmtime(filename))
-            time_since_mod = datetime.timedelta(seconds=(curtime - modtime))
-            cacheValid = time_since_mod <= datetime.timedelta(days=12)
+            # curtime = int(time.time())
+            # modtime = int(os.path.getmtime(filename))
+            # time_since_mod = datetime.timedelta(seconds=(curtime - modtime))
+            # cacheValid = time_since_mod <= datetime.timedelta(days=12)
+            cacheValid = True
 
         # if file found and caching is valid, read from file
         if os.path.isfile(filename) and cacheValid:
