@@ -7,9 +7,10 @@ from selenium import webdriver
 
 import sportsref
 
+
 @sportsref.decorators.memoized
-@sportsref.decorators.cacheHTML
-def getHTML(url):
+@sportsref.decorators.cache_html
+def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
     Incorporates an exponential timeout starting with 2 seconds.
@@ -17,7 +18,7 @@ def getHTML(url):
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
     """
-    TOTAL_TIME = 0.4 # num of secs we we wait between last request & return
+    TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
     start = time.time()
     d = webdriver.PhantomJS(executable_path=r'/Users/phil/projects/phantomjs-2.1.1-macosx/bin/phantomjs',
                             service_args=['--load-images=false'],
@@ -28,24 +29,28 @@ def getHTML(url):
     d.set_window_size(10000, 10000)
     d.get(url)
     html = d.page_source
+    d.quit()
     if html == '<html><head></head><body></body></html>':
         raise Exception("Received HTML empty response")
-    d.quit()
     timeOnRequest = time.time() - start
-    timeRemaining = int(1000*(TOTAL_TIME - timeOnRequest)) # in milliseconds
+    timeRemaining = int(1000 * (TOTAL_TIME - timeOnRequest))  # in milliseconds
     for _ in xrange(timeRemaining):
         # wait one millisecond
         time.sleep(0.001)
     return html
 
-def parseTable(table):
+
+def parse_table(table, flatten=True):
     """Parses a table from SR into a pandas dataframe.
 
     :table: the PyQuery object representing the HTML table
+    :flatten: if True, flattens relative URLs to IDs. otherwise, leaves as
+    text.
     :returns: Pandas dataframe
     """
     if not len(table):
         return pd.DataFrame()
+
     # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr:not([class]) th[data-stat]')]
@@ -55,14 +60,15 @@ def parseTable(table):
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flattenLinks(td) for td in row.items('th,td')]
+        [flatten_links(td) if flatten else td.text()
+         for td in row.items('th,td')]
         for row in rows
     ]
 
     # make DataFrame
     df = pd.DataFrame(data, columns=columns, dtype='float')
 
-    # add hasClass columns
+    # add has_class columns
     allClasses = set(
         cls
         for row in rows
@@ -70,7 +76,7 @@ def parseTable(table):
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
-        df['hasClass_' + cls] = [
+        df['has_class_' + cls] = [
             bool(row.attr['class'] and
                  cls in row.attr['class'].split())
             for row in rows
@@ -87,20 +93,43 @@ def parseTable(table):
         else:
             df.year = df.year.astype(int)
 
-    # game_date -> bsID
-    if 'game_date' in df.columns:
-        df.rename(columns={'game_date': 'bsID'}, inplace=True)
+    # season -> int
+    if 'season' in df.columns:
+        df['season'] = df['season'].astype(int)
+
+    # boxscore_word, game_date -> boxscoreID and separate into Y, M, D columns
+    bs_id_col = None
+    if 'boxscore_word' in df.columns:
+        bs_id_col = 'boxscore_word'
+    elif 'game_date' in df.columns:
+        bs_id_col = 'game_date'
+    if bs_id_col:
+        df = df.loc[df[bs_id_col].notnull()]  # drop bye weeks
+        df['year'] = df[bs_id_col].str[:4].astype(int)
+        df['month'] = df[bs_id_col].str[4:6].astype(int)
+        df['day'] = df[bs_id_col].str[6:8].astype(int)
+        df.rename(columns={bs_id_col: 'boxscoreID'}, inplace=True)
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
+    for col in df.columns:
+        if hasattr(df[col], 'str'):
+            df.ix[:, col] = df.ix[:, col].str.strip()
 
-    # player -> playerID
+    # player -> player_id
     if 'player' in df.columns:
-        df.rename(columns={'player': 'playerID'}, inplace=True)
+        df.rename(columns={'player': 'player_id'}, inplace=True)
+
+    # (number%) -> float(number * 0.01)
+    def convertPct(val):
+        m = re.search(r'([-\d]+)\%', str(val))
+        return float(m.group(1)) / 100. if m else val
+    df = df.applymap(convertPct)
 
     return df
 
-def parseInfoTable(table):
+
+def parse_info_table(table):
     """Parses an info table, like the "Game Info" table or the "Officials"
     table on the PFR Boxscore page. Keys are lower case and have spaces/special
     characters converted to underscores.
@@ -113,17 +142,17 @@ def parseInfoTable(table):
         th, td = tr('th, td').items()
         key = th.text().lower()
         key = re.sub(r'\W', '_', key)
-        val = sportsref.utils.flattenLinks(td)
+        val = sportsref.utils.flatten_links(td)
         ret[key] = val
     return ret
 
-def flattenLinks(td):
+
+def flatten_links(td, _recurse=False):
     """Flattens relative URLs within text of a table cell to IDs and returns
     the result.
 
     :td: the PyQuery object for the HTML to convert
     :returns: the string with the links flattened to IDs
-
     """
 
     # helper function to flatten individual strings/links
@@ -131,19 +160,20 @@ def flattenLinks(td):
         if isinstance(c, basestring):
             return c
         elif 'href' in c.attrib:
-            cID = relURLToID(c.attrib['href'])
+            cID = rel_url_to_id(c.attrib['href'])
             return cID if cID else c.text_content()
         else:
-            return c.text_content()
+            return flatten_links(pq(c), _recurse=True)
 
     # if there's no text, just return None
-    if not td.text():
-        return None
+    if not td or not td.text():
+        return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
 
+
 @sportsref.decorators.memoized
-def relURLToID(url):
+def rel_url_to_id(url):
     """Converts a relative URL to a unique ID.
 
     Here, 'ID' refers generally to the unique ID for a given 'type' that a
@@ -156,6 +186,7 @@ def relURLToID(url):
     * boxscores/...
     * teams/...
     * years/...
+    * leagues/...
     * coaches/...
     * officials/...
     * schools/...
@@ -173,6 +204,7 @@ def relURLToID(url):
     collegeRegex = r'.*/schools/(\S+?)/.*'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    leagueRegex = r'.*/leagues/(.*_\d{4}).*'
 
     regexes = [
         yearRegex,
@@ -185,13 +217,13 @@ def relURLToID(url):
         collegeRegex,
         hsRegex,
         bsDateRegex,
+        leagueRegex,
     ]
 
     for regex in regexes:
         match = re.match(regex, url, re.I)
         if match:
-            return match.group(1)
+            return filter(None, match.groups())[0]
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
     return 'noIDer00'
-

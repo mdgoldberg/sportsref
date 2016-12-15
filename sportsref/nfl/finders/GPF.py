@@ -3,39 +3,33 @@ import json
 import os
 import time
 
-import pandas as pd
 from pyquery import PyQuery as pq
 
-import sportsref
+from ... import decorators, utils
+from .. import pbp
 
-GAME_PLAY_URL = ('http://www.pro-football-reference.com/'
-                 'play-index/play_finder.cgi')
+GPF_URL = ('http://www.pro-football-reference.com/'
+           'play-index/play_finder.cgi')
 
-CONSTANTS_FN = 'GPFConstants.json'
+GPF_CONSTANTS_FILENAME = 'GPFConstants.json'
 
+
+@decorators.memoized
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 
-    querystring = kwArgsToQS(**kwargs)
-    url = '{}?{}'.format(GAME_PLAY_URL, querystring)
+    querystring = _kwargs_to_qs(**kwargs)
+    url = '{}?{}'.format(GPF_URL, querystring)
     # if verbose, print url
     if kwargs.get('verbose', False):
         print url
-    html = sportsref.utils.getHTML(url)
+    html = utils.get_html(url)
     doc = pq(html)
-    
-    # parse
-    table = doc('#div_ table.stats_table')
-    plays = sportsref.utils.parseTable(table)
 
-    # clean game date
-    if 'game_date' in plays.columns:
-        plays['year'] = plays.game_date.str[:4].astype(int)
-        plays['month'] = plays.game_date.str[4:6].astype(int)
-        plays['day'] = plays.game_date.str[6:8].astype(int)
-    # rename game_date to bsID
-    if 'game_date' in plays.columns:
-        plays = plays.rename(columns={'game_date': 'bsID'})
+    # parse
+    table = doc('table#all_plays')
+    plays = utils.parse_table(table)
+
     # parse score column
     if 'score' in plays.columns:
         oScore, dScore = zip(*plays.score.apply(lambda s: s.split('-')))
@@ -43,17 +37,18 @@ def GamePlayFinder(**kwargs):
         plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
-        plays = sportsref.nfl.pbp.expandDetails(plays, detailCol='description')
+        plays = pbp.expandDetails(plays, detailCol='description')
 
     return plays
 
-def kwArgsToQS(**kwargs):
+
+def _kwargs_to_qs(**kwargs):
     """Converts kwargs given to GPF to a querystring.
 
     :returns: the querystring.
     """
     # start with defaults
-    inpOptDef = getInputsOptionsDefaults()
+    inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
         for name, dct in inpOptDef.iteritems()
@@ -68,7 +63,7 @@ def kwArgsToQS(**kwargs):
         # player_id can accept rel URLs
         if k == 'player_id':
             if v.startswith('/players/'):
-                kwargs[k] = sportsref.utils.relURLToID(v)
+                kwargs[k] = utils.rel_url_to_id(v)
         # bool => 'Y'|'N'
         if isinstance(v, bool):
             kwargs[k] = 'Y' if v else 'N'
@@ -144,28 +139,30 @@ def kwArgsToQS(**kwargs):
                 opts[k].append(val)
 
     opts['request'] = [1]
-    
+
     qs = '&'.join('{}={}'.format(name, val)
                   for name, vals in sorted(opts.iteritems()) for val in vals)
 
     return qs
 
-@sportsref.decorators.switchToDir(os.path.dirname(os.path.realpath(__file__)))
-def getInputsOptionsDefaults():
+
+@decorators.switch_to_dir(os.path.dirname(os.path.realpath(__file__)))
+def inputs_options_defaults():
     """Handles scraping options for play finder form.
 
     :returns: {'name1': {'value': val, 'options': [opt1, ...] }, ... }
 
     """
     # set time variables
-    if os.path.isfile(CONSTANTS_FN):
-        modtime = int(os.path.getmtime(CONSTANTS_FN))
+    if os.path.isfile(GPF_CONSTANTS_FILENAME):
+        modtime = int(os.path.getmtime(GPF_CONSTANTS_FILENAME))
         curtime = int(time.time())
     # if file found and it's been <= a week
-    if os.path.isfile(CONSTANTS_FN) and curtime - modtime <= 7*24*60*60:
+    if (os.path.isfile(GPF_CONSTANTS_FILENAME)
+            and curtime - modtime <= 7 * 24 * 60 * 60):
 
         # just read the dict from the cached file
-        with open(CONSTANTS_FN, 'r') as const_f:
+        with open(GPF_CONSTANTS_FILENAME, 'r') as const_f:
             def_dict = json.load(const_f)
 
     # otherwise, we must regenerate the dict and rewrite it
@@ -173,9 +170,9 @@ def getInputsOptionsDefaults():
 
         print 'Regenerating GPFConstants file'
 
-        html = sportsref.utils.getHTML(GAME_PLAY_URL)
+        html = utils.get_html(GPF_URL)
         doc = pq(html)
-        
+
         def_dict = {}
         # start with input elements
         for inp in doc('form#play_finder input[name]'):
@@ -200,7 +197,6 @@ def getInputsOptionsDefaults():
             else:
                 def_dict[name]['value'].add(val)
 
-
         # for dropdowns (select elements)
         for sel in doc.items('form#play_finder select[name]'):
             name = sel.attr['name']
@@ -211,7 +207,7 @@ def getInputsOptionsDefaults():
                     'options': set(),
                     'type': 'select'
                 }
-            
+
             # deal with default value
             defaultOpt = sel('option[selected]')
             if len(defaultOpt):
@@ -227,14 +223,14 @@ def getInputsOptionsDefaults():
                 opt.attrib['value'] for opt in sel('option')
                 if opt.attrib.get('value')
             }
-        
+
         # ignore QB kneels by default
         def_dict['include_kneels']['value'] = ['0']
 
         def_dict.pop('request', None)
         def_dict.pop('use_favorites', None)
 
-        with open(CONSTANTS_FN, 'w+') as f:
+        with open(GPF_CONSTANTS_FILENAME, 'w+') as f:
             for k in def_dict:
                 try:
                     def_dict[k]['value'] = sorted(
