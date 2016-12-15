@@ -117,6 +117,9 @@ def parse_table(table, flatten=True):
     # team_name -> team_id
     if 'team_name' in df.columns:
         df.rename(columns={'team_name': 'team_id'}, inplace=True)
+
+    # get rid of faulty rows
+    if 'team_id' in df.columns:
         df = df.ix[~df['team_id'].isin(['XXX'])]
 
     # season -> int
