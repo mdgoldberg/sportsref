@@ -28,8 +28,8 @@ def team_names(year):
     inactive_table = doc('table#teams_inactive')
     inactive_df = sportsref.utils.parse_table(inactive_table)
     df = pd.concat((active_df, inactive_df))
-    df = df.loc[~df['hasClass_partial_table']]
-    ids = df.team_name.str[:3].values
+    df = df.loc[~df['has_class_partial_table']]
+    ids = df.team_id.str[:3].values
     names = [tr('th a') for tr in active_table('tr').items()]
     names.extend(tr('th a') for tr in inactive_table('tr').items())
     names = filter(None, names)

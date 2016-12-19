@@ -31,7 +31,7 @@ def expand_details(df, detailCol='detail'):
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
-    newDicts = [d if d else blankEntry for i, d in enumerate(dicts)]
+    newDicts = [d if d else blankEntry for d in dicts]
     # get details DataFrame and merge it with original to create main DataFrame
     details = pd.DataFrame(newDicts)
     df = pd.merge(df, details, left_index=True, right_index=True)
@@ -588,7 +588,7 @@ def team_and_opp(struct, curTm=None, curOpp=None):
         return curTm, curOpp
 
     # use row's class to determine when possession changes
-    if struct['hasClass_divider']:
+    if struct['has_class_divider']:
         return curOpp, curTm
     else:
         return curTm, curOpp
