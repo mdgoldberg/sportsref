@@ -71,7 +71,7 @@ class BoxScore:
         """
         doc = self.get_doc()
         table = doc('table.linescore')
-        relURL = table('tr').eq(1)('a').eq(2).attr['href']
+        relURL = table('tr').eq(2)('a').eq(2).attr['href']
         home = sportsref.utils.rel_url_to_id(relURL)
         return home
 
@@ -82,7 +82,7 @@ class BoxScore:
         """
         doc = self.get_doc()
         table = doc('table.linescore')
-        relURL = table('tr').eq(2)('a').eq(2).attr['href']
+        relURL = table('tr').eq(1)('a').eq(2).attr['href']
         away = sportsref.utils.rel_url_to_id(relURL)
         return away
 
@@ -125,8 +125,8 @@ class BoxScore:
         :returns: Integer from 1 to 21.
         """
         doc = self.get_doc()
-        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
-        match = re.search(r'Week (\d+)', rawTxt)
+        rawTxt = doc('#div_other_scores h2 a').attr('href')
+        match = re.search(r'week_(\d+)', rawTxt)
         if match:
             return int(match.group(1))
         else:
@@ -140,8 +140,8 @@ class BoxScore:
 
         :returns: An int representing the year of the season.
         """
-        season = int(self.bsID[0:4])
-        if int(self.bsID[4:6]) <= 2: season -= 1
+        season = int(self.boxscore_id[0:4])
+        if int(self.boxscore_id[4:6]) <= 2: season -= 1
         return season
 
     @sportsref.decorators.memoized
@@ -164,11 +164,13 @@ class BoxScore:
         :returns: A pandas DataFrame. See the description for details.
         """
         doc = self.get_doc()
-        a = doc('table#vis_starters')
-        h = doc('table#home_starters')
+        h = doc('#home_starters')
+        a = doc('#vis_starters')
         data = []
         for h, table in enumerate((a, h)):
-            team = self.home() if h else self.away()
+            if h: team = self.home()
+            else: team = self.away()
+            #team = self.home() if h else self.away()
             for i, row in enumerate(table('tbody tr').items()):
                 datum = {}
                 datum['player_id'] = sportsref.utils.rel_url_to_id(
@@ -182,7 +184,7 @@ class BoxScore:
                 data.append(datum)
         df = pd.DataFrame(data)
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             teamMap = {
@@ -192,7 +194,7 @@ class BoxScore:
             df['team'] = df['home'].map(teamMap)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID',
+        cols = ['season', 'week', 'bsID', 'team', 'player_id',
                 'playerName', 'position', 'home', 'offense']
         for col in cols:
             if col not in df: df[col] = np.nan
@@ -231,21 +233,21 @@ class BoxScore:
         giTable = sportsref.utils.parse_info_table(table)
         return giTable.get('surface', np.nan)
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def roof(self):
         """Whether the stadium has a roof or not.
 
         :returns: string representing the roof of stadium. Returns np.nan if
         not avaiable.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('table#game_info')
-        giTable = sportsref.utils.parseInfoTable(table)
+        giTable = sportsref.utils.parse_info_table(table)
         return giTable.get('roof', np.nan)
 
     @sportsref.decorators.memoized
 
-    @decorators.memoized
+    @sportsref.decorators.memoized
     def over_under(self):
         """
         Returns the over/under for the game as a float, or np.nan if not
@@ -412,19 +414,19 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def statsTeam(self):
+    def stats_team(self):
         """Gets the summarized stats for each team.
         :returns: A DataFrame containing team stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#team_stats')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if not df.empty:
             df = df.transpose()
             df.columns = df.iloc[0]
             df.columns.name = None
             df.drop(['stat'], inplace=True)
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = [self.away(), self.home()]
@@ -508,15 +510,15 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def statsOffense(self):
+    def stats_offense(self):
         """Gets the stats for offense of individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#player_offense')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
@@ -540,7 +542,7 @@ class BoxScore:
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID',
+        cols = ['season', 'week', 'bsID', 'team', 'player_id',
                 'passAtt', 'passCmp', 'passYds', 'passTds', 'passLong', 'passRating',
                 'passSacked', 'passSackedYds', 'passInt',
                 'targets', 'rec', 'recYds', 'recTds', 'recLong',
@@ -551,22 +553,22 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def statsDefense(self):
+    def stats_defense(self):
         """Gets the stats for defense of individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#player_defense')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         # make sure all cols are in the df
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID',
+        cols = ['season', 'week', 'bsID', 'team', 'player_id',
                 'sacks', 'tackles_solo', 'tackles_assists',
                 'def_int', 'def_int_yds', 'def_int_td', 'def_int_long',
                 'fumbles_forced', 'fumbles_rec', 'fumbles_rec_yds', 'fumbles_rec_td']
@@ -576,21 +578,21 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def statsReturns(self):
+    def stats_returns(self):
         """Gets the stats for returns of individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#returns')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID',
+        cols = ['season', 'week', 'bsID', 'team', 'player_id',
                 'kick_ret', 'kick_ret_yds', 'kick_ret_yds_per_ret', 'kick_ret_long', 'kick_ret_td',
                 'punt_ret', 'punt_ret_yds', 'punt_ret_yds_per_ret', 'punt_ret_long', 'punt_ret_td']
         for col in cols:
@@ -599,15 +601,15 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def statsKicking(self):
+    def stats_kicking(self):
         """Gets the stats for kicking of individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#kicking')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
@@ -618,7 +620,7 @@ class BoxScore:
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID',
+        cols = ['season', 'week', 'bsID', 'team', 'player_id',
                 'xpa', 'xpm', 'fga', 'fgm',
                 'punts', 'puntYds', 'puntYdsAvg', 'puntLong']
         for col in cols:
@@ -627,15 +629,15 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def passDirections(self):
+    def pass_directions(self):
         """Gets the stats for kicking of individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#targets_directions')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
@@ -658,7 +660,7 @@ class BoxScore:
                                     ]].sum(axis=1)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID',
+        cols = ['season', 'week', 'bsID', 'team', 'player_id',
                 'rec_catches_d', 'rec_catches_dl', 'rec_catches_dm', 'rec_catches_dr',
                 'rec_catches_s', 'rec_catches_sl', 'rec_catches_sm', 'rec_catches_sr',
                 'rec_targets_d', 'rec_targets_dl', 'rec_targets_dm', 'rec_targets_dr',
@@ -672,39 +674,41 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def snapCounts(self):
+    def snap_counts(self):
         """Gets the snap counts of individual players in the game.
         :returns: A DataFrame containing individual player stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#home_snap_counts')
-        dfH = sportsref.utils.parseTable(table)
+        dfH = sportsref.utils.parse_table(table)
         if not dfH.empty:
             dfH['team'] = self.home()
         table = doc('#vis_snap_counts')
-        dfV = sportsref.utils.parseTable(table)
+        dfV = sportsref.utils.parse_table(table)
         if not dfV.empty:
             dfV['team'] = self.away()
         df = pd.concat([dfH, dfV], ignore_index=True)
         if not df.empty:
-            df['bsID'] = self.bsID
+            df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
-            df['off_pct'] = df['off_pct'].str.rstrip('%').astype('float64')/100
-            df['def_pct'] = df['def_pct'].str.rstrip('%').astype('float64')/100
-            df['st_pct'] = df['st_pct'].str.rstrip('%').astype('float64')/100
+            df['off_pct'] = df['off_pct'] * 100
+            df['def_pct'] = df['def_pct'] * 100
+            df['st_pct'] = df['st_pct'] * 100
             df.rename(columns={'pos':'position',
                                'offense':'offSnaps',
-                               'off_pct':'offPct',
+                               'off_pct':'offSnapsPct',
                                'defense':'defSnaps',
-                               'def_pct':'defPct',
+                               'def_pct':'defSnapsPct',
                                'special_teams':'stSnaps',
-                               'st_pct':'stPct'
+                               'st_pct':'stSnapsPct'
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'playerID', 'position',
-                'offSnaps', 'offPct', 'defSnaps', 'defPct', 'stSnaps', 'stPct']
+        cols = ['season', 'week', 'bsID', 'team', 'player_id', 'position',
+                'offSnaps', 'offSnapsPct',
+                'defSnaps', 'defSnapsPct',
+                'stSnaps', 'stSnapsPct']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -712,22 +716,22 @@ class BoxScore:
         return df
 
     @sportsref.decorators.memoized
-    def gameInfo(self):
+    def game_info(self):
         """Returns a one row dataframe of game info.
 
         :returns: DataFrame of game info.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         d = {
             'season':self.season(),
             'week':self.week(),
-            'bsID':self.bsID,
+            'bsID':self.boxscore_id,
             'date':self.date(),
             'weekday':self.weekday(),
             'home':self.home(),
             'away':self.away(),
-            'homeScore':self.homeScore(),
-            'awayScore':self.awayScore(),
+            'homeScore':self.home_score(),
+            'awayScore':self.away_score(),
             'winner':self.winner(),
             'line':self.line(),
             'overUnder':self.over_under(),
