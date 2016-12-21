@@ -29,7 +29,7 @@ class BoxScore:
     @sportsref.decorators.memoized
     def get_subpage_doc(self, page):
         url = (sportsref.nba.BASE_URL +
-               'boxscores/{}/{}.html'.format(page, self.bsID))
+               '/boxscores/{}/{}.html'.format(page, self.bsID))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
@@ -181,7 +181,7 @@ class BoxScore:
                     jb_str = sportsref.utils.flatten_links(desc)
                     n = None
                     p.update(
-                        sportsref.nba.pbp.parsePlay(jb_str, n, n, n, year)
+                        sportsref.nba.pbp.parse_play(jb_str, n, n, n, year)
                     )
                 else:
                     # if another case, continue
@@ -202,7 +202,7 @@ class BoxScore:
                 # get home and away
                 hm, aw = self.home(), self.away()
                 # handle the play
-                new_p = sportsref.nba.pbp.parsePlay(
+                new_p = sportsref.nba.pbp.parse_play(
                     desc, hm, aw, is_hm_play, year
                 )
                 if new_p == -1:
@@ -235,7 +235,7 @@ class BoxScore:
         # (so we can deduce shot clock and use as feature)
 
         # clean columns
-        df = sportsref.nba.pbp.cleanFeatures(df)
+        df = sportsref.nba.pbp.clean_features(df)
 
         # fill in NaN's in team, opp columns except for jump balls
         df.team.fillna(method='bfill', inplace=True)

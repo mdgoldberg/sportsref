@@ -64,7 +64,7 @@ class Season(object):
         """
         doc = self.get_main_doc()
         team_ids = sportsref.utils.parse_table(
-            doc('table#team-stats-per_game'), flatten=True)['team_name']
+            doc('table#team-stats-per_game'), flatten=True)['team_id']
         team_names = sportsref.utils.parse_table(
             doc('table#team-stats-per_game'), flatten=False)['team_name']
         if len(team_names) != len(team_ids):
