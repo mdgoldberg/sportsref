@@ -149,7 +149,7 @@ def cache_html(func):
         else:
             text = func(url)
             with codecs.open(filename, 'w+', encoding='utf-8') as f:
-                f.write(text.decode('utf-8', 'replace'))
+                f.write(text)
             return text
 
     return wrapper
