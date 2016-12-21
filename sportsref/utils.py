@@ -27,7 +27,11 @@ def get_html(url):
         numTries += 1
         start = time.time()
         try:
-            html = requests.get(url).content
+            response = requests.get(url)
+            if 400 <= response.status_code < 500:
+                raise ValueError(
+                    "Invalid ID led to an error in fetching HTML")
+            html = response.text
             html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
             errnum = e.args[0].args[1].errno
