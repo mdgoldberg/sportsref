@@ -1,10 +1,9 @@
 import re
-import signal
 import time
 
 import pandas as pd
 from pyquery import PyQuery as pq
-from selenium import webdriver
+import requests
 
 import sportsref
 
@@ -18,18 +17,34 @@ def get_html(url):
 
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
+
     """
+    K = 60*3  # K is length of next backoff (in seconds)
     TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
-    start = time.time()
-    browser = webdriver.PhantomJS(service_args=['--load-images=false'],
-                                  service_log_path='/dev/null')
-    browser.set_window_size(10000, 10000)
-    browser.get(url)
-    html = browser.page_source
-    browser.service.process.send_signal(signal.SIGTERM)
-    browser.quit()
-    if html == '<html><head></head><body></body></html>':
-        raise Exception("Received HTML empty response")
+    html = None
+    numTries = 0
+    while not html and numTries < 10:
+        numTries += 1
+        start = time.time()
+        try:
+            html = requests.get(url).content
+        except requests.ConnectionError as e:
+            errnum = e.args[0].args[1].errno
+            if errnum == 61:
+                # Connection Refused
+                if K >= 60:
+                    print 'Waiting {} minutes...'.format(K/60.0)
+                else:
+                    print 'Waiting {} seconds...'.format(K)
+                # sleep
+                for _ in xrange(K):
+                    time.sleep(1)
+                # backoff gets doubled, capped at 1 hour
+                K *= 2
+                K = min(K, 60*60)
+            else:
+                # Some other error code
+                raise e
     timeOnRequest = time.time() - start
     timeRemaining = int(1000 * (TOTAL_TIME - timeOnRequest))  # in milliseconds
     for _ in xrange(timeRemaining):

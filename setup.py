@@ -14,7 +14,7 @@ setup(name='sportsref',
           'numpy',
           'pandas',
           'pyquery',
+          'requests',
           'scipy',
-          'selenium',
       ]
       )
