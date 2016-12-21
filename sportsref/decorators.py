@@ -1,10 +1,10 @@
+import codecs
 import copy
 import datetime
 import hashlib
 import functools
 import os
 import re
-import time
 import urlparse
 
 import appdirs
@@ -141,14 +141,15 @@ def cache_html(func):
 
         # if file found and caching is valid, read from file
         if os.path.isfile(filename) and cacheValid:
-            with open(filename, 'r') as f:
+            with codecs.open(filename, 'r', encoding='utf-8',
+                             errors='replace') as f:
                 text = f.read()
             return text
         # otherwise, download html and cache it
         else:
             text = func(url)
-            with open(filename, 'w+') as f:
-                f.write(text.encode('ascii', 'replace'))
+            with codecs.open(filename, 'w+', encoding='utf-8') as f:
+                f.write(text.decode('utf-8', 'replace'))
             return text
 
     return wrapper
