@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='sportsref',
-      version='0.7.13',
+      version='0.7.14',
       description='Scraping data from sports-reference.com and related sites',
       url='https://github.com/mdgoldberg/sportsref',
       author='Matt Goldberg',
