@@ -28,6 +28,7 @@ def get_html(url):
         start = time.time()
         try:
             html = requests.get(url).content
+            html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
             errnum = e.args[0].args[1].errno
             if errnum == 61:
