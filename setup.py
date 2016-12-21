@@ -6,7 +6,6 @@ setup(name='sportsref',
       url='https://github.com/mdgoldberg/sportsref',
       author='Matt Goldberg',
       author_email='mgoldberg@college.harvard.edu',
-      license='GNU GPLv3',
       packages=find_packages(),
       install_requires=[
           'appdirs',
