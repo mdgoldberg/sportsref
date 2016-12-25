@@ -8,7 +8,7 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
-@sportsref.decorators.memoize
+@sportsref.decorators.class_memoize
 class BoxScore:
 
     def __init__(self, bsID):

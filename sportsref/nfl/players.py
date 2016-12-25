@@ -12,8 +12,8 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.memoize
-class Player:
+@sportsref.decorators.class_memoize
+class Player(object):
 
     def __init__(self, player_id):
         self.player_id = player_id

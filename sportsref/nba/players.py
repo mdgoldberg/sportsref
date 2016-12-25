@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.memoize
+@sportsref.decorators.class_memoize
 class Player(object):
 
     """Each instance of this class represents an NBA player, uniquely

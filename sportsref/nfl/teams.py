@@ -64,8 +64,8 @@ def list_teams(year):
     return team_names(year).keys()
 
 
-@sportsref.decorators.memoize
-class Team:
+@sportsref.decorators.class_memoize
+class Team(object):
 
     def __init__(self, teamID):
         self.teamID = teamID

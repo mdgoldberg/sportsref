@@ -4,7 +4,7 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
-@sportsref.decorators.memoize
+@sportsref.decorators.class_memoize
 class Season(object):
 
     """Object representing a given NBA season."""

@@ -12,8 +12,8 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.memoize
-class BoxScore:
+@sportsref.decorators.class_memoize
+class BoxScore(object):
 
     def __init__(self, boxscore_id):
         self.boxscore_id = boxscore_id

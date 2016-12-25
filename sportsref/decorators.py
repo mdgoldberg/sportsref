@@ -155,8 +155,37 @@ def cache_html(func):
     return wrapper
 
 
+def class_memoize(cls):
+    """
+    A decorator for memoizing class instantiations.
+    """
+
+    def get_id_tuple(f, args, kwargs, mark=object()):
+        """
+        Returns a unique identifier for a class instantiation.
+        """
+        l = [id(f)]
+        for arg in args:
+            l.append(id(arg))
+        l.append(id(mark))
+        for k, v in kwargs:
+            l.append(k)
+            l.append(id(v))
+        return tuple(l)
+
+    @functools.wraps(cls)
+    def wrapper(*args, **kwargs):
+        key = get_id_tuple(cls, args, kwargs)
+        if key not in cache:
+            cache[key] = cls(*args, **kwargs)
+        return cache[key]
+
+    cache = {}
+    return wrapper
+
+
 def memoize(fun):
-    """A simple memoize decorator."""
+    """A decorator for memoizing functions."""
     @functools.wraps(fun)
     def wrapper(*args, **kwargs):
 

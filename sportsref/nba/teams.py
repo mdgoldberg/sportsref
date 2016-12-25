@@ -4,8 +4,8 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
-@sportsref.decorators.memoize
-class Team:
+@sportsref.decorators.class_memoize
+class Team(object):
 
     def __init__(self, teamID):
         self.teamID = teamID
