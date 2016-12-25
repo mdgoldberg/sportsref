@@ -4,6 +4,7 @@ import urlparse
 
 import numpy as np
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
@@ -12,8 +13,7 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.class_memoize
-class Player(object):
+class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, player_id):
         self.player_id = player_id

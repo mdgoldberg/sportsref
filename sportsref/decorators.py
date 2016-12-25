@@ -8,6 +8,7 @@ import re
 import urlparse
 
 import appdirs
+import mementos
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
@@ -155,33 +156,19 @@ def cache_html(func):
     return wrapper
 
 
-def class_memoize(cls):
+def get_class_instance_key(cls, args, kwargs):
     """
-    A decorator for memoizing class instantiations.
+    Returns a unique identifier for a class instantiation.
     """
+    l = [id(cls)]
+    for arg in args:
+        l.append(id(arg))
+    l.extend((k, id(v)) for k, v in kwargs.items())
+    return tuple(sorted(l))
 
-    def get_id_tuple(f, args, kwargs, mark=object()):
-        """
-        Returns a unique identifier for a class instantiation.
-        """
-        l = [id(f)]
-        for arg in args:
-            l.append(id(arg))
-        l.append(id(mark))
-        for k, v in kwargs:
-            l.append(k)
-            l.append(id(v))
-        return tuple(l)
 
-    @functools.wraps(cls)
-    def wrapper(*args, **kwargs):
-        key = get_id_tuple(cls, args, kwargs)
-        if key not in cache:
-            cache[key] = cls(*args, **kwargs)
-        return cache[key]
-
-    cache = {}
-    return wrapper
+# technically not a decorator, but it's similar enough
+Cached = mementos.memento_factory('Cached', get_class_instance_key)
 
 
 def memoize(fun):

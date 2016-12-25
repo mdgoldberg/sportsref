@@ -3,6 +3,7 @@ import re
 
 import numpy as np
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
@@ -11,8 +12,7 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.class_memoize
-class Player(object):
+class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     """Each instance of this class represents an NBA player, uniquely
     identified by a player ID. The instance methods give various data available

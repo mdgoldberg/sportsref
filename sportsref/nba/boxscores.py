@@ -4,12 +4,12 @@ import re
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
 
-@sportsref.decorators.class_memoize
-class BoxScore:
+class BoxScore(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, bsID):
         self.bsID = bsID

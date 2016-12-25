@@ -1,11 +1,11 @@
 import numpy as np
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
 
-@sportsref.decorators.class_memoize
-class Season(object):
+class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     """Object representing a given NBA season."""
 

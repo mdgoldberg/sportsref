@@ -1,11 +1,11 @@
 import numpy as np
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
 
-@sportsref.decorators.class_memoize
-class Team(object):
+class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, teamID):
         self.teamID = teamID

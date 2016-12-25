@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
@@ -12,8 +13,7 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.class_memoize
-class BoxScore(object):
+class BoxScore(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, boxscore_id):
         self.boxscore_id = boxscore_id
