@@ -155,7 +155,7 @@ def cache_html(func):
     return wrapper
 
 
-def memoized(fun):
+def memoize(fun):
     """A simple memoize decorator."""
     @functools.wraps(fun)
     def wrapper(*args, **kwargs):

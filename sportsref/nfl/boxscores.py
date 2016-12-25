@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 class BoxScore:
 
     def __init__(self, boxscore_id):
@@ -35,14 +35,14 @@ class BoxScore:
     def __reduce__(self):
         return BoxScore, (self.boxscore_id,)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_doc(self):
         url = (sportsref.nfl.BASE_URL +
                '/boxscores/{}.htm'.format(self.boxscore_id))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
         for more.
@@ -52,7 +52,7 @@ class BoxScore:
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def weekday(self):
         """Returns the day of the week on which the game occurred.
         :returns: String representation of the day of the week for the game.
@@ -64,7 +64,7 @@ class BoxScore:
         wd = date.weekday()
         return days[wd]
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
@@ -75,7 +75,7 @@ class BoxScore:
         home = sportsref.utils.rel_url_to_id(relURL)
         return home
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def away(self):
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
@@ -86,7 +86,7 @@ class BoxScore:
         away = sportsref.utils.rel_url_to_id(relURL)
         return away
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def home_score(self):
         """Returns score of the home team.
         :returns: int of the home score.
@@ -96,7 +96,7 @@ class BoxScore:
         home_score = table('tr').eq(1)('td')[-1].text_content()
         return int(home_score)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def away_score(self):
         """Returns score of the away team.
         :returns: int of the away score.
@@ -106,7 +106,7 @@ class BoxScore:
         away_score = table('tr').eq(2)('td')[-1].text_content()
         return int(away_score)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def winner(self):
         """Returns the team ID of the winning team. Returns NaN if a tie."""
         hmScore = self.home_score()
@@ -118,7 +118,7 @@ class BoxScore:
         else:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def week(self):
         """Returns the week in which this game took place. 18 is WC round, 19
         is Div round, 20 is CC round, 21 is SB.
@@ -132,7 +132,7 @@ class BoxScore:
         else:
             return 21  # super bowl is week 21
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def season(self):
         """
         Returns the year ID of the season in which this game took place.
@@ -150,7 +150,7 @@ class BoxScore:
             # after the season's year
             return self.date().year - 1
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def starters(self):
         """Returns a DataFrame where each row is an entry in the starters table
         from PFR.
@@ -188,7 +188,7 @@ class BoxScore:
                 data.append(datum)
         return pd.DataFrame(data)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def line(self):
         doc = self.get_doc()
         table = doc('table#game_info')
@@ -208,7 +208,7 @@ class BoxScore:
             line = 0
         return line
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def surface(self):
         """The playing surface on which the game was played.
 
@@ -220,7 +220,7 @@ class BoxScore:
         giTable = sportsref.utils.parse_info_table(table)
         return giTable.get('surface', np.nan)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def over_under(self):
         """
         Returns the over/under for the game as a float, or np.nan if not
@@ -235,7 +235,7 @@ class BoxScore:
         else:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def coin_toss(self):
         """Gets information relating to the opening coin toss.
 
@@ -254,7 +254,7 @@ class BoxScore:
         else:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def weather(self):
         """Returns a dictionary of weather-related info.
 
@@ -298,7 +298,7 @@ class BoxScore:
                 'temp': 70, 'windChill': 70, 'relHumidity': None, 'windMPH': 0
             }
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
 
@@ -358,7 +358,7 @@ class BoxScore:
 
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def ref_info(self):
         """Gets a dictionary of ref positions and the ref IDs of the refs for
         that game.
@@ -369,7 +369,7 @@ class BoxScore:
         table = doc('table#officials')
         return sportsref.utils.parse_info_table(table)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def player_stats(self):
         """Gets the stats for offense, defense, returning, and kicking of
         individual players in the game.

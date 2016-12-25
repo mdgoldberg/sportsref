@@ -4,7 +4,7 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 class Season(object):
 
     """Object representing a given NBA season."""
@@ -26,7 +26,7 @@ class Season(object):
         return (sportsref.nba.BASE_URL +
                 '/leagues/NBA_{}_{}.html'.format(self._yr, page))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_main_doc(self):
         """Returns PyQuery object for the main season URL.
         :returns: PyQuery object.
@@ -35,7 +35,7 @@ class Season(object):
                '/leagues/NBA_{}.html'.format(self._yr))
         return pq(sportsref.utils.get_html(url))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_doc(self, subpage):
         """Returns PyQuery object for a given subpage URL.
         :subpage: The subpage of the season, e.g. 'per_game'.
@@ -44,7 +44,7 @@ class Season(object):
         html = sportsref.utils.get_html(self._subpage_url(subpage))
         return pq(html)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_team_ids(self):
         """Returns a list of the team IDs for the given year.
         :returns: List of team IDs.
@@ -56,7 +56,7 @@ class Season(object):
             print 'ERROR: no teams found'
             return []
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def team_ids_to_names(self):
         """Mapping from 3-letter team IDs to full team names.
         :returns: Dictionary with team IDs as keys and full team strings as
@@ -71,7 +71,7 @@ class Season(object):
             raise Exception("team names and team IDs don't align")
         return dict(zip(team_ids, team_names))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def team_names_to_ids(self):
         """Mapping from full team names to 3-letter team IDs.
         :returns: Dictionary with tean names as keys and team IDs as values.
@@ -79,7 +79,7 @@ class Season(object):
         d = self.team_ids_to_names()
         return {v: k for k, v in d.items()}
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=False)
     def get_boxscore_ids(self, kind='R'):
         """Returns a list of BoxScore IDs for every game in the season.
@@ -107,7 +107,7 @@ class Season(object):
         home, away, home_won = playoffs[0]
         return away if home_won else home
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def playoff_series_results(self):
         """Returns the winning and losing team of every playoff series in the
         given year.
@@ -137,7 +137,7 @@ class Season(object):
 
         return ret
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def _get_team_stats_table(self, selector):
         """Helper function for stats tables on season pages. Returns a
         DataFrame."""
@@ -182,7 +182,7 @@ class Season(object):
         for the season."""
         return self._get_team_stats_table('table#opponent_shooting')
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def _get_player_stats_table(self, identifier):
         """Helper function for player season stats.
 

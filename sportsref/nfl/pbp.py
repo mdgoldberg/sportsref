@@ -51,7 +51,7 @@ def expand_details(df, detailCol='detail'):
     return new_df
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def parse_play_details(details):
     """Parses play details from play-by-play string and returns structured
     data.
@@ -357,7 +357,7 @@ def parse_play_details(details):
     return None
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def clean_features(struct):
     """Cleans up the features collected in parse_play_details.
 
@@ -480,7 +480,7 @@ def clean_features(struct):
     return pd.Series(struct)
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def loc_to_features(l):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
@@ -535,7 +535,7 @@ def add_team_columns(features):
     return features
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def team_and_opp(struct, curTm=None, curOpp=None):
     """Given a dict representing a play and the current team with the ball,
     returns (team, opp) where team is the team with the ball and opp is the

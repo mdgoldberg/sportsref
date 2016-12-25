@@ -8,7 +8,7 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 class BoxScore:
 
     def __init__(self, bsID):
@@ -20,20 +20,20 @@ class BoxScore:
     def __hash__(self):
         return hash(self.bsID)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_main_doc(self):
         url = sportsref.nba.BASE_URL + '/boxscores/{}.html'.format(self.bsID)
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_subpage_doc(self, page):
         url = (sportsref.nba.BASE_URL +
                '/boxscores/{}/{}.html'.format(page, self.bsID))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def date(self):
         """Returns the date of the game. See Python datetime.date documentation
         for more.
@@ -43,7 +43,7 @@ class BoxScore:
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def weekday(self):
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
                 'Saturday', 'Sunday']
@@ -51,7 +51,7 @@ class BoxScore:
         wd = date.weekday()
         return days[wd]
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def linescore(self):
         """Returns the linescore for the game as a DataFrame."""
         doc = self.get_main_doc()
@@ -67,7 +67,7 @@ class BoxScore:
 
         return pd.DataFrame(data, columns=columns)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
@@ -75,7 +75,7 @@ class BoxScore:
         linescore = self.linescore()
         return linescore.ix[1, 'team_id']
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def away(self):
         """Returns away team ID.
         :returns: 3-character string representing away team's ID.
@@ -83,7 +83,7 @@ class BoxScore:
         linescore = self.linescore()
         return linescore.ix[0, 'team_id']
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def home_score(self):
         """Returns score of the home team.
         :returns: int of the home score.
@@ -91,7 +91,7 @@ class BoxScore:
         linescore = self.linescore()
         return linescore.ix[1, 'T']
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def away_score(self):
         """Returns score of the away team.
         :returns: int of the away score.
@@ -99,7 +99,7 @@ class BoxScore:
         linescore = self.linescore()
         return linescore.ix[0, 'T']
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def winner(self):
         """Returns the team ID of the winning team. Returns NaN if a tie."""
         hmScore = self.home_score()
@@ -111,7 +111,7 @@ class BoxScore:
         else:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def season(self):
         """
         Returns the year ID of the season in which this game took place.
@@ -124,19 +124,19 @@ class BoxScore:
         else:
             return d.year
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def basic_stats(self):
         """Returns a DataFrame of basic player stats from the game."""
         # TODO: include a "is_starter" column
         pass
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def advanced_stats(self):
         """Returns a DataFrame of advanced player stats from the game."""
         # TODO: include a "is_starter" column
         pass
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
 

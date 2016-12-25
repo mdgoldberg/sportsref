@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 class Player:
 
     def __init__(self, player_id):
@@ -47,18 +47,18 @@ class Player:
                 self.mainURL, '{}/{}/{}/'.format(self.player_id, page, year)
             )
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_doc(self):
         doc = pq(sportsref.utils.get_html(self.mainURL))
         return doc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def name(self):
         doc = self.get_doc()
         name = doc('div#meta h1:first').text()
         return name
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def age(self, year, month=9, day=1):
         doc = self.get_doc()
         span = doc('div#meta span#necro-birth')
@@ -74,7 +74,7 @@ class Player:
         except Exception:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def position(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
@@ -86,7 +86,7 @@ class Player:
         # multiple positions
         return allPositions[0]
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def height(self):
         doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="height"]').text()
@@ -96,7 +96,7 @@ class Player:
         except ValueError:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def weight(self):
         doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="weight"]').text()
@@ -106,7 +106,7 @@ class Player:
         except AttributeError:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def hand(self):
         doc = self.get_doc()
         try:
@@ -118,7 +118,7 @@ class Player:
             return np.nan
         return rawHand[0]  # 'L' or 'R'
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def current_team(self):
         doc = self.get_doc()
         team = (doc('div#meta p')
@@ -130,7 +130,7 @@ class Player:
         except Exception:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def draft_pick(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
@@ -143,7 +143,7 @@ class Player:
         else:
             return int(m.group(1))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def draft_class(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
@@ -155,7 +155,7 @@ class Player:
         else:
             return int(m.group(1))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def draft_team(self):
         doc = self.get_doc()
         rawDraft = (doc('div#meta p')
@@ -167,7 +167,7 @@ class Player:
         except Exception:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def college(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
@@ -176,7 +176,7 @@ class Player:
         college = re.search(r'College:\s*(\S+)', cleanedText).group(1)
         return college
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def high_school(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
@@ -185,7 +185,7 @@ class Player:
         hs = re.search(r'High School:\s*(\S+)', cleanedText).group(1)
         return hs
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
     def gamelog(self, year=None, kind='R'):
         """Gets the career gamelog of the given player.
@@ -203,7 +203,7 @@ class Player:
             df = df.query('year == @year').reset_index(drop=True)
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
     def passing(self, kind='R'):
         """Gets yearly passing stats for the player.
@@ -216,7 +216,7 @@ class Player:
         df = sportsref.utils.parse_table(table)
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
     def rushing_and_receiving(self, kind='R'):
         """Gets yearly rushing/receiving stats for the player.
@@ -254,7 +254,7 @@ class Player:
         else:
             return None
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def passing_plays(self, year):
         """Returns a pbp DataFrame of a player's passing plays in a season.
 
@@ -263,7 +263,7 @@ class Player:
         """
         return self._plays(year, 'passing')
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def rushing_plays(self, year):
         """Returns a pbp DataFrame of a player's rushing plays in a season.
 
@@ -272,7 +272,7 @@ class Player:
         """
         return self._plays(year, 'rushing')
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def receiving_plays(self, year):
         """Returns a pbp DataFrame of a player's receiving plays in a season.
 
@@ -281,7 +281,7 @@ class Player:
         """
         return self._plays(year, 'receiving')
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def splits(self, year=None):
         """Returns a DataFrame of splits data for a player-year.
 
@@ -299,7 +299,7 @@ class Player:
             df.split_id.fillna(method='ffill', inplace=True)
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def advanced_splits(self, year=None):
         """Returns a DataFrame of advanced splits data for a player-year.
 

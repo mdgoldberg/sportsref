@@ -7,7 +7,7 @@ import pandas as pd
 import sportsref
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def parse_play(details, hm, aw, is_hm, yr):
     """Parse play details from a play-by-play string describing a play; returns
     structured data in a dictionary.

@@ -8,7 +8,7 @@ import requests
 import sportsref
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 @sportsref.decorators.cache_html
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
@@ -198,7 +198,7 @@ def flatten_links(td, _recurse=False):
     return ''.join(_flattenC(c) for c in td.contents())
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def rel_url_to_id(url):
     """Converts a relative URL to a unique ID.
 
