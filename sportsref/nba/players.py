@@ -3,6 +3,7 @@ import re
 
 import numpy as np
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
@@ -11,8 +12,11 @@ __all__ = [
 ]
 
 
-@sportsref.decorators.memoized
-class Player:
+class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
+
+    """Each instance of this class represents an NBA player, uniquely
+    identified by a player ID. The instance methods give various data available
+    from the player's Basketball Reference player page."""
 
     def __init__(self, player_id):
         self.player_id = player_id
@@ -34,17 +38,17 @@ class Player:
     def __reduce__(self):
         return Player, (self.player_id,)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_doc(self):
         return pq(sportsref.utils.get_html(self.main_url))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def name(self):
         """Returns the name of the player as a string."""
         doc = self.get_doc()
         return doc('h1[itemprop="name"]').text()
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def age(self, year, month=10, day=1):
         """Returns the age of the player on a given date.
 
@@ -63,14 +67,14 @@ class Player:
         age = delta.days / 365.
         return age
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def position(self):
         """TODO: Docstring for position.
         :returns: TODO
         """
         raise Exception('not yet implemented - nba.Player.position')
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def height(self):
         """Returns the player's height (in inches).
         :returns: An int representing a player's height in inches.
@@ -83,7 +87,7 @@ class Player:
         except ValueError:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def weight(self):
         """Returns the player's weight (in pounds).
         :returns: An int representing a player's weight in pounds.
@@ -96,7 +100,7 @@ class Player:
         except ValueError:
             return np.nan
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def hand(self):
         """Returns the player's handedness.
         :returns: 'L' for left-handed, 'R' for right-handed.
@@ -105,7 +109,7 @@ class Player:
         hand = re.search(r'Shoots:\s*(L|R)', doc.text()).group(1)
         return hand
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def draft_pick(self):
         """Returns when in the draft the player was picked.
         :returns: TODO
@@ -129,37 +133,37 @@ class Player:
         df = sportsref.utils.parse_table(table)
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_per_game(self, kind='R'):
         """Returns a DataFrame of per-game box score stats."""
         return self._get_stats_table('per_game', kind=kind)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_totals(self, kind='R'):
         """Returns a DataFrame of total box score statistics by season."""
         return self._get_stats_table('totals', kind=kind)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_per36(self, kind='R'):
         """Returns a DataFrame of per-36-minutes stats."""
         return self._get_stats_table('per_minute', kind=kind)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_per100(self, kind='R'):
         """Returns a DataFrame of per-100-possession stats."""
         return self._get_stats_table('per_poss', kind=kind)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_advanced(self, kind='R'):
         """Returns a DataFrame of advanced stats."""
         return self._get_stats_table('advanced', kind=kind)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_shooting(self, kind='R'):
         """Returns a DataFrame of shooting stats."""
         return self._get_stats_table('shooting', kind=kind)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_pbp(self, kind='R'):
         """Returns a DataFrame of play-by-play stats."""
         return self._get_stats_table('advanced_pbp', kind=kind)

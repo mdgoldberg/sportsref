@@ -9,11 +9,13 @@ setup(name='sportsref',
       packages=find_packages(),
       install_requires=[
           'appdirs',
+          'mementos',
           'numexpr',
           'numpy',
           'pandas',
           'pyquery',
           'requests',
           'scipy',
+          'six',
       ]
       )

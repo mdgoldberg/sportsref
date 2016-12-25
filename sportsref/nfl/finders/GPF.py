@@ -14,7 +14,7 @@ GPF_URL = ('http://www.pro-football-reference.com/'
 GPF_CONSTANTS_FILENAME = 'GPFConstants.json'
 
 
-@decorators.memoized
+@decorators.memoize
 def GamePlayFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 

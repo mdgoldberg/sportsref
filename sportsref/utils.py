@@ -8,7 +8,7 @@ import requests
 import sportsref
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 @sportsref.decorators.cache_html
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
@@ -27,7 +27,11 @@ def get_html(url):
         numTries += 1
         start = time.time()
         try:
-            html = requests.get(url).content
+            response = requests.get(url)
+            if 400 <= response.status_code < 500:
+                raise ValueError(
+                    "Invalid ID led to an error in fetching HTML")
+            html = response.text
             html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
             errnum = e.args[0].args[1].errno
@@ -113,7 +117,7 @@ def parse_table(table, flatten=True):
         bs_id_col = 'boxscore_word'
     elif 'game_date' in df.columns:
         bs_id_col = 'game_date'
-    if bs_id_col:
+    if flatten and bs_id_col:
         df = df.loc[df[bs_id_col].notnull()]  # drop bye weeks
         df['year'] = df[bs_id_col].str[:4].astype(int)
         df['month'] = df[bs_id_col].str[4:6].astype(int)
@@ -127,11 +131,11 @@ def parse_table(table, flatten=True):
             df.ix[:, col] = df.ix[:, col].str.strip()
 
     # player -> player_id
-    if 'player' in df.columns:
+    if flatten and 'player' in df.columns:
         df.rename(columns={'player': 'player_id'}, inplace=True)
 
     # team_name -> team_id
-    if 'team_name' in df.columns:
+    if flatten and 'team_name' in df.columns:
         df.rename(columns={'team_name': 'team_id'}, inplace=True)
 
     # get rid of faulty rows
@@ -194,7 +198,7 @@ def flatten_links(td, _recurse=False):
     return ''.join(_flattenC(c) for c in td.contents())
 
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 def rel_url_to_id(url):
     """Converts a relative URL to a unique ID.
 
