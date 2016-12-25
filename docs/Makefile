@@ -19,17 +19,16 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-GH_PAGES_SOURCES = docs/Makefile docs/source
+GH_PAGES_SOURCES = Makefile source
 
 gh-pages:
 	git checkout gh-pages
 	rm -rf build _sources _static
-	git checkout master $(GH_PAGES_SOURCES)
+	git checkout develop $(GH_PAGES_SOURCES)
 	git reset HEAD
 	make html
 	mv -fv build/html/* ./
 	rm -rf $(GH_PAGES_SOURCES) build
 	git add -A
-	git commit -m "Generated gh-pages for " \
-		"`git log master -1 --oneline --abbrev-commit`" && git push origin gh-pages
-	git checkout master
+	git commit -m "Generated gh-pages for `git log develop -1 --oneline --abbrev-commit`" && git push origin gh-pages
+	git checkout develop
