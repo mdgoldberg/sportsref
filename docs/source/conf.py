@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # sportsref documentation build configuration file, created by
-# sphinx-quickstart on Sat Dec 24 23:14:13 2016.
+# sphinx-quickstart on Sun Dec 25 04:56:24 2016.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -71,7 +71,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
