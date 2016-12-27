@@ -13,6 +13,26 @@ __all__ = [
 
 
 @sportsref.decorators.memoized
+def get_season_boxscores_IDs(year):
+    """Returns a series of boxscore IDs for a given season.
+
+    :year: The year of the season in question (as an int).
+    :returns: A pandas series of boxscore IDs indexed by week number
+    """
+    url = sportsref.nfl.BASE_URL + '/years/{}/games.htm'.format(year)
+    doc = pq(sportsref.utils.get_html(url))
+    table = doc('table#games')
+    df = sportsref.utils.parse_table(table)
+    df['week_num'] = df['week_num'].replace(to_replace={'WildCard': '18',
+                                                        'Division': '19',
+                                                        'ConfChamp':'20',
+                                                        'SuperBowl':'21'})
+    df['week_num'] = df['week_num'].apply(pd.to_numeric)
+    df.set_index(['week_num'], inplace=True)
+    return df['boxscore_id']
+
+
+@sportsref.decorators.memoized
 class BoxScore:
 
     def __init__(self, boxscore_id):
@@ -173,15 +193,17 @@ class BoxScore:
             #team = self.home() if h else self.away()
             for i, row in enumerate(table('tbody tr').items()):
                 datum = {}
-                datum['player_id'] = sportsref.utils.rel_url_to_id(
-                    row('a')[0].attrib['href']
-                )
-                datum['playerName'] = row('th').text()
-                datum['position'] = row('td').text()
-                datum['team'] = team
-                datum['home'] = (h == 1)
-                datum['offense'] = (i <= 10)
-                data.append(datum)
+                # few cases where starters table has a blank name
+                if len(row('a')) > 0:
+                    datum['player_id'] = sportsref.utils.rel_url_to_id(
+                        row('a')[0].attrib['href']
+                    )
+                    datum['playerName'] = row('th').text()
+                    datum['position'] = row('td').text()
+                    datum['team'] = team
+                    datum['home'] = (h == 1)
+                    datum['offense'] = (i <= 10)
+                    data.append(datum)
         df = pd.DataFrame(data)
         if not df.empty:
             df['bsID'] = self.boxscore_id
@@ -692,9 +714,9 @@ class BoxScore:
             df['bsID'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
-            df['off_pct'] = df['off_pct'] * 100
-            df['def_pct'] = df['def_pct'] * 100
-            df['st_pct'] = df['st_pct'] * 100
+            df['off_pct'] = df['off_pct'].astype('float')/100
+            df['def_pct'] = df['def_pct'].astype('float')/100
+            df['st_pct'] = df['st_pct'].astype('float')/100
             df.rename(columns={'pos':'position',
                                'offense':'offSnaps',
                                'off_pct':'offSnapsPct',

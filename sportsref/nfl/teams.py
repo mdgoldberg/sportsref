@@ -160,14 +160,16 @@ class Team:
             }
             df['status'] = df.value.str[1:].map(statusMap)
             didNotPlayMap = {
-                1:True,
-                0:False
+                '1':True,
+                '0':False
             }
             df['didNotPlay'] = df.value.str[0].map(didNotPlayMap)
-            df['didNotPlay'] = df['didNotPlay'].astype(bool)
-            df.drop(['variable','value'], axis=1, inplace=True)
+            #df['didNotPlay'] = df['didNotPlay'].astype(bool)
+            #df.drop(['variable','value'], axis=1, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
+            # drop rows if player is None
+            df = df[df['playerID'] != 'None'].reset_index(drop=True)
         # set col order
         cols = ['season', 'week', 'team', 'playerID', 'status', 'didNotPlay']
         for col in cols:
@@ -184,7 +186,7 @@ class Team:
         """
         doc = self.get_year_doc('{}_roster'.format(year))
         table = doc('table#games_played_team')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if not df.empty:
             df['season'] = int(year)
             df['team'] = self.teamID
@@ -201,7 +203,7 @@ class Team:
                                'college_id':'college',
                                'draft_info':'draftInfo'
                               }, inplace=True)
-        cols = ['season', 'team', 'playerID',
+        cols = ['season', 'team', 'player_id',
                 'playerName', 'position', 'uniformNumber', 'gamesPlayed', 'gamesStarted',
                 'pfrApproxValue', 'experience', 'age', 'birthDate', 'height', 'weight',
                 'college', 'draftInfo', 'salary',]

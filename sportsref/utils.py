@@ -130,7 +130,8 @@ def parse_table(table, flatten=True):
     def convertPct(val):
         m = re.search(r'([-\d]+)\%', str(val))
         return float(m.group(1)) / 100. if m else val
-    df = df.applymap(convertPct)
+    #df = df.applymap(convertPct)
+    df = df.replace('%','',regex=True)
 
     return df
 
