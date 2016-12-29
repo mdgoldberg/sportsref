@@ -108,36 +108,6 @@ class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
         return away if home_won else home
 
     @sportsref.decorators.memoize
-    def playoff_series_results(self):
-        """Returns the winning and losing team of every playoff series in the
-        given year.
-        :returns: Returns a list of tuples of the form
-        (home team ID, away team ID, bool(home team won)).
-        """
-        doc = self.get_main_doc()
-        table = doc('table#all_playoffs')
-
-        # get winners/losers
-        atags = [tr('td:eq(1) a')
-                 for tr in table.items('tr')
-                 if len(tr('td')) == 3]
-        relURLs = [(a.eq(0).attr['href'], a.eq(1).attr['href']) for a in atags]
-        wl = [tuple(map(sportsref.utils.rel_url_to_id, ru)) for ru in relURLs]
-
-        # get home team
-        atags = table('tr.toggleable table tr:eq(0) td:eq(0) a')
-        bsIDs = [sportsref.utils.rel_url_to_id(a.attrib['href'])
-                 for a in atags]
-        home = np.array([sportsref.nba.BoxScore(bs).home() for bs in bsIDs])
-
-        # get winners and losers
-        win, loss = map(np.array, zip(*wl))
-        homeWon = home == win
-        ret = zip(home, np.where(homeWon, loss, win), homeWon)
-
-        return ret
-
-    @sportsref.decorators.memoize
     def _get_team_stats_table(self, selector):
         """Helper function for stats tables on season pages. Returns a
         DataFrame."""
