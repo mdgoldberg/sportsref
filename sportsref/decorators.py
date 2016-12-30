@@ -12,12 +12,10 @@ import mementos
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
-import wrapt
 
 import sportsref
 
 
-@wrapt.decorator
 def switch_to_dir(dirPath):
     """
     Decorator that switches to given directory before executing function, and
@@ -104,7 +102,6 @@ def _cacheValid_cfb(ct, mt, fn):
     return True
 
 
-@wrapt.decorator
 def cache_html(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
     the user cache determined by the appdirs package.
@@ -170,13 +167,10 @@ def get_class_instance_key(cls, args, kwargs):
     return tuple(sorted(l))
 
 
-# For classes where there should only be one instance per unique constructor
-# call, inherit from six.with_metaclass(sportsref.decorators.Cached, object)
-# (technically not a decorator, but it's similar enough)
+# technically not a decorator, but it's similar enough
 Cached = mementos.memento_factory('Cached', get_class_instance_key)
 
 
-@wrapt.decorator
 def memoize(fun):
     """A decorator for memoizing functions."""
     @functools.wraps(fun)
@@ -230,7 +224,6 @@ def memoize(fun):
     return wrapper
 
 
-@wrapt.decorator
 def kind_rpb(include_type=False):
     def decorator(fun):
         """Supports functions that return a DataFrame and have a `kind` keyword

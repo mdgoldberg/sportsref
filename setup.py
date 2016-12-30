@@ -17,6 +17,5 @@ setup(name='sportsref',
           'requests',
           'scipy',
           'six',
-          'wrapt',
       ]
       )
