@@ -3,6 +3,7 @@ appnope==0.1.0
 backports-abc==0.5
 backports.shutil-get-terminal-size==1.0.0
 bleach==1.5.0
+boltons==16.5.1
 certifi==2016.9.26
 configparser==3.5.0
 cssselect==1.0.0
@@ -15,13 +16,13 @@ ipykernel==4.5.2
 ipython==5.1.0
 ipython-genutils==0.1.0
 ipywidgets==5.2.2
-Jinja2==2.8
+Jinja2==2.8.1
 jsonschema==2.5.1
 jupyter==1.0.0
 jupyter-client==4.4.0
 jupyter-console==5.0.0
 jupyter-core==4.2.1
-lxml==3.7.0
+lxml==3.7.1
 MarkupSafe==0.23
 mementos==1.2.2
 mistune==0.7.3
@@ -30,7 +31,7 @@ nbformat==4.2.0
 notebook==4.3.1
 numexpr==2.6.1
 numpy==1.11.3
-pandas==0.19.1
+pandas==0.19.2
 pandocfilters==1.4.1
 pathlib2==2.1.0
 pexpect==4.2.1
@@ -48,6 +49,7 @@ scipy==0.18.1
 simplegeneric==0.8.1
 singledispatch==3.4.0.3
 six==1.10.0
+-e git+git@github.com:mdgoldberg/sportsref.git#egg=sportsref
 terminado==0.6
 testpath==0.3
 tornado==4.4.2

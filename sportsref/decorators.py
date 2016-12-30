@@ -2,12 +2,12 @@ import codecs
 import copy
 import datetime
 import hashlib
-import functools
 import os
 import re
 import urlparse
 
 import appdirs
+from boltons import funcutils
 import mementos
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ def switch_to_dir(dirPath):
     """
 
     def decorator(func):
-        @functools.wraps(func)
+        @funcutils.wraps(func)
         def wrapper(*args, **kwargs):
             orig_cwd = os.getcwd()
             os.chdir(dirPath)
@@ -114,7 +114,7 @@ def cache_html(func):
     def cacheValidFuncs(s):
         return eval('_cacheValid_' + s)
 
-    @functools.wraps(func)
+    @funcutils.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
         sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' +
@@ -173,7 +173,7 @@ Cached = mementos.memento_factory('Cached', get_class_instance_key)
 
 def memoize(fun):
     """A decorator for memoizing functions."""
-    @functools.wraps(fun)
+    @funcutils.wraps(fun)
     def wrapper(*args, **kwargs):
 
         # deal with lists in args
@@ -231,7 +231,7 @@ def kind_rpb(include_type=False):
         ('B'). If given 'B', it will call the function with both 'R' and 'P'
         and concatenate the results.
         """
-        @functools.wraps(fun)
+        @funcutils.wraps(fun)
         def wrapper(*args, **kwargs):
             kind = kwargs.get('kind', 'R').upper()
             if kind == 'B':
