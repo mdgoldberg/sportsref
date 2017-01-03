@@ -177,6 +177,15 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         return college
 
     @sportsref.decorators.memoize
+    def collegeid(self):
+        doc = self.get_doc()
+        rawText = (doc('div#meta p')
+                   .filter(lambda i, e: 'College' in e.text_content()))
+        cleanedText = sportsref.utils.flatten_links(rawText)
+        collegeid = re.search(r'\((.*?)\)',cleanedText).group(1)
+        return collegeid
+
+    @sportsref.decorators.memoize
     def high_school(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
