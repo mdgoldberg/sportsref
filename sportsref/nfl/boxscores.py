@@ -1,10 +1,12 @@
+import future
+import future.utils
+
 import re
 import datetime
 
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
@@ -13,7 +15,9 @@ __all__ = [
 ]
 
 
-class BoxScore(six.with_metaclass(sportsref.decorators.Cached, object)):
+class BoxScore(
+    future.utils.with_metaclass(sportsref.decorators.Cached, object)
+):
 
     def __init__(self, boxscore_id):
         self.boxscore_id = boxscore_id

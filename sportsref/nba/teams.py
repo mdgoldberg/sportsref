@@ -1,11 +1,13 @@
+import future
+import future.utils
+
 import numpy as np
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
 
-class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
+class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, teamID):
         self.teamID = teamID

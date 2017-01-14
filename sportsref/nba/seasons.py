@@ -1,11 +1,13 @@
+import future
+import future.utils
+
 import pandas as pd
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
 
-class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
+class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     """Object representing a given NBA season."""
 

@@ -10,6 +10,7 @@ setup(name='sportsref',
       install_requires=[
           'appdirs',
           'boltons',
+          'future',
           'mementos',
           'numexpr',
           'numpy',
@@ -17,6 +18,5 @@ setup(name='sportsref',
           'pyquery',
           'requests',
           'scipy',
-          'six',
       ]
       )

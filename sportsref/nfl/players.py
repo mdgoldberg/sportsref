@@ -1,10 +1,12 @@
+import future
+import future.utils
+
 import datetime
 import re
 import urlparse
 
 import numpy as np
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
@@ -13,7 +15,7 @@ __all__ = [
 ]
 
 
-class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
+class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, player_id):
         self.player_id = player_id
