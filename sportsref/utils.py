@@ -61,14 +61,14 @@ def parseTable(table):
         return pd.DataFrame()
     # get columns
     columns = [c.attrib['data-stat']
-               for c in table('thead tr[class=""] th[data-stat]')]
+               for c in table('thead tr:not([class]) th[data-stat]')]
 
     # get data
     rows = list(table('tbody tr')
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
-        [flattenLinks(td) for td in row.items('td')]
+        [flattenLinks(td) for td in row.items('th, td')]
         for row in rows
     ]
 
@@ -83,17 +83,19 @@ def parseTable(table):
         for cls in row.attr['class'].split()
     )
     for cls in allClasses:
-        df['hasClass_' + cls] = [
-            row.attr['class'] and
-            cls in row.attr['class'].split()
+        df['has_class_' + cls] = [
+            bool(row.attr['class'] and
+                 cls in row.attr['class'].split())
             for row in rows
-        ]
+            ]
 
     # small fixes to DataFrame
 
     # year_id -> year (as int)
     if 'year_id' in df.columns:
         df.rename(columns={'year_id': 'year'}, inplace=True)
+        # replace college stars which designate playoff stats added in to table
+        df.year = df.year.str.replace('*', '')
         df.year = df.year.fillna(method='ffill')
         if df.year.dtype == basestring:
             df.year = df.year.map(lambda s: s[:4]).astype(int)
@@ -109,7 +111,7 @@ def parseTable(table):
 
     return df
 
-def flattenLinks(td):
+def flattenLinks(td, _recurse=False):
     """Flattens relative URLs within text of a table cell to IDs and returns
     the result.
 
@@ -128,8 +130,8 @@ def flattenLinks(td):
             return c.text_content()
 
     # if there's no text, just return None
-    if not td.text():
-        return None
+    if not td or not td.text():
+        return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
 

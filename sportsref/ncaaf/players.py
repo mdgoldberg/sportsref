@@ -1,6 +1,6 @@
 import re
 import collections
-
+from lxml import etree
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
@@ -33,52 +33,46 @@ class Player:
     @sportsref.decorators.memoized
     def name(self):
         doc = self.getDoc()
-        name = doc('div#info_box h1:first').text()
+        name = doc('div#meta h1:first').text()
         return name
 
     @sportsref.decorators.memoized
     def position(self):
         doc = self.getDoc()
-        rawText = (doc('div#info_box p')
+        rawText = (doc('div#meta p')
                    .filter(lambda i,e: 'Position' in e.text_content())
                    .text())
-        rawPos = re.search(r'Position: (\S+)', rawText, re.I).group(1)
-        allPositions = rawPos.split('-')
-        # TODO: right now, returning just the primary position for those with
-        # multiple positions
+        rawPos = re.search(r'Position : (\S+)', rawText, re.I).group(1)
+        allPositions = rawPos.split('/')
+        # TODO: returning just the first position for those with
+        # multiple positions. Should return the last position played
         return allPositions[0]
 
     @sportsref.decorators.memoized
     def height(self):
         doc = self.getDoc()
+        rawText = doc('div#meta p span[itemprop="height"]').text()
         try:
-            rawText = (doc('div#info_box p')
-                       .filter(
-                           lambda i,e: 'height:' in e.text_content().lower()
-                       ).text())
-            rawHeight = (re.search(r'Height: (\d\-\d{1,2})', rawText, re.I)
-                         .group(1))
-        except AttributeError:
+            feet, inches = map(int, rawText.split('-'))
+            return feet * 12 + inches
+        except ValueError:
             return np.nan
-        feet, inches = map(int, rawHeight.split('-'))
-        return feet*12 + inches
 
     @sportsref.decorators.memoized
     def weight(self):
         doc = self.getDoc()
+        rawText = doc('div#meta p span[itemprop="weight"]').text()
         try:
-            rawText = (doc('div#info_box p')
-                       .filter(lambda i,e: 'Weight:' in e.text_content())
-                       .text())
-            rawWeight = re.search(r'Weight: (\S+)', rawText, re.I).group(1)
+            weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
+            return int(weight)
         except AttributeError:
             return np.nan
-        return int(rawWeight)
 
     @sportsref.decorators.memoized
     def draftPick(self):
         doc = self.getDoc()
-        rawDraft = doc('div#info_box > p:contains("Draft")').text()
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i, e: 'Draft' in e.text_content()).text())
         m = re.search(r'Draft:.*?, (\d+).*?overall.*', rawDraft, re.I)
         # if not drafted or taken in supplemental draft, return NaN
         if not m:
@@ -89,7 +83,8 @@ class Player:
     @sportsref.decorators.memoized
     def draftClass(self):
         doc = self.getDoc()
-        rawDraft = doc('div#info_box > p:contains("Draft")').text()
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i, e: 'Draft' in e.text_content()).text())
         m = re.search(r'Draft:.*?of the (\d+) NFL', rawDraft, re.I)
         # if not drafted or taken in supplemental draft, return NaN
         if not m:
@@ -100,7 +95,8 @@ class Player:
     @sportsref.decorators.memoized
     def draftTeam(self):
         doc = self.getDoc()
-        rawDraft = doc('div#info_box > p:contains("Draft")')
+        rawDraft = (doc('div#meta p')
+                    .filter(lambda i, e: 'Draft' in e.text_content()))
         draftStr = sportsref.utils.flattenLinks(rawDraft)
         m = re.search(r'by the (\w{3})', draftStr)
         if not m:
@@ -110,10 +106,12 @@ class Player:
 
     @sportsref.decorators.memoized
     def college(self):
-        """Gets the last college that the player played for."""
+        """Gets the last college (ID) that the player played for."""
         doc = self.getDoc()
-        aTag = doc('div#info_box > p:first a:last')
-        college = sportsref.utils.relURLToID(aTag.attr['href'])
+        rawText = (doc('div#meta p')
+                   .filter(lambda i, e: 'School' in e.text_content()))
+        cleanedText = sportsref.utils.flattenLinks(rawText)
+        college = re.search(r'School:\s*(\S+)', cleanedText).group(1)
         return college
 
     @sportsref.decorators.memoized
@@ -139,6 +137,13 @@ class Player:
         doc = self.getDoc()
         table = doc('#passing')
         df = sportsref.utils.parseTable(table)
+        if df.empty and table.length > 0:
+            tree = etree.fromstring(str(table))
+            comments = tree.xpath('//comment()')
+            comment = etree.tostring(comments[0])
+            contents = comment.replace("<!--", "").replace("-->", "")
+            table = pq(contents)
+            df = sportsref.utils.parseTable(table)
         return df
 
     @sportsref.decorators.memoized
@@ -147,8 +152,17 @@ class Player:
         :returns: Pandas DataFrame with stats.
         """
         doc = self.getDoc()
-        table = doc('#rushing')
+        table = doc('#all_rushing')
+        if not table:
+            table = doc('#all_receiving')
         df = sportsref.utils.parseTable(table)
+        if df.empty and table.length > 0:
+            tree = etree.fromstring(str(table))
+            comments = tree.xpath('//comment()')
+            comment = etree.tostring(comments[0])
+            contents = comment.replace("<!--", "").replace("-->", "")
+            table = pq(contents)
+            df = sportsref.utils.parseTable(table)
         return df
 
     @sportsref.decorators.memoized
@@ -157,8 +171,66 @@ class Player:
         :returns: Pandas DataFrame with defensive stats.
         """
         doc = self.getDoc()
-        table = doc('#defense')
+        table = doc('#all_defense')
         df = sportsref.utils.parseTable(table)
+        if df.empty and table.length > 0:
+            tree = etree.fromstring(str(table))
+            comments = tree.xpath('//comment()')
+            comment = etree.tostring(comments[0])
+            contents = comment.replace("<!--", "").replace("-->", "")
+            table = pq(contents)
+            df = sportsref.utils.parseTable(table)
+        return df
+
+    @sportsref.decorators.memoized
+    def scoring(self):
+        """Gets yearly scoring stats for the player.
+        :returns: Pandas DataFrame with defensive stats.
+        """
+        doc = self.getDoc()
+        table = doc('#all_scoring')
+        df = sportsref.utils.parseTable(table)
+        if df.empty and table.length > 0:
+            tree = etree.fromstring(str(table))
+            comments = tree.xpath('//comment()')
+            comment = etree.tostring(comments[0])
+            contents = comment.replace("<!--", "").replace("-->", "")
+            table = pq(contents)
+            df = sportsref.utils.parseTable(table)
+        return df
+
+    @sportsref.decorators.memoized
+    def punt_kick_returns(self):
+        """Gets yearly scoring stats for the player.
+        :returns: Pandas DataFrame with defensive stats.
+        """
+        doc = self.getDoc()
+        table = doc('#all_punt_ret')
+        df = sportsref.utils.parseTable(table)
+        if df.empty and table.length > 0:
+            tree = etree.fromstring(str(table))
+            comments = tree.xpath('//comment()')
+            comment = etree.tostring(comments[0])
+            contents = comment.replace("<!--", "").replace("-->", "")
+            table = pq(contents)
+            df = sportsref.utils.parseTable(table)
+        return df
+
+    @sportsref.decorators.memoized
+    def kicking(self):
+        """Gets yearly scoring stats for the player.
+        :returns: Pandas DataFrame with defensive stats.
+        """
+        doc = self.getDoc()
+        table = doc('#all_kicking')
+        df = sportsref.utils.parseTable(table)
+        if df.empty and table.length > 0:
+            tree = etree.fromstring(str(table))
+            comments = tree.xpath('//comment()')
+            comment = etree.tostring(comments[0])
+            contents = comment.replace("<!--", "").replace("-->", "")
+            table = pq(contents)
+            df = sportsref.utils.parseTable(table)
         return df
 
     def awards(self):
@@ -174,3 +246,39 @@ class Player:
         for yr, award in zip(*[iter(results)]*2):
             ret[int(yr)].append(award)
         return dict(ret)
+
+    @sportsref.decorators.memoized
+    def all_annual_stats(self):
+        """Gets yearly all annual stats for the player by grabbing
+        each individual dataset and then merging them for full years.
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with all annual stats.
+        """
+        dfPassing = self.passing()
+        # dfPassing = dfPassing.ix[dfPassing["has_class_full_table"]]
+        dfRushRec = self.rushing_and_receiving()
+        # dfRushRec = dfRushRec.ix[dfRushRec["has_class_full_table"]]
+        dfDefense = self.defense()
+        # dfDefense = dfDefense.ix[dfDefense["has_class_full_table"]]
+        dfReturns = self.punt_kick_returns()
+        # dfReturns = dfReturns.ix[dfReturns["has_class_full_table"]]
+        dfKicking = self.kicking()
+        # dfKicking = dfKicking.ix[dfKicking["has_class_full_table"]]
+        dfScoring = self.scoring()
+        # dfScoring = dfScoring.ix[dfScoring["has_class_full_table"]]
+        # the mergeList declares the common fields to merge on
+        mergeList = ['year', 'school_name', 'conf_abbr', 'class', 'pos', 'g']
+        dfAll = pd.DataFrame(columns=mergeList)
+        if not dfPassing.empty:
+            dfAll = dfAll.merge(dfPassing, 'outer', mergeList)
+        if not dfRushRec.empty:
+            dfAll = dfAll.merge(dfRushRec, 'outer', mergeList)
+        if not dfDefense.empty:
+            dfAll = dfAll.merge(dfDefense, 'outer', mergeList)
+        if not dfReturns.empty:
+            dfAll = dfAll.merge(dfReturns, 'outer', mergeList)
+        if not dfKicking.empty:
+            dfAll = dfAll.merge(dfKicking, 'outer', mergeList)
+        if not dfScoring.empty:
+            dfAll = dfAll.merge(dfScoring, 'outer', mergeList)
+        return dfAll
