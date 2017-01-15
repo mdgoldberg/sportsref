@@ -19,6 +19,7 @@ docutils==0.13.1
 entrypoints==0.2.2
 enum34==1.1.6
 functools32==3.2.3.post2
+future==0.16.0
 futures==3.0.5
 graphviz==0.5.2
 HeapDict==1.0.0
