@@ -240,6 +240,49 @@ class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
         return df.ix[df.player_id == 'Team Stats'].iloc[0]
 
     @sportsref.decorators.memoize
+    def injuries(self, year):
+        """ This gets the injuries from pro-football-reference for each team
+
+        :param year: year to query
+        :return: the pfrid and injury status per week for the year
+        """
+        # set link and table_name and then get the pyquery table
+        link = sportsref.nfl.BASE_URL + \
+               '/teams/{}/{}_injuries.htm'.format(self.teamID, str(year))
+        doc = pq(sportsref.utils.get_html(link))
+        table = doc('#team_injuries')
+
+        # check if valid return
+        if not len(table):
+            return pd.DataFrame()
+        else:
+            # identify columns, rows, data, and make dataframe
+            columns = [c.text() for c in table('thead tr th').items()]
+            rows = list(table('tbody tr').items())
+            data = [[(td.attr('data-append-csv') if td.attr('class') == "left "
+                      else (
+            td.attr('data-tip') if "dnp" not in td.attr('class')
+            else "dnp;" + td.attr('data-tip')))
+                     for td in row.items('th,td')] for row in rows]
+            injuries_one_team = pd.DataFrame(data, columns=columns)
+            return injuries_one_team
+
+    @sportsref.decorators.memoize
+    def snap_count(self, year):
+        """ get snaps per team per year
+
+        :param year: year of query
+        :return: dataframe with pfrID, snap count (sum of just off and defense)
+        """
+        # set link and table_name and then get the pyquery table
+        link = sportsref.nfl.BASE_URL + \
+               '/teams/{}/{}-snap-counts.htm'.format(self.teamID, str(year))
+        doc = pq(sportsref.utils.get_html(link))
+        table = doc('#all_snap_counts')
+        snap_counts = sportsref.utils.parse_table(table)
+        return snap_counts
+
+    @sportsref.decorators.memoize
     def opp_stats(self, year):
         """Returns a Series (dict-like) of the team's opponent's stats from the
         team-season page.
