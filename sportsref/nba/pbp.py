@@ -8,7 +8,7 @@ import pandas as pd
 
 import sportsref
 
-player_re = r'\w{0,7}\d{2}'
+PLAYER_RE = r'\w{0,7}\d{2}'
 
 
 @sportsref.decorators.memoize
@@ -39,10 +39,10 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing field goal attempts
     shotRE = (r'(?P<shooter>{0}) (?P<is_fgm>makes|misses) '
-              '(?P<is_three>2|3)\-pt shot').format(player_re)
+              '(?P<is_three>2|3)\-pt shot').format(PLAYER_RE)
     distRE = r' (?:from (?P<shot_dist>\d+) ft|at rim)'
-    assistRE = r' \(assist by (?P<assister>{0})\)'.format(player_re)
-    blockRE = r' \(block by (?P<blocker>{0})\)'.format(player_re)
+    assistRE = r' \(assist by (?P<assister>{0})\)'.format(PLAYER_RE)
+    blockRE = r' \(block by (?P<blocker>{0})\)'.format(PLAYER_RE)
     shotRE = r'{0}{1}(?:{2}|{3})?'.format(shotRE, distRE, assistRE, blockRE)
     m = re.match(shotRE, details, re.IGNORECASE)
     if m:
@@ -61,7 +61,7 @@ def parse_play(details, hm, aw, is_hm, yr):
     # parsing jump balls
     jumpRE = ((r'Jump ball: (?P<away_jumper>{0}) vs\. (?P<home_jumper>{0})'
                r'(?: \((?P<gains_poss>{0}) gains possession\))?')
-              .format(player_re))
+              .format(PLAYER_RE))
     m = re.match(jumpRE, details, re.IGNORECASE)
     if m:
         p['is_jump_ball'] = True
@@ -70,7 +70,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing rebounds
     rebRE = (r'(?P<is_oreb>Offensive|Defensive) rebound'
-             r' by (?P<rebounder>{0}|Team)').format(player_re)
+             r' by (?P<rebounder>{0}|Team)').format(PLAYER_RE)
     m = re.match(rebRE, details, re.I)
     if m:
         p['is_reb'] = True
@@ -84,7 +84,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing shooting fouls
     shotFoulRE = (r'Shooting(?P<is_block_foul> block)? foul by (?P<fouler>{0})'
-                  r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(player_re)
+                  r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(shotFoulRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -100,7 +100,7 @@ def parse_play(details, hm, aw, is_hm, yr):
     ftRE = (r'(?P<ft_shooter>{}) (?P<is_ftm>makes|misses) '
             r'(?P<is_tech_ft>technical )?(?P<is_flag_ft>flagrant )?'
             r'(?P<is_clearpath_ft>clear path )?free throw'
-            r'(?: (?P<ft_num>\d+) of (?P<tot_fta>\d+))?').format(player_re)
+            r'(?: (?P<ft_num>\d+) of (?P<tot_fta>\d+))?').format(PLAYER_RE)
     m = re.match(ftRE, details, re.I)
     if m:
         p['is_fta'] = True
@@ -119,7 +119,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing substitutions
     subRE = (r'(?P<sub_in>{0}) enters the game for '
-             r'(?P<sub_out>{0})').format(player_re)
+             r'(?P<sub_out>{0})').format(PLAYER_RE)
     m = re.match(subRE, details, re.I)
     if m:
         p['is_sub'] = True
@@ -129,9 +129,9 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing turnovers
     toReasons = (r'(?P<to_type>[^;]+)(?:; steal by '
-                 r'(?P<stealer>{0}))?').format(player_re)
+                 r'(?P<stealer>{0}))?').format(PLAYER_RE)
     toRE = (r'Turnover by (?P<to_by>{}|Team) '
-            r'\((?:{})\)').format(player_re, toReasons)
+            r'\((?:{})\)').format(PLAYER_RE, toReasons)
     m = re.match(toRE, details, re.I)
     if m:
         p['is_to'] = True
@@ -156,7 +156,7 @@ def parse_play(details, hm, aw, is_hm, yr):
     # parsing offensive fouls
     offFoulRE = (r'Offensive(?P<is_charge> charge)? foul '
                  r'by (?P<to_by>{0})'
-                 r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(player_re)
+                 r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(offFoulRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -173,7 +173,7 @@ def parse_play(details, hm, aw, is_hm, yr):
     # parsing personal fouls
     foulRE = (r'Personal (?P<is_take_foul>take )?(?P<is_block_foul>block )?'
               r'foul by (?P<fouler>{0})(?: \(drawn by '
-              r'(?P<drew_foul>{0})\))?').format(player_re)
+              r'(?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(foulRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -187,7 +187,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # TODO: parsing double personal fouls
     # double_foul_re = (r'Double personal foul by (?P<fouler1>{0}) and '
-    #                   r'(?P<fouler2>{0})').format(player_re)
+    #                   r'(?P<fouler2>{0})').format(PLAYER_RE)
     # m = re.match(double_Foul_re, details, re.I)
     # if m:
     #     p['is_foul'] = True
@@ -196,7 +196,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing loose ball fouls
     looseBallRE = (r'Loose ball foul by (?P<fouler>{0})'
-                   r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(player_re)
+                   r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(looseBallRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -211,7 +211,7 @@ def parse_play(details, hm, aw, is_hm, yr):
     # parsing away from play fouls
     awayFromBallRE = ((r'Away from play foul by (?P<fouler>{0})'
                        r'(?: \(drawn by (?P<drew_foul>{0})\))?')
-                      .format(player_re))
+                      .format(PLAYER_RE))
     m = re.match(awayFromBallRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -224,7 +224,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing inbound fouls
     inboundRE = (r'Inbound foul by (?P<fouler>{0})'
-                 r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(player_re)
+                 r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(inboundRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -237,7 +237,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing flagrant fouls
     flagrantRE = (r'Flagrant foul type (?P<flag_type>1|2) by (?P<fouler>{0})'
-                  r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(player_re)
+                  r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(flagrantRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -248,7 +248,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing clear path fouls
     clearPathRE = (r'Clear path foul by (?P<fouler>{0})'
-                   r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(player_re)
+                   r'(?: \(drawn by (?P<drew_foul>{0})\))?').format(PLAYER_RE)
     m = re.match(clearPathRE, details, re.I)
     if m:
         p['is_foul'] = True
@@ -280,7 +280,7 @@ def parse_play(details, hm, aw, is_hm, yr):
               r'(?P<is_delay>Delay )?'
               r'(?P<is_unsport>Non unsport )?'
               r'tech(?:nical)? foul by '
-              r'(?P<fouler>{0}|Team)').format(player_re)
+              r'(?P<fouler>{0}|Team)').format(PLAYER_RE)
     m = re.match(techRE, details, re.I)
     if m:
         p['is_tech_foul'] = True
@@ -294,7 +294,7 @@ def parse_play(details, hm, aw, is_hm, yr):
         return p
 
     # parsing ejections
-    ejectRE = r'(?P<ejectee>{0}) ejected from game'.format(player_re)
+    ejectRE = r'(?P<ejectee>{0}) ejected from game'.format(PLAYER_RE)
     m = re.match(ejectRE, details, re.I)
     if m:
         p['is_ejection'] = True
@@ -303,7 +303,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing defensive 3 seconds techs
     def3TechRE = (r'(?:Def 3 sec tech foul|Defensive three seconds)'
-                  r' by (?P<fouler>{})').format(player_re)
+                  r' by (?P<fouler>{})').format(PLAYER_RE)
     m = re.match(def3TechRE, details, re.I)
     if m:
         p['is_tech_foul'] = True
@@ -314,7 +314,7 @@ def parse_play(details, hm, aw, is_hm, yr):
 
     # parsing violations
     violRE = (r'Violation by (?P<violator>{0}|Team) '
-              r'\((?P<viol_type>.*)\)').format(player_re)
+              r'\((?P<viol_type>.*)\)').format(PLAYER_RE)
     m = re.match(violRE, details, re.I)
     if m:
         p['is_viol'] = True
@@ -390,8 +390,8 @@ def get_period_starters2(df):
             hm_players.add(play['home_jumper'])
             aw_players.add(play['away_jumper'])
 
-        aw_players = [p for p in aw_players if re.match(player_re, p)]
-        hm_players = [p for p in hm_players if re.match(player_re, p)]
+        aw_players = [p for p in aw_players if re.match(PLAYER_RE, p)]
+        hm_players = [p for p in hm_players if re.match(PLAYER_RE, p)]
         return aw_players, hm_players
 
     # create a mapping { quarter => (away_starters, home_starters) }
@@ -500,7 +500,7 @@ def get_period_starters(bs_id):
     :returns: list of (aw_starters, hm_starters) tuples, one per period
     :rtype: List[(List[Str], List[Str])]
     """
-    bs = nba.BoxScore(bs_id)
+    bs = sportsref.nba.BoxScore(bs_id)
     pm_doc = bs.get_subpage_doc('plus-minus')
 
     period_divs = pm_doc('div.header').eq(0).children('div')
