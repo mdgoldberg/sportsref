@@ -282,3 +282,31 @@ class Player:
         if not dfScoring.empty:
             dfAll = dfAll.merge(dfScoring, 'outer', mergeList)
         return dfAll
+
+def get_college_leaders_one_year(year):
+    """ Returns college leader ids for a year from
+    http://www.sports-reference.com/cfb
+
+    :param year: the year for the data pull
+    :return: A dataframe with the college id and college team name
+    """
+    # set link and table_name and then get the pyquery table
+    link = "http://www.sports-reference.com/cfb/years/" + str(year) + \
+           "-leaders.html"
+    doc = pq(sportsref.utils.getHTML(link))
+    table = doc('#div_leaders')
+
+    # check if valid return
+    if not len(table):
+        return pd.DataFrame()
+    else:
+        # identify columns, rows, data, and make dataframe
+        rows = list(table('tr').items())
+        data = []
+        for row in rows:
+            data.append([sportsref.utils.flattenLinks(td)
+                        .encode('ascii', 'ignore').split('  ')
+                         for td in row.items('td') if
+                         td.attr('class') == "who"].pop(0))
+        players_one_yr = pd.DataFrame(data, columns=['collegeid', 'college'])
+        return players_one_yr

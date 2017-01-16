@@ -15,6 +15,8 @@ class Team:
 
     def __init__(self, teamID):
         self.teamID = teamID
+        self.relURL = '/schools/{}'.format(self.teamID)
+        self.teamURL = sportsref.ncaaf.BASE_URL + self.relURL
         
     def __eq__(self, other):
         return (self.teamID == other.teamID)
@@ -24,9 +26,7 @@ class Team:
 
     @sportsref.decorators.memoized
     def getMainDoc(self):
-        relURL = '/schools/{}'.format(self.teamID)
-        teamURL = sportsref.ncaaf.BASE_URL + relURL
-        mainDoc = pq(sportsref.utils.getHTML(teamURL))
+        mainDoc = pq(sportsref.utils.getHTML(self.teamURL))
         return mainDoc
 
     @sportsref.decorators.memoized
@@ -75,4 +75,28 @@ class Team:
             print "ERROR: NO SRS FOUND FOR {} in {}".format(self.teamID, year)
             return np.nan
 
-# TODO - BEGIN HERE
+    def get_roster(self, year):
+        """ Returns the roster for a team for the year
+
+        :param year: the year of the roster
+        :return: a dataframe with the player_id, class, and position
+        """
+        url = sportsref.ncaaf.BASE_URL +\
+              '/schools/{}/{}-roster.html'.format(self.teamID, str(year))
+        doc = pq(sportsref.utils.getHTML(url))
+        table = doc('#all_roster')
+        df = sportsref.utils.parseTable(table)
+        return df
+
+def get_all_college_teams():
+    """ Returns all the college teams from
+    http://www.sports-reference.com/cfb
+
+    :return: A dataframe with
+    """
+    # set link and table_name and then get the pyquery table
+    link = "http://www.sports-reference.com/cfb/schools/"
+    doc = pq(sportsref.utils.getHTML(link))
+    table = doc('#all_schools')
+    df = sportsref.utils.parseTable(table)
+    return df
