@@ -1,11 +1,13 @@
-import numpy as np
+import future
+import future.utils
+
+import pandas as pd
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
 
-class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
+class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     """Object representing a given NBA season."""
 
@@ -14,17 +16,20 @@ class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
 
         :year: The year of the season we want.
         """
-        self._yr = int(year)
+        self.yr = int(year)
 
     def __eq__(self, other):
-        return (self._yr == other._yr)
+        return (self.yr == other.yr)
 
     def __hash__(self):
-        return hash(self._yr)
+        return hash(self.yr)
+
+    def __repr__(self):
+        return 'Season({})'.format(self.yr)
 
     def _subpage_url(self, page):
         return (sportsref.nba.BASE_URL +
-                '/leagues/NBA_{}_{}.html'.format(self._yr, page))
+                '/leagues/NBA_{}_{}.html'.format(self.yr, page))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
@@ -32,11 +37,11 @@ class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: PyQuery object.
         """
         url = (sportsref.nba.BASE_URL +
-               '/leagues/NBA_{}.html'.format(self._yr))
+               '/leagues/NBA_{}.html'.format(self.yr))
         return pq(sportsref.utils.get_html(url))
 
     @sportsref.decorators.memoize
-    def get_doc(self, subpage):
+    def get_sub_doc(self, subpage):
         """Returns PyQuery object for a given subpage URL.
         :subpage: The subpage of the season, e.g. 'per_game'.
         :returns: PyQuery object.
@@ -49,7 +54,7 @@ class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns a list of the team IDs for the given year.
         :returns: List of team IDs.
         """
-        df = self.team_stats()
+        df = self.team_stats_per_game()
         if not df.empty:
             return df.index.tolist()
         else:
@@ -80,62 +85,62 @@ class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
         return {v: k for k, v in d.items()}
 
     @sportsref.decorators.memoize
-    @sportsref.decorators.kind_rpb(include_type=False)
-    def get_boxscore_ids(self, kind='R'):
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def get_schedule(self, kind='R'):
         """Returns a list of BoxScore IDs for every game in the season.
         Only needs to handle 'R' or 'P' options because decorator handles 'B'.
 
-        :kind: 'R' for regular season, 'P' for playoffs, 'B' for both.
-        :returns: List of IDs for nba.BoxScore objects.
+        :param kind: 'R' for regular season, 'P' for playoffs, 'B' for both.
+            Defaults to 'R'.
+        :returns: DataFrame of schedule information.
+        :rtype: pd.DataFrame
         """
-        doc = self.get_doc('games') # noqa
-        raise Exception('not yet implemented - nba.Season.get_boxscore_ids')
+        kind = kind.upper()[0]
+        dfs = []
+
+        # get games from each month
+        for month in ('october', 'november', 'december', 'january', 'february',
+                      'march', 'april', 'may', 'june'):
+            try:
+                doc = self.get_sub_doc('games-{}'.format(month))
+            except ValueError:
+                continue
+            table = doc('table#schedule')
+            df = sportsref.utils.parse_table(table)
+            dfs.append(df)
+        df = pd.concat(dfs)
+
+        # figure out which games are regular season
+        team_per_game = self.team_stats_per_game()
+        n_reg_games = int(team_per_game.g.sum() / 2)
+
+        # expand `date_game` column to month/day/year
+        date_df = df['date_game'].str.extract(
+            'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
+            expand=True)
+
+        df = pd.concat((df, date_df), axis=1).drop('date_game', axis=1)
+
+        # clean up some columns
+        df.rename(columns={'box_score_text': 'boxscore_id'}, inplace=True)
+
+        # subset appropriately based on `kind`
+        if kind == 'P':
+            return df.iloc[n_reg_games:]
+        else:
+            return df.iloc[:n_reg_games]
 
     def finals_winner(self):
         """Returns the team ID for the winner of that year's NBA Finals.
         :returns: 3-letter team ID for champ.
         """
-        playoffs = self.playoff_series_results()
-        home, away, home_won = playoffs[0]
-        return home if home_won else away
+        raise NotImplementedError('nba.Season.finals_winner')
 
     def finals_loser(self):
         """Returns the team ID for the loser of that year's NBA Finals.
         :returns: 3-letter team ID for runner-up.
         """
-        playoffs = self.playoff_series_results()
-        home, away, home_won = playoffs[0]
-        return away if home_won else home
-
-    @sportsref.decorators.memoize
-    def playoff_series_results(self):
-        """Returns the winning and losing team of every playoff series in the
-        given year.
-        :returns: Returns a list of tuples of the form
-        (home team ID, away team ID, bool(home team won)).
-        """
-        doc = self.get_main_doc()
-        table = doc('table#all_playoffs')
-
-        # get winners/losers
-        atags = [tr('td:eq(1) a')
-                 for tr in table.items('tr')
-                 if len(tr('td')) == 3]
-        relURLs = [(a.eq(0).attr['href'], a.eq(1).attr['href']) for a in atags]
-        wl = [tuple(map(sportsref.utils.rel_url_to_id, ru)) for ru in relURLs]
-
-        # get home team
-        atags = table('tr.toggleable table tr:eq(0) td:eq(0) a')
-        bsIDs = [sportsref.utils.rel_url_to_id(a.attrib['href'])
-                 for a in atags]
-        home = np.array([sportsref.nba.BoxScore(bs).home() for bs in bsIDs])
-
-        # get winners and losers
-        win, loss = map(np.array, zip(*wl))
-        homeWon = home == win
-        ret = zip(home, np.where(homeWon, loss, win), homeWon)
-
-        return ret
+        raise NotImplementedError('nba.Season.finals_loser')
 
     @sportsref.decorators.memoize
     def _get_team_stats_table(self, selector):
@@ -189,7 +194,7 @@ class Season(six.with_metaclass(sportsref.decorators.Cached, object)):
         :identifier: string identifying the type of stat, e.g. 'per_game'.
         :returns: A DataFrame of stats.
         """
-        doc = self.get_doc(identifier)
+        doc = self.get_sub_doc(identifier)
         table = doc('table#{}_stats'.format(identifier))
         df = sportsref.utils.parse_table(table)
         df = df.drop('ranker', axis=1)

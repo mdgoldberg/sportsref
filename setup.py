@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='sportsref',
-      version='0.7.15',
+      version='0.7.16',
       description='Scraping data from sports-reference.com and related sites',
       url='https://github.com/mdgoldberg/sportsref',
       author='Matt Goldberg',
@@ -9,6 +9,8 @@ setup(name='sportsref',
       packages=find_packages(),
       install_requires=[
           'appdirs',
+          'boltons',
+          'future',
           'mementos',
           'numexpr',
           'numpy',
@@ -16,6 +18,5 @@ setup(name='sportsref',
           'pyquery',
           'requests',
           'scipy',
-          'six',
       ]
       )

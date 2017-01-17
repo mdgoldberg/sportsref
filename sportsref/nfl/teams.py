@@ -1,9 +1,11 @@
+import future
+import future.utils
+
 import re
 
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
@@ -65,7 +67,7 @@ def list_teams(year):
     return team_names(year).keys()
 
 
-class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
+class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, teamID):
         self.teamID = teamID

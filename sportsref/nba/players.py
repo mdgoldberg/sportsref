@@ -1,9 +1,11 @@
+import future
+import future.utils
+
 import datetime
 import re
 
 import numpy as np
 from pyquery import PyQuery as pq
-import six
 
 import sportsref
 
@@ -12,7 +14,7 @@ __all__ = [
 ]
 
 
-class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
+class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     """Each instance of this class represents an NBA player, uniquely
     identified by a player ID. The instance methods give various data available
@@ -20,8 +22,9 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, player_id):
         self.player_id = player_id
-        self.main_url = (sportsref.nba.BASE_URL +
-                         '/players/{0[0]}/{0}.htm').format(self.player_id)
+        self.url_base = (sportsref.nba.BASE_URL +
+                         '/players/{0[0]}/{0}').format(self.player_id)
+        self.main_url = self.url_base + '.htm'
 
     def __eq__(self, other):
         return self.player_id == other.player_id
@@ -35,17 +38,19 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
     def __str__(self):
         return self.name()
 
-    def __reduce__(self):
-        return Player, (self.player_id,)
+    @sportsref.decorators.memoize
+    def get_main_doc(self):
+        return pq(sportsref.utils.get_html(self.main_url))
 
     @sportsref.decorators.memoize
-    def get_doc(self):
-        return pq(sportsref.utils.get_html(self.main_url))
+    def get_sub_doc(self, rel_url):
+        url = '{}/{}'.format(self.url_base, rel_url)
+        return pq(sportsref.utils.get_html(url))
 
     @sportsref.decorators.memoize
     def name(self):
         """Returns the name of the player as a string."""
-        doc = self.get_doc()
+        doc = self.get_main_doc()
         return doc('h1[itemprop="name"]').text()
 
     @sportsref.decorators.memoize
@@ -57,7 +62,7 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :day: int representing the day within the month (1-31).
         :returns: Age in years as a float.
         """
-        doc = self.get_doc()
+        doc = self.get_main_doc()
         date_string = doc('span[itemprop="birthDate"]').attr('data-birth')
         regex = r'(\d{4})\-(\d{2})\-(\d{2})'
         date_args = map(int, re.match(regex, date_string).groups())
@@ -79,7 +84,7 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns the player's height (in inches).
         :returns: An int representing a player's height in inches.
         """
-        doc = self.get_doc()
+        doc = self.get_main_doc()
         raw = doc('span[itemprop="height"]').text()
         try:
             feet, inches = map(int, raw.split('-'))
@@ -92,7 +97,7 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns the player's weight (in pounds).
         :returns: An int representing a player's weight in pounds.
         """
-        doc = self.get_doc()
+        doc = self.get_main_doc()
         raw = doc('span[itemprop="weight"]').text()
         try:
             weight = re.match(r'(\d+)lb', raw).group(1)
@@ -105,7 +110,7 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns the player's handedness.
         :returns: 'L' for left-handed, 'R' for right-handed.
         """
-        doc = self.get_doc()
+        doc = self.get_main_doc()
         hand = re.search(r'Shoots:\s*(L|R)', doc.text()).group(1)
         return hand
 
@@ -115,6 +120,13 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: TODO
         """
         raise Exception('not yet implemented - nba.Player.draft_pick')
+
+    @sportsref.decorators.memoize
+    def draft_year(self):
+        """Returns the year the player was selected (or undrafted).
+        :returns: TODO
+        """
+        raise Exception('not yet implemented - nba.Player.draft_year')
 
     @sportsref.decorators.kind_rpb(include_type=True)
     def _get_stats_table(self, table_id, kind='R'):
@@ -126,7 +138,7 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         'B'.
         :returns: A DataFrame of stats.
         """
-        doc = self.get_doc()
+        doc = self.get_main_doc()
         table_id = 'table#{}{}'.format(
             'playoffs_' if kind == 'P' else '', table_id)
         table = doc(table_id)
@@ -167,3 +179,40 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
     def stats_pbp(self, kind='R'):
         """Returns a DataFrame of play-by-play stats."""
         return self._get_stats_table('advanced_pbp', kind=kind)
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def gamelog_basic(self, year, kind='R'):
+        """Returns a table of a player's basic game-by-game stats for a season.
+
+        :param year: The year representing the desired season.
+        :param kind: specifies regular season, playoffs, or both. One of 'R',
+            'P', 'B'. Defaults to 'R'.
+        :returns: A DataFrame of the player's standard boxscore stats from each
+            game of the season.
+        :rtype: pd.DataFrame
+        """
+        doc = self.get_sub_doc('gamelog/{}'.format(year))
+        table = (doc('table#pgl_basic_playoffs')
+                 if kind == 'P' else doc('table#pgl_basic'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def gamelog_advanced(self, year, kind='R'):
+        """Returns a table of a player's advanced game-by-game stats for a
+        season.
+
+        :param year: The year representing the desired season.
+        :param kind: specifies regular season, playoffs, or both. One of 'R',
+            'P', 'B'. Defaults to 'R'.
+        :returns: A DataFrame of the player's advanced stats from each game of
+            the season.
+        :rtype: pd.DataFrame
+        """
+        doc = self.get_sub_doc('gamelog-advanced/{}'.format(year))
+        table = (doc('table#pgl_advanced_playoffs')
+                 if kind == 'P' else doc('table#pgl_advanced'))
+        df = sportsref.utils.parse_table(table)
+        return df

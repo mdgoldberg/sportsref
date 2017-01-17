@@ -29,8 +29,8 @@ def get_html(url):
         try:
             response = requests.get(url)
             if 400 <= response.status_code < 500:
-                raise ValueError(
-                    "Invalid ID led to an error in fetching HTML")
+                raise ValueError(('Invalid URL led to an error in fetching '
+                                 'HTML: {}').format(url))
             html = response.text
             html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
