@@ -33,7 +33,7 @@ class Player:
     @sportsref.decorators.memoized
     def name(self):
         doc = self.getDoc()
-        name = doc('div#meta h1:first').text()
+        name = doc('div#meta h1[itemprop="name"]').text()
         return name
 
     @sportsref.decorators.memoized
