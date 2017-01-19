@@ -153,7 +153,7 @@ class BoxScore(
             doc = self.get_subpage_doc('pbp')
         except ValueError:
             return pd.DataFrame()
-        table = doc('table.stats_table:last')
+        table = doc('table#pbp')
         rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
         data = []
         year = self.season()
