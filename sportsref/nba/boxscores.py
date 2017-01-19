@@ -149,10 +149,7 @@ class BoxScore(
 
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
-        try:
-            doc = self.get_subpage_doc('pbp')
-        except ValueError:
-            return pd.DataFrame()
+        doc = self.get_subpage_doc('pbp')
         table = doc('table#pbp')
         rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
         data = []
