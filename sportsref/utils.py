@@ -121,10 +121,10 @@ def parse_table(table, flatten=True):
     if bs_id_col:
         df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
         if flatten:
-            df = df.loc[df[bs_id_col].notnull()]  # drop bye weeks
-            df['year'] = df[bs_id_col].str[:4].astype(int)
-            df['month'] = df[bs_id_col].str[4:6].astype(int)
-            df['day'] = df[bs_id_col].str[6:8].astype(int)
+            df = df.loc[df['boxscore_id'].notnull()]  # drop bye weeks
+            df['year'] = df['boxscore_id'].str[:4].astype(int)
+            df['month'] = df['boxscore_id'].str[4:6].astype(int)
+            df['day'] = df['boxscore_id'].str[6:8].astype(int)
 
     # ignore *,+, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
