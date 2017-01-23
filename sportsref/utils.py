@@ -134,25 +134,34 @@ def parse_table(table, flatten=True):
 
     # player -> player_id
     if 'player' in df.columns:
-        df.rename(columns={'player': 'player_id'}, inplace=True)
+        if flatten:
+            df.rename(columns={'player': 'player_id'}, inplace=True)
+            # when flattening, keep a column for names
+            player_names = parse_table(table, flatten=False)['player_name']
+            df.ix[:, 'player_name'] = player_names
+        else:
+            df.rename(columns={'player': 'player_name'}, inplace=True)
 
     # team_name -> team_id
     if 'team_name' in df.columns:
-        df.rename(columns={'team_name': 'team_id'}, inplace=True)
-
-    # get rid of faulty rows
-    if 'team_id' in df.columns:
-        df = df.ix[~df['team_id'].isin(['XXX'])]
+        # first, get rid of faulty rows
+        df = df.ix[~df['team_name'].isin(['XXX'])]
+        if flatten:
+            df.rename(columns={'team_name': 'team_id'}, inplace=True)
+            # when flattening, keep a column for names
+            team_names = parse_table(table, flatten=False)['team_name']
+            df.ix[:, 'team_name'] = team_names
 
     # season -> int
     if 'season' in df.columns:
         df['season'] = df['season'].astype(int)
 
     # (number%) -> float(number * 0.01)
-    def convertPct(val):
+    def convert_pct(val):
         m = re.search(r'([-\d]+)\%', str(val))
         return float(m.group(1)) / 100. if m else val
-    df = df.applymap(convertPct)
+
+    df = df.applymap(convert_pct)
 
     return df
 

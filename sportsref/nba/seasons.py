@@ -68,10 +68,11 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         values.
         """
         doc = self.get_main_doc()
-        team_ids = sportsref.utils.parse_table(
-            doc('table#team-stats-per_game'), flatten=True)['team_id']
-        team_names = sportsref.utils.parse_table(
-            doc('table#team-stats-per_game'), flatten=False)['team_name']
+        table = doc('table#team-stats-per_game')
+        flattened = sportsref.utils.parse_table(table, flatten=True)
+        unflattened = sportsref.utils.parse_table(table, flatten=False)
+        team_ids = flattened['team_id']
+        team_names = unflattened['team_name']
         if len(team_names) != len(team_ids):
             raise Exception("team names and team IDs don't align")
         return dict(zip(team_ids, team_names))

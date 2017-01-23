@@ -463,12 +463,11 @@ def add_lineups(df):
         :param hm_lineup: The home team's current lineup.
         :returns: A dictionary of lineups.
         """
-        ret_dict = {}
-        for tm, lineup in zip(['aw', 'hm'], [aw_lineup, hm_lineup]):
-            for i, player in enumerate(lineup):
-                key = '{}_player{}'.format(tm, i + 1)
-                ret_dict[key] = player
-        return ret_dict
+        return {
+            '{}_player{}'.format(tm, i+1): player
+            for tm, lineup in zip(['aw', 'hm'], [aw_lineup, hm_lineup])
+            for i, player in enumerate(lineup)
+        }
 
     for i, row in df.iterrows():
         if row['quarter'] > cur_qtr:
