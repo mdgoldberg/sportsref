@@ -10,7 +10,7 @@ __all__ = [
     'Team',
 ]
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 class Team:
 
     def __init__(self, teamID):
@@ -24,19 +24,19 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def getMainDoc(self):
-        mainDoc = pq(sportsref.utils.getHTML(self.teamURL))
+        mainDoc = pq(sportsref.utils.get_html(self.teamURL))
         return mainDoc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def teamYearURL(self, yr_str):
         return (sportsref.ncaaf.BASE_URL +
                 '/schools/{}/{}.html'.format(self.teamID, yr_str))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def getYearDoc(self, yr_str):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
+        return pq(sportsref.utils.get_html(self.teamYearURL(yr_str)))
 
     def conference(self, year):
         """Returns the ID of the conference in which the team played that year.
@@ -83,9 +83,9 @@ class Team:
         """
         url = sportsref.ncaaf.BASE_URL +\
               '/schools/{}/{}-roster.html'.format(self.teamID, str(year))
-        doc = pq(sportsref.utils.getHTML(url))
+        doc = pq(sportsref.utils.get_html(url))
         table = doc('#all_roster')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         return df
 
 def get_all_college_teams():
@@ -96,7 +96,7 @@ def get_all_college_teams():
     """
     # set link and table_name and then get the pyquery table
     link = "http://www.sports-reference.com/cfb/schools/"
-    doc = pq(sportsref.utils.getHTML(link))
+    doc = pq(sportsref.utils.get_html(link))
     table = doc('#all_schools')
-    df = sportsref.utils.parseTable(table)
+    df = sportsref.utils.parse_table(table)
     return df
