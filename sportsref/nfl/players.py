@@ -221,7 +221,8 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with passing stats.
         """
         doc = self.get_doc()
-        table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
+        table = doc('table#passing') if kind == 'R' else \
+            doc('table#passing_playoffs')
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -234,11 +235,11 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with rushing/receiving stats.
         """
         doc = self.get_doc()
-        table = (doc('#rushing_and_receiving') if kind == 'R'
-                 else doc('#rushing_and_receiving_playoffs'))
+        table = (doc('table#rushing_and_receiving') if kind == 'R'
+                 else doc('table#rushing_and_receiving_playoffs'))
         if not table:
-            table = (doc('#receiving_and_rushing') if kind == 'R'
-                     else doc('#receiving_and_rushing_playoffs'))
+            table = (doc('table#receiving_and_rushing') if kind == 'R'
+                     else doc('table#receiving_and_rushing_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -251,8 +252,8 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with defense/fumble stats.
         """
         doc = self.get_doc()
-        table = (doc('#all_defense') if kind == 'R'
-                 else doc('#all_defense_playoffs'))
+        table = (doc('table#defense') if kind == 'R'
+                 else doc('table#defense_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -265,8 +266,8 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with kick/punt return stats.
         """
         doc = self.get_doc()
-        table = (doc('#all_returns') if kind == 'R'
-                 else doc('#all_returns_playoffs'))
+        table = (doc('table#returns') if kind == 'R'
+                 else doc('table#returns_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -279,8 +280,8 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with games stats.
         """
         doc = self.get_doc()
-        table = (doc('#all_games_played') if kind == 'R'
-                 else doc('#all_games_played_playoffs'))
+        table = (doc('table#games_played') if kind == 'R'
+                 else doc('table#games_played_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -293,8 +294,8 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with kicking/punting stats.
         """
         doc = self.get_doc()
-        table = (doc('#all_kicking') if kind == 'R'
-                 else doc('#all_kicking_playoffs'))
+        table = (doc('table#kicking') if kind == 'R'
+                 else doc('table#kicking_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -307,8 +308,8 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with all scoring stats.
         """
         doc = self.get_doc()
-        table = (doc('#all_scoring') if kind == 'R'
-                 else doc('#all_scoring_playoffs'))
+        table = (doc('table#scoring') if kind == 'R'
+                 else doc('table#scoring_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
