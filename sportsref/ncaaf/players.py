@@ -26,19 +26,19 @@ class Player:
         return hash(self.pID)
 
     @sportsref.decorators.memoize
-    def getDoc(self):
+    def get_doc(self):
         doc = pq(sportsref.utils.get_html(self.mainURL))
         return doc
 
     @sportsref.decorators.memoize
     def name(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         name = doc('div#meta h1:first').text()
         return name
 
     @sportsref.decorators.memoize
     def position(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = (doc('div#meta p')
                    .filter(lambda i,e: 'Position' in e.text_content())
                    .text())
@@ -46,11 +46,11 @@ class Player:
         allPositions = rawPos.split('/')
         # TODO: returning just the first position for those with
         # multiple positions. Should return the last position played
-        return allPositions[0]
+        return allPositions
 
     @sportsref.decorators.memoize
     def height(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="height"]').text()
         try:
             feet, inches = map(int, rawText.split('-'))
@@ -60,7 +60,7 @@ class Player:
 
     @sportsref.decorators.memoize
     def weight(self):
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="weight"]').text()
         try:
             weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
@@ -69,8 +69,8 @@ class Player:
             return np.nan
 
     @sportsref.decorators.memoize
-    def draftPick(self):
-        doc = self.getDoc()
+    def draft_pick(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i, e: 'Draft' in e.text_content()).text())
         m = re.search(r'Draft:.*?, (\d+).*?overall.*', rawDraft, re.I)
@@ -81,8 +81,8 @@ class Player:
             return int(m.group(1))
 
     @sportsref.decorators.memoize
-    def draftClass(self):
-        doc = self.getDoc()
+    def draft_class(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i, e: 'Draft' in e.text_content()).text())
         m = re.search(r'Draft:.*?of the (\d+) NFL', rawDraft, re.I)
@@ -93,8 +93,8 @@ class Player:
             return int(m.group(1))
 
     @sportsref.decorators.memoize
-    def draftTeam(self):
-        doc = self.getDoc()
+    def draft_team(self):
+        doc = self.get_doc()
         rawDraft = (doc('div#meta p')
                     .filter(lambda i, e: 'Draft' in e.text_content()))
         draftStr = sportsref.utils.flatten_links(rawDraft)
@@ -107,7 +107,7 @@ class Player:
     @sportsref.decorators.memoize
     def college(self):
         """Gets the last college (ID) that the player played for."""
-        doc = self.getDoc()
+        doc = self.get_doc()
         rawText = (doc('div#meta p')
                    .filter(lambda i, e: 'School' in e.text_content()))
         cleanedText = sportsref.utils.flatten_links(rawText)
@@ -134,7 +134,7 @@ class Player:
         """Gets yearly passing stats for the player.
         :returns: Pandas DataFrame with passing stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#passing')
         df = sportsref.utils.parse_table(table)
         if df.empty and table.length > 0:
@@ -151,7 +151,7 @@ class Player:
         """Gets yearly rushing & receiving stats for the player.
         :returns: Pandas DataFrame with stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#all_rushing')
         if not table:
             table = doc('#all_receiving')
@@ -170,7 +170,7 @@ class Player:
         """Gets yearly defensive stats for the player.
         :returns: Pandas DataFrame with defensive stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#all_defense')
         df = sportsref.utils.parse_table(table)
         if df.empty and table.length > 0:
@@ -187,7 +187,7 @@ class Player:
         """Gets yearly scoring stats for the player.
         :returns: Pandas DataFrame with defensive stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#all_scoring')
         df = sportsref.utils.parse_table(table)
         if df.empty and table.length > 0:
@@ -204,7 +204,7 @@ class Player:
         """Gets yearly scoring stats for the player.
         :returns: Pandas DataFrame with defensive stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#all_punt_ret')
         df = sportsref.utils.parse_table(table)
         if df.empty and table.length > 0:
@@ -221,7 +221,7 @@ class Player:
         """Gets yearly scoring stats for the player.
         :returns: Pandas DataFrame with defensive stats.
         """
-        doc = self.getDoc()
+        doc = self.get_doc()
         table = doc('#all_kicking')
         df = sportsref.utils.parse_table(table)
         if df.empty and table.length > 0:
@@ -238,7 +238,7 @@ class Player:
         :returns: dictionary mapping year to awards won during that year.
         """
         ret = collections.defaultdict(list)
-        doc = self.getDoc()
+        doc = self.get_doc()
         anchors = doc('table#leaderboard td:contains("Awards and Honors") a')
         results = anchors.map(
             lambda i,e: sportsref.utils.relURLToID(e.attrib['href'])
