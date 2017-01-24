@@ -158,7 +158,7 @@ def parse_table(table, flatten=True):
 
     # (number%) -> float(number * 0.01)
     def convert_pct(val):
-        m = re.search(r'([-\d]+)\%', str(val))
+        m = re.search(r'([-\.\d]+)\%', str(val))
         return float(m.group(1)) / 100. if m else val
 
     df = df.applymap(convert_pct)
