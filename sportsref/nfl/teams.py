@@ -246,11 +246,9 @@ class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
         :param year: year to query
         :return: the pfrid and injury status per week for the year
         """
-        # set link and table_name and then get the pyquery table
-        link = sportsref.nfl.BASE_URL + \
-               '/teams/{}/{}_injuries.htm'.format(self.teamID, str(year))
-        doc = pq(sportsref.utils.get_html(link))
-        table = doc('#team_injuries')
+        # get doc and table for the injuries
+        doc = self.get_year_doc('{}_injuries'.format(str(year)))
+        table = doc('table#team_injuries')
 
         # check if valid return
         if not len(table):
@@ -275,10 +273,8 @@ class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
         :return: dataframe with pfrID, snap count (sum of just off and defense)
         """
         # set link and table_name and then get the pyquery table
-        link = sportsref.nfl.BASE_URL + \
-               '/teams/{}/{}-snap-counts.htm'.format(self.teamID, str(year))
-        doc = pq(sportsref.utils.get_html(link))
-        table = doc('#all_snap_counts')
+        doc = self.get_year_doc('{}-snap-counts'.format(str(year)))
+        table = doc('table#snap_counts')
         snap_counts = sportsref.utils.parse_table(table)
         return snap_counts
 
@@ -305,6 +301,6 @@ class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
     @sportsref.decorators.memoize
     def rushing_and_receiving(self, year):
         doc = self.get_year_doc(year)
-        table = doc('#rushing_and_receiving')
+        table = doc('table#rushing_and_receiving')
         df = sportsref.utils.parse_table(table)
         return df

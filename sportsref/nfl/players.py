@@ -177,7 +177,7 @@ class Player(six.with_metaclass(sportsref.decorators.Cached, object)):
         return college
 
     @sportsref.decorators.memoize
-    def collegeid(self):
+    def ncaaf_player_id(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p').filter(lambda i, e:
                                             'College' in e.text_content()))
