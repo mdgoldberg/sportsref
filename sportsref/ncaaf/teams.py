@@ -10,11 +10,13 @@ __all__ = [
     'Team',
 ]
 
-@sportsref.decorators.memoized
+@sportsref.decorators.memoize
 class Team:
 
     def __init__(self, teamID):
         self.teamID = teamID
+        self.relURL = '/schools/{}'.format(self.teamID)
+        self.teamURL = sportsref.ncaaf.BASE_URL + self.relURL
         
     def __eq__(self, other):
         return (self.teamID == other.teamID)
@@ -22,21 +24,19 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def getMainDoc(self):
-        relURL = '/schools/{}'.format(self.teamID)
-        teamURL = sportsref.ncaaf.BASE_URL + relURL
-        mainDoc = pq(sportsref.utils.getHTML(teamURL))
+        mainDoc = pq(sportsref.utils.get_html(self.teamURL))
         return mainDoc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def teamYearURL(self, yr_str):
         return (sportsref.ncaaf.BASE_URL +
                 '/schools/{}/{}.html'.format(self.teamID, yr_str))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def getYearDoc(self, yr_str):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
+        return pq(sportsref.utils.get_html(self.teamYearURL(yr_str)))
 
     def conference(self, year):
         """Returns the ID of the conference in which the team played that year.
@@ -45,7 +45,7 @@ class Team:
         """
         doc = self.getYearDoc(year)
         anch = doc('div#info_box span:contains("Conference:")').next('a')
-        return sportsref.utils.relURLToID(anch.attr['href'])
+        return sportsref.utils.rel_url_to_id(anch.attr['href'])
 
     def srs(self, year):
         """Returns the SRS (Simple Rating System) for the team for a given
@@ -75,4 +75,29 @@ class Team:
             print "ERROR: NO SRS FOUND FOR {} in {}".format(self.teamID, year)
             return np.nan
 
-# TODO - BEGIN HERE
+    def get_roster(self, year):
+        """ Returns the roster for a team for the year
+
+        :param year: the year of the roster
+        :return: a dataframe with the player_id, class, and position
+        """
+        url = (sportsref.ncaaf.BASE_URL +
+               '/schools/{}/{}-roster.html'.format(self.teamID, str(year)))
+        doc = pq(sportsref.utils.get_html(url))
+        table = doc('#all_roster')
+        df = sportsref.utils.parse_table(table)
+        return df
+
+def get_all_college_teams():
+    """ Returns all the college teams from http://www.sports-reference.com/cfb
+
+    :return: A dataframe with all the teams that have ever played in college
+    football, the year they started and finished, their records, and their
+    schedule strengths
+    """
+    # set link and table_name and then get the pyquery table
+    link = "http://www.sports-reference.com/cfb/schools/"
+    doc = pq(sportsref.utils.get_html(link))
+    table = doc('#all_schools')
+    df = sportsref.utils.parse_table(table)
+    return df

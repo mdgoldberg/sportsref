@@ -1,17 +1,11 @@
-import datetime
-import re
-import urlparse
-
 import numpy as np
-import pandas as pd
 from pyquery import PyQuery as pq
+import six
 
 import sportsref
 
-yr = datetime.datetime.now().year
 
-@sportsref.decorators.memoized
-class Team:
+class Team(six.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, teamID):
         self.teamID = teamID
@@ -22,23 +16,23 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @sportsref.decorators.memoized
-    def teamYearURL(self, yr_str):
+    @sportsref.decorators.memoize
+    def team_year_url(self, yr_str):
         return (sportsref.nba.BASE_URL +
                 '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
-    @sportsref.decorators.memoized
-    def getMainDoc(self):
+    @sportsref.decorators.memoize
+    def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = sportsref.nba.BASE_URL + relURL
-        mainDoc = pq(sportsref.utils.getHTML(teamURL))
+        mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
-    @sportsref.decorators.memoized
-    def getYearDoc(self, yr_str=yr):
-        return pq(sportsref.utils.getHTML(self.teamYearURL(yr_str)))
+    @sportsref.decorators.memoize
+    def get_year_doc(self, yr_str):
+        return pq(sportsref.utils.get_html(self.team_year_url(yr_str)))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def name(self):
         """Returns the real name of the franchise given the team ID.
 
@@ -48,14 +42,14 @@ class Team:
 
         :returns: A string corresponding to the team's full name.
         """
-        doc = self.getMainDoc()
+        doc = self.get_main_doc()
         headerwords = doc('div#info_box h1')[0].text_content().split()
         lastIdx = headerwords.index('Franchise')
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
-    @sportsref.decorators.memoized
-    def roster(self, year=yr):
+    @sportsref.decorators.memoize
+    def roster(self, year):
         """Returns the roster table for the given year.
 
         :year: The year for which we want the roster; defaults to current year.
@@ -63,8 +57,8 @@ class Team:
         """
         raise NotImplementedError('roster')
 
-    @sportsref.decorators.memoized
-    def boxscores(self, year=yr):
+    @sportsref.decorators.memoize
+    def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.
 
@@ -72,9 +66,9 @@ class Team:
         year.
         :returns: np.array of strings representing boxscore IDs.
         """
-        doc = self.getYearDoc('{}_games'.format(year))
+        doc = self.get_year_doc('{}_games'.format(year))
         table = doc('table#teams_games')
-        df = sportsref.utils.parseTable(table)
+        df = sportsref.utils.parse_table(table)
         if df.empty:
             return np.array([])
         return df.box_score_text.dropna().values

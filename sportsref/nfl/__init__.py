@@ -1,5 +1,3 @@
-BASE_URL = 'http://www.pro-football-reference.com'
-
 import finders
 import teams
 import players
@@ -11,6 +9,8 @@ from players import Player
 from teams import Team
 from boxscores import BoxScore
 from finders import GamePlayFinder, PlayerSeasonFinder
+
+BASE_URL = 'http://www.pro-football-reference.com'
 
 # modules/variables to expose
 __all__ = [

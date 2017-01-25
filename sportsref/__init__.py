@@ -1,3 +1,5 @@
+# flake8: noqa
+
 SITE_ABBREV = {
     'http://www.pro-football-reference.com': 'pfr',
     'http://www.basketball-reference.com': 'bkref',
@@ -9,5 +11,5 @@ import decorators
 import utils
 import nfl
 import nba
-import ncaaf
-import ncaab
+
+__all__ = ['decorators', 'utils', 'nfl', 'nba', 'SITE_ABBREV']
