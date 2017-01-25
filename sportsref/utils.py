@@ -102,6 +102,13 @@ def parse_table(table, flatten=True):
 
     # small fixes to DataFrame
 
+    # ignore *,+, and other characters used to note things
+    df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
+    for col in df.columns:
+        if hasattr(df[col], 'str'):
+            df.ix[:, col] = df.ix[:, col].str.strip()
+
+
     # year_id -> year (as int)
     if 'year_id' in df.columns:
         df.rename(columns={'year_id': 'year'}, inplace=True)
@@ -123,12 +130,6 @@ def parse_table(table, flatten=True):
         df['month'] = df[bs_id_col].str[4:6].astype(int)
         df['day'] = df[bs_id_col].str[6:8].astype(int)
         df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
-
-    # ignore *,+, and other characters used to note things
-    df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
-    for col in df.columns:
-        if hasattr(df[col], 'str'):
-            df.ix[:, col] = df.ix[:, col].str.strip()
 
     # player -> player_id
     if flatten and 'player' in df.columns:

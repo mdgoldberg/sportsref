@@ -129,21 +129,14 @@ class Player:
             df = df.query('year == @year')
         return df
 
-    @sportsref.decorators.memoize
+    # @sportsref.decorators.memoize
     def passing(self):
         """Gets yearly passing stats for the player.
         :returns: Pandas DataFrame with passing stats.
         """
         doc = self.get_doc()
-        table = doc('#passing')
+        table = doc('table#passing')
         df = sportsref.utils.parse_table(table)
-        if df.empty and table.length > 0:
-            tree = etree.fromstring(str(table))
-            comments = tree.xpath('//comment()')
-            comment = etree.tostring(comments[0])
-            contents = comment.replace("<!--", "").replace("-->", "")
-            table = pq(contents)
-            df = sportsref.utils.parse_table(table)
         return df
 
     @sportsref.decorators.memoize
@@ -152,17 +145,10 @@ class Player:
         :returns: Pandas DataFrame with stats.
         """
         doc = self.get_doc()
-        table = doc('#all_rushing')
+        table = doc('table#rushing')
         if not table:
-            table = doc('#all_receiving')
+            table = doc('table#receiving')
         df = sportsref.utils.parse_table(table)
-        if df.empty and table.length > 0:
-            tree = etree.fromstring(str(table))
-            comments = tree.xpath('//comment()')
-            comment = etree.tostring(comments[0])
-            contents = comment.replace("<!--", "").replace("-->", "")
-            table = pq(contents)
-            df = sportsref.utils.parse_table(table)
         return df
 
     @sportsref.decorators.memoize
@@ -171,15 +157,8 @@ class Player:
         :returns: Pandas DataFrame with defensive stats.
         """
         doc = self.get_doc()
-        table = doc('#all_defense')
+        table = doc('table#defense')
         df = sportsref.utils.parse_table(table)
-        if df.empty and table.length > 0:
-            tree = etree.fromstring(str(table))
-            comments = tree.xpath('//comment()')
-            comment = etree.tostring(comments[0])
-            contents = comment.replace("<!--", "").replace("-->", "")
-            table = pq(contents)
-            df = sportsref.utils.parse_table(table)
         return df
 
     @sportsref.decorators.memoize
@@ -188,32 +167,20 @@ class Player:
         :returns: Pandas DataFrame with defensive stats.
         """
         doc = self.get_doc()
-        table = doc('#all_scoring')
+        table = doc('table#scoring')
         df = sportsref.utils.parse_table(table)
-        if df.empty and table.length > 0:
-            tree = etree.fromstring(str(table))
-            comments = tree.xpath('//comment()')
-            comment = etree.tostring(comments[0])
-            contents = comment.replace("<!--", "").replace("-->", "")
-            table = pq(contents)
-            df = sportsref.utils.parse_table(table)
         return df
 
     @sportsref.decorators.memoize
-    def punt_kick_returns(self):
+    def returns(self):
         """Gets yearly scoring stats for the player.
         :returns: Pandas DataFrame with defensive stats.
         """
         doc = self.get_doc()
-        table = doc('#all_punt_ret')
+        table = doc('table#punt_ret')
+        if not table:
+            table = doc('table#kick_ret')
         df = sportsref.utils.parse_table(table)
-        if df.empty and table.length > 0:
-            tree = etree.fromstring(str(table))
-            comments = tree.xpath('//comment()')
-            comment = etree.tostring(comments[0])
-            contents = comment.replace("<!--", "").replace("-->", "")
-            table = pq(contents)
-            df = sportsref.utils.parse_table(table)
         return df
 
     @sportsref.decorators.memoize
@@ -222,15 +189,8 @@ class Player:
         :returns: Pandas DataFrame with defensive stats.
         """
         doc = self.get_doc()
-        table = doc('#all_kicking')
+        table = doc('table#kicking')
         df = sportsref.utils.parse_table(table)
-        if df.empty and table.length > 0:
-            tree = etree.fromstring(str(table))
-            comments = tree.xpath('//comment()')
-            comment = etree.tostring(comments[0])
-            contents = comment.replace("<!--", "").replace("-->", "")
-            table = pq(contents)
-            df = sportsref.utils.parse_table(table)
         return df
 
     def awards(self):
@@ -241,7 +201,7 @@ class Player:
         doc = self.get_doc()
         anchors = doc('table#leaderboard td:contains("Awards and Honors") a')
         results = anchors.map(
-            lambda i,e: sportsref.utils.relURLToID(e.attrib['href'])
+            lambda i,e: sportsref.utils.rel_url_to_id(e.attrib['href'])
         )
         for yr, award in zip(*[iter(results)]*2):
             ret[int(yr)].append(award)
@@ -255,17 +215,11 @@ class Player:
         :returns: Pandas DataFrame with all annual stats.
         """
         dfPassing = self.passing()
-        # dfPassing = dfPassing.ix[dfPassing["has_class_full_table"]]
         dfRushRec = self.rushing_and_receiving()
-        # dfRushRec = dfRushRec.ix[dfRushRec["has_class_full_table"]]
         dfDefense = self.defense()
-        # dfDefense = dfDefense.ix[dfDefense["has_class_full_table"]]
-        dfReturns = self.punt_kick_returns()
-        # dfReturns = dfReturns.ix[dfReturns["has_class_full_table"]]
+        dfReturns = self.returns()
         dfKicking = self.kicking()
-        # dfKicking = dfKicking.ix[dfKicking["has_class_full_table"]]
         dfScoring = self.scoring()
-        # dfScoring = dfScoring.ix[dfScoring["has_class_full_table"]]
         # the mergeList declares the common fields to merge on
         mergeList = ['year', 'school_name', 'conf_abbr', 'class', 'pos', 'g']
         dfAll = pd.DataFrame(columns=mergeList)

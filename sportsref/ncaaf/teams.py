@@ -45,7 +45,7 @@ class Team:
         """
         doc = self.getYearDoc(year)
         anch = doc('div#info_box span:contains("Conference:")').next('a')
-        return sportsref.utils.relURLToID(anch.attr['href'])
+        return sportsref.utils.rel_url_to_id(anch.attr['href'])
 
     def srs(self, year):
         """Returns the SRS (Simple Rating System) for the team for a given
@@ -81,18 +81,19 @@ class Team:
         :param year: the year of the roster
         :return: a dataframe with the player_id, class, and position
         """
-        url = sportsref.ncaaf.BASE_URL +\
-              '/schools/{}/{}-roster.html'.format(self.teamID, str(year))
+        url = (sportsref.ncaaf.BASE_URL +
+               '/schools/{}/{}-roster.html'.format(self.teamID, str(year)))
         doc = pq(sportsref.utils.get_html(url))
         table = doc('#all_roster')
         df = sportsref.utils.parse_table(table)
         return df
 
 def get_all_college_teams():
-    """ Returns all the college teams from
-    http://www.sports-reference.com/cfb
+    """ Returns all the college teams from http://www.sports-reference.com/cfb
 
-    :return: A dataframe with
+    :return: A dataframe with all the teams that have ever played in college
+    football, the year they started and finished, their records, and their
+    schedule strengths
     """
     # set link and table_name and then get the pyquery table
     link = "http://www.sports-reference.com/cfb/schools/"
