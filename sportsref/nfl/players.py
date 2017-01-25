@@ -179,6 +179,15 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return college
 
     @sportsref.decorators.memoize
+    def ncaaf_player_id(self):
+        doc = self.get_doc()
+        rawText = (doc('div#meta p').filter(lambda i, e:
+                                            'College' in e.text_content()))
+        cleanedText = sportsref.utils.flatten_links(rawText)
+        collegeid = re.search(r'\((.*?)\)', cleanedText).group(1)
+        return collegeid
+
+    @ sportsref.decorators.memoize
     def high_school(self):
         doc = self.get_doc()
         rawText = (doc('div#meta p')
@@ -214,7 +223,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with passing stats.
         """
         doc = self.get_doc()
-        table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
+        table = doc('table#passing') if kind == 'R' else \
+            doc('table#passing_playoffs')
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -227,13 +237,118 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with rushing/receiving stats.
         """
         doc = self.get_doc()
-        table = (doc('#rushing_and_receiving') if kind == 'R'
-                 else doc('#rushing_and_receiving_playoffs'))
+        table = (doc('table#rushing_and_receiving') if kind == 'R'
+                 else doc('table#rushing_and_receiving_playoffs'))
         if not table:
-            table = (doc('#receiving_and_rushing') if kind == 'R'
-                     else doc('#receiving_and_rushing_playoffs'))
+            table = (doc('table#receiving_and_rushing') if kind == 'R'
+                     else doc('table#receiving_and_rushing_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def defense_and_fumbles(self, kind='R'):
+        """Gets yearly defense/fumble stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with defense/fumble stats.
+        """
+        doc = self.get_doc()
+        table = (doc('table#defense') if kind == 'R'
+                 else doc('table#defense_playoffs'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def kick_and_punt_returns(self, kind='R'):
+        """Gets yearly kick/punt return stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with kick/punt return stats.
+        """
+        doc = self.get_doc()
+        table = (doc('table#returns') if kind == 'R'
+                 else doc('table#returns_playoffs'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def games(self, kind='R'):
+        """Gets yearly games stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with games stats.
+        """
+        doc = self.get_doc()
+        table = (doc('table#games_played') if kind == 'R'
+                 else doc('table#games_played_playoffs'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def kicking_and_punting(self, kind='R'):
+        """Gets yearly kicking/punting stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with kicking/punting stats.
+        """
+        doc = self.get_doc()
+        table = (doc('table#kicking') if kind == 'R'
+                 else doc('table#kicking_playoffs'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def all_scoring(self, kind='R'):
+        """Gets yearly all scoring stats for the player.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with all scoring stats.
+        """
+        doc = self.get_doc()
+        table = (doc('table#scoring') if kind == 'R'
+                 else doc('table#scoring_playoffs'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def all_annual_stats(self, kind='R'):
+        """Gets yearly all annual stats for the player by grabbing
+        each individual dataset and then merging them for full years.
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with all annual stats.
+        """
+        dfPassing = self.passing(kind)
+        dfPassing = dfPassing.ix[dfPassing["has_class_full_table"]]
+        dfRushRec = self.rushing_and_receiving(kind)
+        dfRushRec = dfRushRec.ix[dfRushRec["has_class_full_table"]]
+        dfDefense = self.defense_and_fumbles(kind)
+        dfDefense = dfDefense.ix[dfDefense["has_class_full_table"]]
+        dfReturns = self.kick_and_punt_returns(kind)
+        dfReturns = dfReturns.ix[dfReturns["has_class_full_table"]]
+        dfGames = self.games(kind)
+        dfGames = dfGames.ix[dfGames["has_class_full_table"]]
+        dfKicking = self.kicking_and_punting(kind)
+        dfKicking = dfKicking.ix[dfKicking["has_class_full_table"]]
+        dfScoring = self.all_scoring(kind)
+        dfScoring = dfScoring.ix[dfScoring["has_class_full_table"]]
+        # the mergeList declares the common fields to merge on
+        mergeList = ['year', 'age', 'team', 'pos', 'uniform_number', 'g', 'gs']
+        dfAll = dfPassing.merge(dfRushRec, 'outer', mergeList)
+        dfAll = dfAll.merge(dfDefense, 'outer', mergeList)
+        dfAll = dfAll.merge(dfReturns, 'outer', mergeList)
+        dfAll = dfAll.merge(dfGames, 'outer', mergeList)
+        dfAll = dfAll.merge(dfKicking, 'outer', mergeList)
+        dfAll = dfAll.merge(dfScoring, 'outer', mergeList)
+
+        return dfAll
 
     def _plays(self, year, play_type):
         """Returns a DataFrame of plays for a given year for a given play type
