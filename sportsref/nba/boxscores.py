@@ -134,8 +134,34 @@ class BoxScore(
     @sportsref.decorators.memoize
     def basic_stats(self):
         """Returns a DataFrame of basic player stats from the game."""
+
+        def time_to_mp(t):
+            if t.find(':') == -1:
+                return 0.
+            else:
+                mins, secs = map(int, t.split(':'))
+                return mins + secs / 60.
+
+        # get data
+        doc = self.get_main_doc()
+        tms = self.away(), self.home()
+        tm_ids = ['box_{}_basic'.format(tm) for tm in tms]
+        tables = [doc('table#{}'.format(tm_id).lower()) for tm_id in tm_ids]
+        dfs = [sportsref.utils.parse_table(table) for table in tables]
         # TODO: include a "is_starter" column
-        pass
+        # clean data and add features
+        for i, (tm, df) in enumerate(zip(tms, dfs)):
+            if 'mp' in df.columns:
+                got_time = df['mp'].str.find(':')
+                stat_cols = [c for c, t in df.dtypes.iteritems()
+                             if t != object]
+                df.ix[got_time == -1, stat_cols] = 0
+                df.ix[:, 'mp'] = df.mp.map(time_to_mp)
+            df.ix[:, 'team'] = tm
+            df.ix[:, 'is_home'] = i == 1
+            df.ix[:, 'is_starter'] = [i < 5 for i in range(df.shape[0])]
+
+        return pd.concat(dfs)
 
     @sportsref.decorators.memoize
     def advanced_stats(self):
