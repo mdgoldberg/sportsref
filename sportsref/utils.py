@@ -74,9 +74,9 @@ def parse_table(table, flatten=True):
                for c in table('thead tr:not([class]) th[data-stat]')]
 
     # get data
-    rows = list(table('tbody tr')
-                .not_('.thead, .stat_total, .stat_average')
-                .items())
+    rows = (table('tbody tr')
+            .not_('.thead, .stat_total, .stat_average')
+            .items())
     data = [
         [flatten_links(td) if flatten else td.text()
          for td in row.items('th,td')]
@@ -100,33 +100,29 @@ def parse_table(table, flatten=True):
             for row in rows
         ]
 
-    # small fixes to DataFrame
+    # cleaning the DataFrame
 
     # year_id -> year (as int)
     if 'year_id' in df.columns:
         df.rename(columns={'year_id': 'year'}, inplace=True)
-        df.year = df.year.fillna(method='ffill')
-        if df.year.dtype == basestring:
-            df.year = df.year.map(lambda s: s[:4]).astype(int)
-        else:
-            df.year = df.year.astype(int)
+        if flatten:
+            df.year = df.year.fillna(method='ffill')
+            df['pro_bowl'] = df.year.str.contains('\*')
+            df['all_pro_1st_tm'] = df.year.str.contains('\+')
+            df['year'] = df.year.map(lambda s: str(s)[:4]).astype(int)
 
     # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
-    for bs_id_col in ('boxscore_word', 'game_date', 'date_game'):
+    for bs_id_col in ('boxscore_word', 'game_date', 'box_score_text'):
         if bs_id_col in df.columns:
+            df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
+            if flatten:
+                df = df.loc[df['boxscore_id'].notnull()]  # drop bye weeks
+                df['year'] = df['boxscore_id'].str[:4].astype(int)
+                df['month'] = df['boxscore_id'].str[4:6].astype(int)
+                df['day'] = df['boxscore_id'].str[6:8].astype(int)
             break
-    else:
-        bs_id_col = None
 
-    if bs_id_col:
-        df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
-        if flatten:
-            df = df.loc[df['boxscore_id'].notnull()]  # drop bye weeks
-            df['year'] = df['boxscore_id'].str[:4].astype(int)
-            df['month'] = df['boxscore_id'].str[4:6].astype(int)
-            df['day'] = df['boxscore_id'].str[6:8].astype(int)
-
-    # ignore *,+, and other characters used to note things
+    # ignore *, +, and other characters used to note things
     df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
     for col in df.columns:
         if hasattr(df[col], 'str'):

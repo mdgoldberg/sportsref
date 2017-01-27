@@ -1,6 +1,7 @@
 from builtins import enumerate, int, range
 
 import copy
+import operator
 import re
 
 import numpy as np
@@ -9,6 +10,10 @@ import pandas as pd
 import sportsref
 
 PLAYER_RE = r'\w{0,7}\d{2}'
+
+HM_LINEUP_COLS = ['hm_player{}'.format(i) for i in range(1, 6)]
+AW_LINEUP_COLS = ['aw_player{}'.format(i) for i in range(1, 6)]
+ALL_LINEUP_COLS = AW_LINEUP_COLS + HM_LINEUP_COLS
 
 
 @sportsref.decorators.memoize
@@ -343,6 +348,14 @@ def clean_features(df):
     # fix free throw columns on technicals
     df.ix[df.is_tech_ft, ['ft_num', 'tot_fta']] = 1
 
+    # fill in NaN's in team, opp columns except for jump balls
+    df.team.fillna(method='bfill', inplace=True)
+    df.opp.fillna(method='bfill', inplace=True)
+    df.team.fillna(method='ffill', inplace=True)
+    df.opp.fillna(method='ffill', inplace=True)
+    if 'is_jump_ball' in df.columns:
+        df.ix[df['is_jump_ball'], ['team', 'opp']] = np.nan
+
     return df
 
 
@@ -395,11 +408,12 @@ def get_period_starters2(df):
         return aw_players, hm_players
 
     # create a mapping { quarter => (away_starters, home_starters) }
-    period_starters = {i: (set(), set()) for i in df.quarter.unique()}
+    n_periods = df.quarter.nunique()
+    period_starters = [(set(), set()) for _ in range(n_periods)]
 
     # fill out this mapping quarter by quarter
     for qtr, group in df.groupby(df.quarter):
-        aw_starters, hm_starters = period_starters[qtr]
+        aw_starters, hm_starters = period_starters[qtr-1]
         aw_exclude, hm_exclude = set(), set()
         for i, row in group.iterrows():
             new_aw_starters, new_hm_starters = players_from_play(row)
@@ -415,19 +429,40 @@ def get_period_starters2(df):
             aw_starters.update(new_aw_starters)
             aw_starters -= aw_exclude
             if len(hm_starters) >= 5 and len(aw_starters) >= 5:
-                if len(hm_starters) > 5 or len(aw_starters) > 5:
+                if len(hm_starters) != 5 or len(aw_starters) != 5:
                     import ipdb
                     ipdb.set_trace()
                 break
 
-    # period_starts = np.nonzero(df.quarter.diff())[0]
     return period_starters
 
 
-def add_lineups(df):
-    """Modifies and returns the DataFrame it is passed. Specifically, it adds
-    five columns for each team (ten total), where each column has the ID of a
-    player on the court during the play.
+def add_binarized_lineups(df):
+    """TODO: Docstring for add_binarized_lineups.
+
+    :param df: TODO
+    :returns: TODO
+    """
+
+    if (set(ALL_LINEUP_COLS) - set(df.columns)):
+        df = add_lineups(df)
+
+    all_players = reduce(
+        operator.or_, [set(df[c].unique()) for c in ALL_LINEUP_COLS]
+    )
+
+    rows = df[ALL_LINEUP_COLS].values
+    data = {'{}_in'.format(player_id):
+            np.array([player_id in row for row in rows])
+            for player_id in all_players}
+    ret_df = pd.concat((df, pd.DataFrame(data)), axis=1)
+    return ret_df
+
+
+def add_lineups(df, binarize=False):
+    """Returns a new DataFrame based on the one it is passed. Specifically, it
+    adds five columns for each team (ten total), where each column has the ID
+    of a player on the court during the play.
 
     This information is figured out sequentially from the game's substitution
     data in the passed DataFrame, so the DataFrame passed as an argument must
@@ -435,20 +470,25 @@ def add_lineups(df):
     plays). That is, the DataFrame must be of the form returned by
     :func:`nba.BoxScore.pbp <nba.BoxScore.pbp>`.
 
+    TODO: documentation for binarize
+
     .. note:: Note that the lineups reflect the teams in the game when the play
         happened, not after the play. For example, if a play is a substitution,
         the lineups for that play will be the lineups before the substituion
         occurs.
 
     :param df: A DataFrame of a game's play-by-play data.
+    :param binarize: If True, appends data as player_is_in binary columns for
+        each player that comes into the game for either team. Defaults to
+        False. See details.
     :returns: A DataFrame with additional lineup columns.
 
     """
     # TODO: add this precondition to documentation
-    assert df['bs_id'].nunique() == 1
+    assert df['boxscore_id'].nunique() == 1
 
-    bs_id = df['bs_id'].iloc[0]
-    per_starters = get_period_starters(bs_id)
+    # bs_id = df['boxscore_id'].iloc[0]
+    per_starters = get_period_starters2(df)
     cur_qtr = 0
     aw_lineup, hm_lineup = [], []
 
@@ -469,52 +509,42 @@ def add_lineups(df):
             for i, player in enumerate(lineup)
         }
 
-    for i, row in df.iterrows():
+    def handle_sub(row, aw_lineup, hm_lineup):
+        """Modifies the aw_lineup and hm_lineup lists based on the substitution
+        that takes place in the given row."""
+        assert row['is_sub']
+        if row['is_home_play']:
+            idx = hm_lineup.index(row['sub_out'])
+            hm_lineup[idx] = row['sub_in']
+        else:
+            idx = aw_lineup.index(row['sub_out'])
+            aw_lineup[idx] = row['sub_in']
+        return aw_lineup, hm_lineup
+
+    sub_or_per_start = df.is_sub | df.quarter.diff().astype(bool)
+    for i, row in df[sub_or_per_start].iterrows():
         if row['quarter'] > cur_qtr:
             # first row in a quarter; get lineups from per_starters dict
             # and update lineups immediately
             assert row['quarter'] == cur_qtr + 1
             cur_qtr += 1
-            aw_lineup, hm_lineup = map(list, per_starters[cur_qtr])
+            aw_lineup, hm_lineup = map(list, per_starters[cur_qtr-1])
             lineups[i] = lineup_dict(aw_lineup, hm_lineup)
+            if row['is_sub']:
+                aw_lineup, hm_lineup = handle_sub(row, aw_lineup, hm_lineup)
         else:
             # during the quarter; update lineups first
             # then change lineups based on sub, if applicable
             lineups[i] = lineup_dict(aw_lineup, hm_lineup)
             if row['is_sub']:
-                if row['is_home_play']:
-                    idx = hm_lineup.index(row['sub_out'])
-                    hm_lineup[idx] = row['sub_in']
-                else:
-                    idx = aw_lineup.index(row['sub_out'])
-                    aw_lineup[idx] = row['sub_in']
+                aw_lineup, hm_lineup = handle_sub(row, aw_lineup, hm_lineup)
 
-    return pd.DataFrame(lineups)
+    lineup_df = pd.DataFrame(lineups)
+    if lineup_df.iloc[-1].isnull().all():
+        lineup_df.iloc[-1] = lineup_dict(aw_lineup, hm_lineup)
+    lineup_df.fillna(method='bfill', inplace=True)
 
+    if binarize:
+        lineup_df = add_binarized_lineups(lineup_df)
 
-def get_period_starters(bs_id):
-    """TODO
-
-    :param bs_id: TODO
-    :returns: list of (aw_starters, hm_starters) tuples, one per period
-    :rtype: List[(List[Str], List[Str])]
-    """
-    bs = sportsref.nba.BoxScore(bs_id)
-    pm_doc = bs.get_subpage_doc('plus-minus')
-
-    period_divs = pm_doc('div.header').eq(0).children('div')
-    widths = list(map(int, period_divs.map(
-        lambda i, e: re.search(r'width.*?(\d+)px', e.attrib['style']).group(1)
-    )))
-    per_starts = np.concatenate(([0], np.cumsum(widths)[:-1]))
-    n_periods = per_starts.shape[0]
-    aw_starters = [[] for i in range(n_periods)]
-    hm_starters = [[] for i in range(n_periods)]
-
-    # TODO: then, figure out which players were in then (had class='plus',
-    # 'minus', even')
-
-    import ipdb
-    ipdb.set_trace()
-
-    return aw_starters, hm_starters
+    return pd.concat((df, lineup_df), axis=1)

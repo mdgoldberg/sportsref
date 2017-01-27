@@ -122,9 +122,6 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
         df = pd.concat((df, date_df), axis=1).drop('date_game', axis=1)
 
-        # clean up some columns
-        df.rename(columns={'box_score_text': 'boxscore_id'}, inplace=True)
-
         # subset appropriately based on `kind`
         if kind == 'P':
             return df.iloc[n_reg_games:]

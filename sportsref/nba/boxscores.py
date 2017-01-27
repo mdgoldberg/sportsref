@@ -2,6 +2,7 @@ import future
 import future.utils
 
 import datetime
+import itertools
 import re
 
 import numpy as np
@@ -263,29 +264,40 @@ class BoxScore(
 
             data.append(p)
 
-        # convert to DataFrame
+        # convert to DataFrame and clean columns
         df = pd.DataFrame.from_records(data)
+        df = sportsref.nba.pbp.clean_features(df)
 
         # add columns for home team, away team, and bs_id
         df['home'] = self.home()
         df['away'] = self.away()
-        df['bs_id'] = self.bs_id
+        df['boxscore_id'] = self.bs_id
+
+        # add column for pts
+        df['pts'] = (df['is_ftm'] + 2 * df['is_fgm']
+                     + (df['is_fgm'] & df['is_three']))
+        df['hm_pts'] = np.where(df.team == df.home, df.pts, 0)
+        df['aw_pts'] = np.where(df.team == df.away, df.pts, 0)
 
         # TODO: track current lineup for each team
+        # df = sportsref.nba.pbp.add_lineups(df)
 
         # TODO: track possession number for each possession
 
         # TODO: add shot clock as a feature
 
-        # clean columns
-        df = sportsref.nba.pbp.clean_features(df)
-
-        # fill in NaN's in team, opp columns except for jump balls
-        df.team.fillna(method='bfill', inplace=True)
-        df.opp.fillna(method='bfill', inplace=True)
-        df.team.fillna(method='ffill', inplace=True)
-        df.opp.fillna(method='ffill', inplace=True)
-        if 'is_jump_ball' in df.columns:
-            df.ix[df['is_jump_ball'], ['team', 'opp']] = np.nan
+        # get rid of redundant subs (player subs in and out immediately)
+        plays_to_drop = []
+        for t, group in df[df.is_sub].groupby('secs_elapsed'):
+            for (idx1, p1), (idx2, p2) in itertools.combinations(
+                group.to_dict('index').items(), 2
+            ):
+                if (
+                    p1['sub_in'] == p2['sub_out'] and
+                    p1['sub_out'] == p2['sub_in']
+                ):
+                    plays_to_drop.extend([idx1, idx2])
+        df.drop(plays_to_drop, axis=0, inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
         return df
