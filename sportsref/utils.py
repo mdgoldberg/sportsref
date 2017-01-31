@@ -29,8 +29,10 @@ def get_html(url):
         try:
             response = requests.get(url)
             if 400 <= response.status_code < 500:
-                raise ValueError(('Invalid URL led to an error in fetching '
-                                 'HTML: {}').format(url))
+                raise ValueError(
+                    'Status Code {} received fetching URL "{}"'
+                    .format(response.status_code, url)
+                )
             html = response.text
             html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
@@ -58,13 +60,15 @@ def get_html(url):
     return html
 
 
-def parse_table(table, flatten=True):
+def parse_table(table, flatten=True, footer=False):
     """Parses a table from SR into a pandas dataframe.
 
-    :table: the PyQuery object representing the HTML table
-    :flatten: if True, flattens relative URLs to IDs. otherwise, leaves as
-    text.
-    :returns: Pandas dataframe
+    :param table: the PyQuery object representing the HTML table
+    :param flatten: if True, flattens relative URLs to IDs. otherwise, leaves
+        as text.
+    :param footer: If True, returns the summary/footer of the page. Recommended
+        to use this with flatten=False. Defaults to False.
+    :returns: pd.DataFrame
     """
     if not len(table):
         return pd.DataFrame()
@@ -74,7 +78,7 @@ def parse_table(table, flatten=True):
                for c in table('thead tr:not([class]) th[data-stat]')]
 
     # get data
-    rows = (table('tbody tr')
+    rows = (table('tbody tr' if not footer else 'tfoot tr')
             .not_('.thead, .stat_total, .stat_average')
             .items())
     data = [
@@ -102,6 +106,8 @@ def parse_table(table, flatten=True):
 
     # cleaning the DataFrame
 
+    df.drop(['Xxx', 'Yyy', 'Zzz'], axis=1, inplace=True, errors='ignore')
+
     # year_id -> year (as int)
     if 'year_id' in df.columns:
         df.rename(columns={'year_id': 'year'}, inplace=True)
@@ -110,6 +116,9 @@ def parse_table(table, flatten=True):
             df['pro_bowl'] = df.year.str.contains('\*')
             df['all_pro_1st_tm'] = df.year.str.contains('\+')
             df['year'] = df.year.map(lambda s: str(s)[:4]).astype(int)
+
+    if 'pos' in df.columns:
+        df.rename(columns={'pos': 'position'}, inplace=True)
 
     # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
     for bs_id_col in ('boxscore_word', 'game_date', 'box_score_text'):
@@ -150,14 +159,22 @@ def parse_table(table, flatten=True):
 
     # season -> int
     if 'season' in df.columns:
-        df['season'] = df['season'].astype(int)
+        if flatten:
+            df['season'] = df['season'].astype(int)
 
-    # (number%) -> float(number * 0.01)
-    def convert_pct(val):
+    # converts number-y things to floats
+    def convert_to_float(val):
+        # percentages: (number%) -> float(number * 0.01)
         m = re.search(r'([-\.\d]+)\%', str(val))
-        return float(m.group(1)) / 100. if m else val
+        if m:
+            return float(m.group(1)) / 100. if m else val
+        try:
+            return float(val)
+        except Exception:
+            return val
 
-    df = df.applymap(convert_pct)
+    df = df.ix[df.astype(bool).any(axis=1)]
+    df = df.applymap(convert_to_float)
 
     return df
 
@@ -199,7 +216,7 @@ def flatten_links(td, _recurse=False):
             return flatten_links(pq(c), _recurse=True)
 
     # if there's no text, just return None
-    if not td or not td.text():
+    if td is None or not td.text():
         return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
