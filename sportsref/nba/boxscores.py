@@ -16,28 +16,29 @@ class BoxScore(
     future.utils.with_metaclass(sportsref.decorators.Cached, object)
 ):
 
-    def __init__(self, bs_id):
-        self.bs_id = bs_id
+    def __init__(self, boxscore_id):
+        self.boxscore_id = boxscore_id
 
     def __eq__(self, other):
-        return self.bs_id == other.bs_id
+        return self.boxscore_id == other.boxscore_id
 
     def __hash__(self):
-        return hash(self.bs_id)
+        return hash(self.boxscore_id)
 
     def __repr__(self):
-        return 'BoxScore({})'.format(self.bs_id)
+        return 'BoxScore({})'.format(self.boxscore_id)
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
-        url = sportsref.nba.BASE_URL + '/boxscores/{}.html'.format(self.bs_id)
+        url = ('{}/boxscores/{}.html'
+               .format(sportsref.nba.BASE_URL, self.boxscore_id))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
     @sportsref.decorators.memoize
     def get_subpage_doc(self, page):
         url = (sportsref.nba.BASE_URL +
-               '/boxscores/{}/{}.html'.format(page, self.bs_id))
+               '/boxscores/{}/{}.html'.format(page, self.boxscore_id))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
@@ -47,7 +48,7 @@ class BoxScore(
         for more.
         :returns: A datetime.date object with year, month, and day attributes.
         """
-        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.bs_id)
+        match = re.match(r'(\d{4})(\d{2})(\d{2})', self.boxscore_id)
         year, month, day = map(int, match.groups())
         return datetime.date(year=year, month=month, day=day)
 
@@ -137,7 +138,7 @@ class BoxScore(
         """Returns a DataFrame of basic player stats from the game."""
 
         def time_to_mp(t):
-            if t.find(':') == -1:
+            if not t or t.find(':') == -1:
                 return 0.
             else:
                 mins, secs = map(int, t.split(':'))
@@ -171,21 +172,47 @@ class BoxScore(
         pass
 
     @sportsref.decorators.memoize
-    def pbp(self):
+    def pbp(self, dense_lineups=False, sparse_lineups=False):
         """Returns a dataframe of the play-by-play data from the game.
 
+        :param dense_lineups: If True, adds 10 columns containing the names of
+            the players on the court. Defaults to False.
+        :param sparse_lineups: If True, adds binary columns denoting whether a
+            given player is in the game at the time of a pass. Defaults to
+            False.
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
-        doc = self.get_subpage_doc('pbp')
+        try:
+            doc = self.get_subpage_doc('pbp')
+        except:
+            raise ValueError(
+                'No PBP data found for boxscore "{}"'.format(self.boxscore_id)
+            )
         table = doc('table#pbp')
-        rows = [tr.children('td') for tr in table('tr').items() if tr('td')]
+        trs = [
+            tr for tr in table('tr').items()
+            if (not tr.attr['class'] or  # regular data rows
+                tr.attr['id'] and tr.attr['id'].startswith('q'))  # qtr bounds
+        ]
+        rows = [tr.children('td') for tr in trs]
+        n_rows = len(rows)
         data = []
         year = self.season()
+        hm, aw = self.home(), self.away()
         cur_qtr = 0
         cur_aw_score = 0
         cur_hm_score = 0
-        for row in rows:
+
+        for i in range(n_rows):
+            tr = trs[i]
+            row = rows[i]
             p = {}
+
+            # increment cur_qtr when we hit a new quarter
+            if tr.attr['id'] and tr.attr['id'].startswith('q'):
+                assert int(tr.attr['id'][1:]) == cur_qtr + 1
+                cur_qtr += 1
+                continue
 
             # add time of play to entry
             t_str = row.eq(0).text()
@@ -195,8 +222,9 @@ class BoxScore(
                     5 * 60 * (cur_qtr - 4 if cur_qtr > 4 else 0))
             secsElapsed = endQ - (60 * mins + secs + 0.1 * tenths)
             p['secs_elapsed'] = secsElapsed
+            p['clock_time'] = t_str
 
-            # add scores to entry
+            # add scores and quarter to entry
             p['hm_score'] = cur_hm_score
             p['aw_score'] = cur_aw_score
             p['quarter'] = cur_qtr
@@ -205,22 +233,28 @@ class BoxScore(
             # ex: beginning/end of quarter, jump ball
             if row.length == 2:
                 desc = row.eq(1)
-                if desc.text().lower().startswith('start of '):
-                    # handle start of quarter/OT
-                    cur_qtr += 1
-                    continue
-                elif desc.text().lower().startswith('jump ball: '):
-                    # handle jump ball
+                # handle jump balls
+                if desc.text().lower().startswith('jump ball: '):
                     p['is_jump_ball'] = True
                     jb_str = sportsref.utils.flatten_links(desc)
                     n = None
                     p.update(
                         sportsref.nba.pbp.parse_play(jb_str, n, n, n, year)
                     )
+                # ignore rows marking beginning/end of quarters
+                elif (
+                    desc.text().lower().startswith('start of ') or
+                    desc.text().lower().startswith('end of ')
+                ):
+                    continue
+                # if another case, log and continue
                 else:
-                    # if another case, continue
                     if not desc.text().lower().startswith('end of '):
-                        print 'other case:', desc.text()
+                        print(
+                            '{}, Q{}, {} other case: {}'
+                            .format(self.boxscore_id, cur_qtr,
+                                    t_str, desc.text())
+                        )
                     continue
 
             # handle team play description
@@ -233,8 +267,6 @@ class BoxScore(
                 # update scores
                 scores = re.match(r'(\d+)\-(\d+)', sc_desc.text()).groups()
                 cur_aw_score, cur_hm_score = map(int, scores)
-                # get home and away
-                hm, aw = self.home(), self.away()
                 # handle the play
                 new_p = sportsref.nba.pbp.parse_play(
                     desc, hm, aw, is_hm_play, year
@@ -253,7 +285,8 @@ class BoxScore(
                     p = orig_p
                     new_p = new_p[1]
                 elif new_p.get('is_error'):
-                    print "can't parse: %s, boxscore: %s" % (desc, self.bs_id)
+                    print("can't parse: {}, boxscore: {}"
+                          .format(desc, self.boxscore_id))
                     # import pdb; pdb.set_trace()
                 p.update(new_p)
 
@@ -268,19 +301,26 @@ class BoxScore(
         df = pd.DataFrame.from_records(data)
         df = sportsref.nba.pbp.clean_features(df)
 
-        # add columns for home team, away team, and bs_id
+        # add columns for home team, away team, and boxscore_id
         df['home'] = self.home()
         df['away'] = self.away()
-        df['boxscore_id'] = self.bs_id
+        df['boxscore_id'] = self.boxscore_id
 
         # add column for pts
-        df['pts'] = (df['is_ftm'] + 2 * df['is_fgm']
-                     + (df['is_fgm'] & df['is_three']))
+        df['pts'] = (df['is_ftm'] + 2 * df['is_fgm'] +
+                     (df['is_fgm'] & df['is_three']))
         df['hm_pts'] = np.where(df.team == df.home, df.pts, 0)
         df['aw_pts'] = np.where(df.team == df.away, df.pts, 0)
 
         # TODO: track current lineup for each team
-        # df = sportsref.nba.pbp.add_lineups(df)
+        if dense_lineups:
+            df = pd.concat(
+                (df, sportsref.nba.pbp.get_dense_lineups(df)), axis=1
+            )
+        if sparse_lineups:
+            df = pd.concat(
+                (df, sportsref.nba.pbp.get_sparse_lineups(df)), axis=1
+            )
 
         # TODO: track possession number for each possession
 
