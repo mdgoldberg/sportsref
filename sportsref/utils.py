@@ -78,9 +78,9 @@ def parse_table(table, flatten=True, footer=False):
                for c in table('thead tr:not([class]) th[data-stat]')]
 
     # get data
-    rows = (table('tbody tr' if not footer else 'tfoot tr')
-            .not_('.thead, .stat_total, .stat_average')
-            .items())
+    rows = list(table('tbody tr' if not footer else 'tfoot tr')
+                .not_('.thead, .stat_total, .stat_average')
+                .items())
     data = [
         [flatten_links(td) if flatten else td.text()
          for td in row.items('th,td')]
@@ -113,10 +113,12 @@ def parse_table(table, flatten=True, footer=False):
         df.rename(columns={'year_id': 'year'}, inplace=True)
         if flatten:
             df.year = df.year.fillna(method='ffill')
-            df['pro_bowl'] = df.year.str.contains('\*')
-            df['all_pro_1st_tm'] = df.year.str.contains('\+')
+            if hasattr(df.year, 'str'):
+                df['pro_bowl'] = df.year.str.contains('\*')
+                df['all_pro_1st_tm'] = df.year.str.contains('\+')
             df['year'] = df.year.map(lambda s: str(s)[:4]).astype(int)
 
+    # pos -> position
     if 'pos' in df.columns:
         df.rename(columns={'pos': 'position'}, inplace=True)
 
@@ -124,15 +126,10 @@ def parse_table(table, flatten=True, footer=False):
     for bs_id_col in ('boxscore_word', 'game_date', 'box_score_text'):
         if bs_id_col in df.columns:
             df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
-            if flatten:
-                df = df.loc[df['boxscore_id'].notnull()]  # drop bye weeks
-                df['year'] = df['boxscore_id'].str[:4].astype(int)
-                df['month'] = df['boxscore_id'].str[4:6].astype(int)
-                df['day'] = df['boxscore_id'].str[6:8].astype(int)
             break
 
     # ignore *, +, and other characters used to note things
-    df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
+    df.replace(re.compile(ur'[\*\+\u2605]', re.U), '', inplace=True)
     for col in df.columns:
         if hasattr(df[col], 'str'):
             df.ix[:, col] = df.ix[:, col].str.strip()
@@ -162,14 +159,26 @@ def parse_table(table, flatten=True, footer=False):
         if flatten:
             df['season'] = df['season'].astype(int)
 
+    # add month, day, year columns based on date_game
+    if 'date_game' in df.columns:
+        date_df = df['date_game'].str.extract(
+            'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
+            expand=True
+        )
+        df = pd.concat((df, date_df), axis=1)
+
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
         m = re.search(r'([-\.\d]+)\%', str(val))
         if m:
             return float(m.group(1)) / 100. if m else val
+        # generally try to coerce to float, unless it's an int or bool
         try:
-            return float(val)
+            if isinstance(val, (int, bool)):
+                return val
+            else:
+                return float(val)
         except Exception:
             return val
 
@@ -253,7 +262,7 @@ def rel_url_to_id(url):
     refRegex = r'.*/officials/(.+?r)\.html?'
     collegeRegex = r'.*/schools/(\S+?)/.*'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
-    bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    bsDateRegex = r'.*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)'
     leagueRegex = r'.*/leagues/(.*_\d{4}).*'
 
     regexes = [
