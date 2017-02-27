@@ -27,7 +27,7 @@ def expand_details(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'])
+    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'].values)
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.iterkeys()}
     blankEntry = {c: np.nan for c in cols}
@@ -39,15 +39,14 @@ def expand_details(df, detailCol='detail'):
     errors = [i for i, d in enumerate(dicts) if d is None]
     df['isError'] = False
     df.loc[errors, 'isError'] = True
-    # fill in some NaN's necessary for clean_features
+    # fill in some NaN's necessary for _clean_features
     df.ix[0, 'qtr_time_remain'] = '15:00'
     df.qtr_time_remain.fillna(method='bfill', inplace=True)
     df.qtr_time_remain.fillna(
-        pd.Series(np.where(df.quarter == 4, '0:00', '15:00')),
-        inplace=True
+        pd.Series(np.where(df.quarter == 4, '0:00', '15:00')), inplace=True
     )
-    # use clean_features to clean up and add columns
-    new_df = df.apply(clean_features, axis=1)
+    # use _clean_features to clean up and add columns
+    new_df = df.apply(_clean_features, axis=1)
     return new_df
 
 
@@ -357,8 +356,7 @@ def parse_play_details(details):
     return None
 
 
-@sportsref.decorators.memoize
-def clean_features(struct):
+def _clean_features(struct):
     """Cleans up the features collected in parse_play_details.
 
     :struct: Pandas Series of features parsed from details string.
@@ -461,7 +459,7 @@ def clean_features(struct):
     if struct['isXP']:
         struct['fieldSide'] = struct['ydLine'] = np.nan
     else:
-        fieldSide, ydline = loc_to_features(struct.get('location'))
+        fieldSide, ydline = _loc_to_features(struct.get('location'))
         struct['fieldSide'] = fieldSide
         struct['ydLine'] = ydline
     # creating secsElapsed (in entire game) from qtr_time_remain and quarter
@@ -480,8 +478,7 @@ def clean_features(struct):
     return pd.Series(struct)
 
 
-@sportsref.decorators.memoize
-def loc_to_features(l):
+def _loc_to_features(l):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
 
@@ -491,19 +488,22 @@ def loc_to_features(l):
 
     """
     if l:
-        l = l.strip()
-        if ' ' in l:
-            r = l.split()
-            r[0] = r[0].lower()
-            r[1] = int(r[1])
-        else:
-            r = (np.nan, int(l))
+        if isinstance(l, basestring):
+            l = l.strip()
+            if ' ' in l:
+                r = l.split()
+                r[0] = r[0].lower()
+                r[1] = int(r[1])
+            else:
+                r = (np.nan, int(l))
+        elif isinstance(l, float):
+            return (np.nan, 50)
     else:
         r = (np.nan, np.nan)
     return r
 
 
-def add_team_columns(features):
+def _add_team_columns(features):
     """Function that adds 'team' and 'opp' columns to the features by iterating
     through the rows in order. A precondition is that the features dicts are in
     order in a continuous game sense and that all rows are from the same game.
@@ -519,9 +519,9 @@ def add_team_columns(features):
         # if it's a kickoff or the play after a kickoff,
         # figure out who has possession manually
         if row['isKickoff'] or playAfterKickoff:
-            curTm, curOpp = team_and_opp(row)
+            curTm, curOpp = _team_and_opp(row)
         else:
-            curTm, curOpp = team_and_opp(row, curTm, curOpp)
+            curTm, curOpp = _team_and_opp(row, curTm, curOpp)
         row['team'], row['opp'] = curTm, curOpp
         # set playAfterKickoff
         playAfterKickoff = row['isKickoff']
@@ -535,8 +535,7 @@ def add_team_columns(features):
     return features
 
 
-@sportsref.decorators.memoize
-def team_and_opp(struct, curTm=None, curOpp=None):
+def _team_and_opp(struct, curTm=None, curOpp=None):
     """Given a dict representing a play and the current team with the ball,
     returns (team, opp) where team is the team with the ball and opp is the
     team without the ball at the end of the play.
@@ -575,15 +574,9 @@ def team_and_opp(struct, curTm=None, curOpp=None):
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
-            player = sportsref.nfl.players.Player(pID)
-            glog = player.gamelog(kind='B')
-            if 'boxscore_id' in glog.columns:
-                narrowed = glog.loc[
-                    glog.boxscore_id == struct['boxscore_id'], 'team'
-                ]
-                if not narrowed.empty:
-                    curTm = narrowed.item()
-                    curOpp = bs.home() if bs.home() != curTm else bs.away()
+            snaps = bs.snap_counts()
+            curTm = snaps.ix[pID, 'team']
+            curOpp = bs.home() if bs.home() != curTm else bs.away()
 
         return curTm, curOpp
 
@@ -594,36 +587,37 @@ def team_and_opp(struct, curTm=None, curOpp=None):
         return curTm, curOpp
 
 
-def add_team_features(row):
+def _add_team_features(df):
     """Adds extra convenience features based on teams with and without
     possession, with the precondition that the there are 'team' and 'opp'
     specified in row.
 
-    :row: A Series representing one play after clean_features has been called
-    and 'team' and 'opp' have been added.
+    :df: A DataFrame representing a game's play-by-play data after
+        _clean_features has been called and 'team' and 'opp' have been added by
+        _add_team_columns.
     :returns: A dict with new features in addition to previous features.
     """
-    # if team and opp haven't been added, return as is
-    if pd.isnull(row.get('team')):
-        print 'ERROR: team is null', row['boxscore_id'], row['detail']
-        return row
-    homeOnOff = row['team'] == row['home']
+    assert df.team.notnull().all()
+
+    homeOnOff = df['team'] == df['home']
     # create column for distToGoal
-    row['distToGoal'] = (row['ydLine'] if row['team'] != row['fieldSide']
-                         else 100 - row['ydLine'])
-    row['distToGoal'] = 2 if row.isXP or row.isTwoPoint else row['distToGoal']
+    df['distToGoal'] = np.where(df['team'] != df['fieldSide'],
+                                df['ydLine'], 100 - df['ydLine'])
+    df['distToGoal'] = np.where(df['isXP'] | df['isTwoPoint'],
+                                2, df['distToGoal'])
     # create column for each team's WP
-    row['team_wp'] = row['home_wp'] if homeOnOff else 100. - row['home_wp']
-    row['opp_wp'] = 100. - row['team_wp']
+    df['team_wp'] = np.where(homeOnOff, df['home_wp'], 100. - df['home_wp'])
+    df['opp_wp'] = 100. - df['team_wp']
     # create columns for each team's WPA
-    row['team_wpa'] = row['home_wpa'] if homeOnOff else -row['home_wpa']
-    row['opp_wpa'] = -row['team_wpa']
+    df['team_wpa'] = np.where(homeOnOff, df['home_wpa'], -df['home_wpa'])
+    df['opp_wpa'] = -df['team_wpa']
     # create column for offense and defense scores if not already there
-    bs = sportsref.nfl.boxscores.BoxScore(row['boxscore_id'])
-    if bs.home() == row['team']:
-        row['team_score'] = row['pbp_score_hm']
-        row['opp_score'] = row['pbp_score_aw']
-    else:
-        row['team_score'] = row['pbp_score_aw']
-        row['opp_score'] = row['pbp_score_hm']
-    return row
+    assert df['boxscore_id'].nunique() == 1
+    bs_id = df['boxscore_id'].values[0]
+    bs = sportsref.nfl.boxscores.BoxScore(bs_id)
+    df['team_score'] = np.where(df['team'] == bs.home(),
+                                df['pbp_score_hm'], df['pbp_score_aw'])
+    df['opp_score'] = np.where(df['team'] == bs.home(),
+                               df['pbp_score_aw'], df['pbp_score_hm'])
+
+    return df

@@ -45,10 +45,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A string corresponding to the team's full name.
         """
         doc = self.get_main_doc()
-        headerwords = doc('div#info_box h1')[0].text_content().split()
-        lastIdx = headerwords.index('Franchise')
-        teamwords = headerwords[:lastIdx]
-        return ' '.join(teamwords)
+        name = doc('div#info h1[itemprop="name"]').text()
+        return name
 
     @sportsref.decorators.memoize
     def roster(self, year):

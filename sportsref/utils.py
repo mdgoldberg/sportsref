@@ -29,8 +29,10 @@ def get_html(url):
         try:
             response = requests.get(url)
             if 400 <= response.status_code < 500:
-                raise ValueError(('Invalid URL led to an error in fetching '
-                                 'HTML: {}').format(url))
+                raise ValueError(
+                    'Status Code {} received fetching URL "{}"'
+                    .format(response.status_code, url)
+                )
             html = response.text
             html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
@@ -58,13 +60,15 @@ def get_html(url):
     return html
 
 
-def parse_table(table, flatten=True):
+def parse_table(table, flatten=True, footer=False):
     """Parses a table from SR into a pandas dataframe.
 
-    :table: the PyQuery object representing the HTML table
-    :flatten: if True, flattens relative URLs to IDs. otherwise, leaves as
-    text.
-    :returns: Pandas dataframe
+    :param table: the PyQuery object representing the HTML table
+    :param flatten: if True, flattens relative URLs to IDs. otherwise, leaves
+        as text.
+    :param footer: If True, returns the summary/footer of the page. Recommended
+        to use this with flatten=False. Defaults to False.
+    :returns: pd.DataFrame
     """
     if not len(table):
         return pd.DataFrame()
@@ -74,7 +78,7 @@ def parse_table(table, flatten=True):
                for c in table('thead tr:not([class]) th[data-stat]')]
 
     # get data
-    rows = list(table('tbody tr')
+    rows = list(table('tbody tr' if not footer else 'tfoot tr')
                 .not_('.thead, .stat_total, .stat_average')
                 .items())
     data = [
@@ -100,57 +104,86 @@ def parse_table(table, flatten=True):
             for row in rows
         ]
 
-    # small fixes to DataFrame
+    # cleaning the DataFrame
+
+    df.drop(['Xxx', 'Yyy', 'Zzz'], axis=1, inplace=True, errors='ignore')
 
     # year_id -> year (as int)
     if 'year_id' in df.columns:
         df.rename(columns={'year_id': 'year'}, inplace=True)
-        df.year = df.year.fillna(method='ffill')
-        if df.year.dtype == basestring:
-            df.year = df.year.map(lambda s: s[:4]).astype(int)
-        else:
-            df.year = df.year.astype(int)
+        if flatten:
+            df.year = df.year.fillna(method='ffill')
+            if hasattr(df.year, 'str'):
+                df['pro_bowl'] = df.year.str.contains('\*')
+                df['all_pro_1st_tm'] = df.year.str.contains('\+')
+            df['year'] = df.year.map(lambda s: str(s)[:4]).astype(int)
+
+    # pos -> position
+    if 'pos' in df.columns:
+        df.rename(columns={'pos': 'position'}, inplace=True)
 
     # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
-    bs_id_col = None
-    if 'boxscore_word' in df.columns:
-        bs_id_col = 'boxscore_word'
-    elif 'game_date' in df.columns:
-        bs_id_col = 'game_date'
-    if flatten and bs_id_col:
-        df = df.loc[df[bs_id_col].notnull()]  # drop bye weeks
-        df['year'] = df[bs_id_col].str[:4].astype(int)
-        df['month'] = df[bs_id_col].str[4:6].astype(int)
-        df['day'] = df[bs_id_col].str[6:8].astype(int)
-        df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
+    for bs_id_col in ('boxscore_word', 'game_date', 'box_score_text'):
+        if bs_id_col in df.columns:
+            df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
+            break
 
-    # ignore *,+, and other characters used to note things
-    df.replace(re.compile(ur'[\*\+\u2605)]', re.U), '', inplace=True)
+    # ignore *, +, and other characters used to note things
+    df.replace(re.compile(ur'[\*\+\u2605]', re.U), '', inplace=True)
     for col in df.columns:
         if hasattr(df[col], 'str'):
             df.ix[:, col] = df.ix[:, col].str.strip()
 
     # player -> player_id
-    if flatten and 'player' in df.columns:
-        df.rename(columns={'player': 'player_id'}, inplace=True)
+    if 'player' in df.columns:
+        if flatten:
+            df.rename(columns={'player': 'player_id'}, inplace=True)
+            # when flattening, keep a column for names
+            player_names = parse_table(table, flatten=False)['player_name']
+            df.ix[:, 'player_name'] = player_names
+        else:
+            df.rename(columns={'player': 'player_name'}, inplace=True)
 
     # team_name -> team_id
-    if flatten and 'team_name' in df.columns:
-        df.rename(columns={'team_name': 'team_id'}, inplace=True)
-
-    # get rid of faulty rows
-    if 'team_id' in df.columns:
-        df = df.ix[~df['team_id'].isin(['XXX'])]
+    if 'team_name' in df.columns:
+        # first, get rid of faulty rows
+        df = df.ix[~df['team_name'].isin(['XXX'])]
+        if flatten:
+            df.rename(columns={'team_name': 'team_id'}, inplace=True)
+            # when flattening, keep a column for names
+            team_names = parse_table(table, flatten=False)['team_name']
+            df.ix[:, 'team_name'] = team_names
 
     # season -> int
     if 'season' in df.columns:
-        df['season'] = df['season'].astype(int)
+        if flatten:
+            df['season'] = df['season'].astype(int)
 
-    # (number%) -> float(number * 0.01)
-    def convertPct(val):
-        m = re.search(r'([-\d]+)\%', str(val))
-        return float(m.group(1)) / 100. if m else val
-    df = df.applymap(convertPct)
+    # add month, day, year columns based on date_game
+    if 'date_game' in df.columns:
+        date_df = df['date_game'].str.extract(
+            'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
+            expand=True
+        )
+        df = pd.concat((df, date_df), axis=1)
+
+    # converts number-y things to floats
+    def convert_to_float(val):
+        # percentages: (number%) -> float(number * 0.01)
+        m = re.search(r'([-\.\d]+)\%', str(val))
+        if m:
+            return float(m.group(1)) / 100. if m else val
+        # generally try to coerce to float, unless it's an int or bool
+        try:
+            if isinstance(val, (int, bool)):
+                return val
+            else:
+                return float(val)
+        except Exception:
+            return val
+
+    df = df.ix[df.astype(bool).any(axis=1)]
+    df = df.applymap(convert_to_float)
 
     return df
 
@@ -192,7 +225,7 @@ def flatten_links(td, _recurse=False):
             return flatten_links(pq(c), _recurse=True)
 
     # if there's no text, just return None
-    if not td or not td.text():
+    if td is None or not td.text():
         return '' if _recurse else None
 
     return ''.join(_flattenC(c) for c in td.contents())
@@ -229,7 +262,7 @@ def rel_url_to_id(url):
     refRegex = r'.*/officials/(.+?r)\.html?'
     collegeRegex = r'.*/schools/(\S+?)/.*'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
-    bsDateRegex = r'.*/boxscores/index\.cgi\?(month=\d+&day=\d+&year=\d+)'
+    bsDateRegex = r'.*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)'
     leagueRegex = r'.*/leagues/(.*_\d{4}).*'
 
     regexes = [

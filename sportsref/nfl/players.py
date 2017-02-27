@@ -199,7 +199,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """
         url = self._subpage_url('gamelog', None)  # year is filtered later
         doc = pq(sportsref.utils.get_html(url))
-        table = doc('#stats') if kind == 'R' else doc('#stats_playoffs')
+        table = (doc('table#stats') if kind == 'R' else
+                 doc('table#stats_playoffs'))
         df = sportsref.utils.parse_table(table)
         if year is not None:
             df = df.query('year == @year').reset_index(drop=True)
@@ -214,7 +215,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with passing stats.
         """
         doc = self.get_doc()
-        table = doc('#passing') if kind == 'R' else doc('#passing_playoffs')
+        table = (doc('table#passing') if kind == 'R' else
+                 doc('table#passing_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 
@@ -227,11 +229,11 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Pandas DataFrame with rushing/receiving stats.
         """
         doc = self.get_doc()
-        table = (doc('#rushing_and_receiving') if kind == 'R'
-                 else doc('#rushing_and_receiving_playoffs'))
+        table = (doc('table#rushing_and_receiving') if kind == 'R'
+                 else doc('table#rushing_and_receiving_playoffs'))
         if not table:
-            table = (doc('#receiving_and_rushing') if kind == 'R'
-                     else doc('#receiving_and_rushing_playoffs'))
+            table = (doc('table#receiving_and_rushing') if kind == 'R'
+                     else doc('table#receiving_and_rushing_playoffs'))
         df = sportsref.utils.parse_table(table)
         return df
 

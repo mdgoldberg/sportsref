@@ -68,10 +68,11 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         values.
         """
         doc = self.get_main_doc()
-        team_ids = sportsref.utils.parse_table(
-            doc('table#team-stats-per_game'), flatten=True)['team_id']
-        team_names = sportsref.utils.parse_table(
-            doc('table#team-stats-per_game'), flatten=False)['team_name']
+        table = doc('table#team-stats-per_game')
+        flattened = sportsref.utils.parse_table(table, flatten=True)
+        unflattened = sportsref.utils.parse_table(table, flatten=False)
+        team_ids = flattened['team_id']
+        team_names = unflattened['team_name']
         if len(team_names) != len(team_ids):
             raise Exception("team names and team IDs don't align")
         return dict(zip(team_ids, team_names))
@@ -108,21 +109,22 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             table = doc('table#schedule')
             df = sportsref.utils.parse_table(table)
             dfs.append(df)
-        df = pd.concat(dfs)
+        df = pd.concat(dfs).reset_index(drop=True)
 
-        # figure out which games are regular season
-        team_per_game = self.team_stats_per_game()
-        n_reg_games = int(team_per_game.g.sum() / 2)
+        # figure out how many regular season games
+        try:
+            sportsref.utils.get_html('{}/playoffs/NBA_{}.html'.format(
+                sportsref.nba.BASE_URL, self.yr)
+            )
+            is_past_season = True
+        except ValueError:
+            is_past_season = False
 
-        # expand `date_game` column to month/day/year
-        date_df = df['date_game'].str.extract(
-            'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
-            expand=True)
-
-        df = pd.concat((df, date_df), axis=1).drop('date_game', axis=1)
-
-        # clean up some columns
-        df.rename(columns={'box_score_text': 'boxscore_id'}, inplace=True)
+        if is_past_season:
+            team_per_game = self.team_stats_per_game()
+            n_reg_games = int(team_per_game.g.sum() / 2)
+        else:
+            n_reg_games = len(df)
 
         # subset appropriately based on `kind`
         if kind == 'P':
