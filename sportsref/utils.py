@@ -116,11 +116,51 @@ def parse_table(table, flatten=True):
     if 'player' in df.columns:
         df.rename(columns={'player': 'player_id'}, inplace=True)
 
+<<<<<<< Updated upstream
     # (number%) -> float(number * 0.01)
     def convertPct(val):
         m = re.search(r'([-\d]+)\%', str(val))
         return float(m.group(1)) / 100. if m else val
     df = df.applymap(convertPct)
+=======
+    # season -> int
+    if 'season' in df.columns:
+        if flatten:
+            df['season'] = df['season'].astype(int)
+
+    # add month, day, year columns based on date_game,
+    # or convert to boxscore_id
+    date_game_re = r'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)'
+    if 'date_game' in df.columns:
+        # if it's the type of date_game that can be turned into a date, do so
+        if df['date_game'].str.search(date_game_re).all():
+            date_df = df['date_game'].str.extract(
+                'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
+                expand=True
+            )
+            df = pd.concat((df, date_df), axis=1)
+        # otherwise, rename it to boxscore_id
+        else:
+            df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
+
+    # converts number-y things to floats
+    def convert_to_float(val):
+        # percentages: (number%) -> float(number * 0.01)
+        m = re.search(r'([-\.\d]+)\%', str(val))
+        if m:
+            return float(m.group(1)) / 100. if m else val
+        # generally try to coerce to float, unless it's an int or bool
+        try:
+            if isinstance(val, (int, bool)):
+                return val
+            else:
+                return float(val)
+        except Exception:
+            return val
+
+    df = df.ix[df.astype(bool).any(axis=1)]
+    df = df.applymap(convert_to_float)
+>>>>>>> Stashed changes
 
     return df
 
