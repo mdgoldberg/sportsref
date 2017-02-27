@@ -109,18 +109,22 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             table = doc('table#schedule')
             df = sportsref.utils.parse_table(table)
             dfs.append(df)
-        df = pd.concat(dfs)
+        df = pd.concat(dfs).reset_index(drop=True)
 
-        # figure out which games are regular season
-        team_per_game = self.team_stats_per_game()
-        n_reg_games = int(team_per_game.g.sum() / 2)
+        # figure out how many regular season games
+        try:
+            sportsref.utils.get_html('{}/playoffs/NBA_{}.html'.format(
+                sportsref.nba.BASE_URL, self.yr)
+            )
+            is_past_season = True
+        except ValueError:
+            is_past_season = False
 
-        # expand `date_game` column to month/day/year
-        date_df = df['date_game'].str.extract(
-            'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
-            expand=True)
-
-        df = pd.concat((df, date_df), axis=1).drop('date_game', axis=1)
+        if is_past_season:
+            team_per_game = self.team_stats_per_game()
+            n_reg_games = int(team_per_game.g.sum() / 2)
+        else:
+            n_reg_games = len(df)
 
         # subset appropriately based on `kind`
         if kind == 'P':

@@ -2,7 +2,6 @@ import future
 import future.utils
 
 import datetime
-import itertools
 import re
 
 import numpy as np
@@ -74,7 +73,7 @@ class BoxScore(
             for tr in table('tr.thead').next_all('tr').items()
         ]
 
-        return pd.DataFrame(data, columns=columns)
+        return pd.DataFrame(data, columns=columns, dtype='float')
 
     @sportsref.decorators.memoize
     def home(self):
@@ -150,7 +149,7 @@ class BoxScore(
         tm_ids = ['box_{}_basic'.format(tm) for tm in tms]
         tables = [doc('table#{}'.format(tm_id).lower()) for tm_id in tm_ids]
         dfs = [sportsref.utils.parse_table(table) for table in tables]
-        # TODO: include a "is_starter" column
+
         # clean data and add features
         for i, (tm, df) in enumerate(zip(tms, dfs)):
             if 'mp' in df.columns:
@@ -162,6 +161,7 @@ class BoxScore(
             df.ix[:, 'team'] = tm
             df.ix[:, 'is_home'] = i == 1
             df.ix[:, 'is_starter'] = [i < 5 for i in range(df.shape[0])]
+            df.drop_duplicates(subset='player_id', keep='first', inplace=True)
 
         return pd.concat(dfs)
 
@@ -195,13 +195,10 @@ class BoxScore(
                 tr.attr['id'] and tr.attr['id'].startswith('q'))  # qtr bounds
         ]
         rows = [tr.children('td') for tr in trs]
-        n_rows = len(rows)
+        n_rows = len(trs)
         data = []
-        year = self.season()
-        hm, aw = self.home(), self.away()
         cur_qtr = 0
-        cur_aw_score = 0
-        cur_hm_score = 0
+        bsid = self.boxscore_id
 
         for i in range(n_rows):
             tr = trs[i]
@@ -223,10 +220,6 @@ class BoxScore(
             secsElapsed = endQ - (60 * mins + secs + 0.1 * tenths)
             p['secs_elapsed'] = secsElapsed
             p['clock_time'] = t_str
-
-            # add scores and quarter to entry
-            p['hm_score'] = cur_hm_score
-            p['aw_score'] = cur_aw_score
             p['quarter'] = cur_qtr
 
             # handle single play description
@@ -237,9 +230,8 @@ class BoxScore(
                 if desc.text().lower().startswith('jump ball: '):
                     p['is_jump_ball'] = True
                     jb_str = sportsref.utils.flatten_links(desc)
-                    n = None
                     p.update(
-                        sportsref.nba.pbp.parse_play(jb_str, n, n, n, year)
+                        sportsref.nba.pbp.parse_play(bsid, jb_str, None)
                     )
                 # ignore rows marking beginning/end of quarters
                 elif (
@@ -260,17 +252,12 @@ class BoxScore(
             # handle team play description
             # ex: shot, turnover, rebound, foul, sub, etc.
             elif row.length == 6:
-                aw_desc, sc_desc, hm_desc = row.eq(1), row.eq(3), row.eq(5)
+                aw_desc, hm_desc = row.eq(1), row.eq(5)
                 is_hm_play = bool(hm_desc.text())
                 desc = hm_desc if is_hm_play else aw_desc
                 desc = sportsref.utils.flatten_links(desc)
-                # update scores
-                scores = re.match(r'(\d+)\-(\d+)', sc_desc.text()).groups()
-                cur_aw_score, cur_hm_score = map(int, scores)
-                # handle the play
-                new_p = sportsref.nba.pbp.parse_play(
-                    desc, hm, aw, is_hm_play, year
-                )
+                # parse the play
+                new_p = sportsref.nba.pbp.parse_play(bsid, desc, is_hm_play)
                 if not new_p:
                     continue
                 elif isinstance(new_p, list):
@@ -301,18 +288,114 @@ class BoxScore(
         df = pd.DataFrame.from_records(data)
         df = sportsref.nba.pbp.clean_features(df)
 
-        # add columns for home team, away team, and boxscore_id
-        df['home'] = self.home()
-        df['away'] = self.away()
+        # add columns for home team, away team, boxscore_id, date
+        away, home = self.away(), self.home()
+        df['home'] = home
+        df['away'] = away
         df['boxscore_id'] = self.boxscore_id
+        df['season'] = self.season()
+        date = self.date()
+        df['year'] = date.year
+        df['month'] = date.month
+        df['day'] = date.day
 
-        # add column for pts
+        # get rid of 'rebounds' after FTM, non-final FTA, or tech FTA
+        df.reset_index(drop=True, inplace=True)
+        no_reb_mask = (
+            (df.fta_num < df.tot_fta) | df.is_ftm |
+            df.get('is_tech_fta', False)
+        )
+        drop_mask = (
+            df.is_reb & no_reb_mask.shift(1).fillna(False)
+        ).nonzero()[0]
+        df.drop(drop_mask, axis=0, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+        # track possession number for each possession
+        new_poss = (df.team == df.home).diff().fillna(False)
+        # def rebound considered part of the new possession
+        df['poss_num'] = np.cumsum(new_poss) + df.is_dreb
+        # create poss_num with rebs -> new possessions for granular groupbys
+        poss_num_reb = np.cumsum(new_poss | df.is_reb)
+
+        # make sure plays with the same clock time are in the right order
+        sort_cols = [col for col in
+                     ['is_reb', 'is_fga', 'is_pf', 'is_tech_foul',
+                      'is_ejection', 'is_tech_fta', 'is_timeout', 'is_pf_fta',
+                      'is_sub']
+                     if col in df.columns]
+        for label, group in df.groupby([df.secs_elapsed, poss_num_reb]):
+            if len(group) > 1:
+                df.ix[group.index, :] = group.sort_values(
+                    sort_cols, ascending=False
+                ).values
+
+        # makes sure team and poss_num are correct for subs after rearranging
+        # some possessions above
+        df.ix[df['is_sub'], ['team', 'opp', 'poss_num']] = np.nan
+        df.team.fillna(method='bfill', inplace=True)
+        df.opp.fillna(method='bfill', inplace=True)
+        df.poss_num.fillna(method='bfill', inplace=True)
+        # make sure 'team' is the team shooting tech FTs
+        # (impt for keeping track of the score)
+        if 'is_tech_fta' in df.columns:
+            tech_fta = df['is_tech_fta']
+            df.ix[tech_fta, 'team'] = df.ix[tech_fta, 'ft_team']
+            df.ix[tech_fta, 'opp'] = np.where(
+                df.ix[tech_fta, 'team'] == home, away, home
+            )
+        # redefine poss_num_reb
+        new_poss = (df.team == df.home).diff().fillna(False)
+        poss_num_reb = np.cumsum(new_poss | df.is_reb)
+
+        # get rid of redundant subs
+        for (se, tm, pnum), group in df[df.is_sub].groupby(
+            [df.secs_elapsed, df.sub_team, poss_num_reb]
+        ):
+            if len(group) > 1:
+                sub_in = set()
+                sub_out = set()
+                # first, figure out who's in and who's out after subs
+                for i, row in group.iterrows():
+                    if row['sub_in'] in sub_out:
+                        sub_out.remove(row['sub_in'])
+                    else:
+                        sub_in.add(row['sub_in'])
+                    if row['sub_out'] in sub_in:
+                        sub_in.remove(row['sub_out'])
+                    else:
+                        sub_out.add(row['sub_out'])
+                assert len(sub_in) == len(sub_out)
+                # second, add those subs
+                n_subs = len(sub_in)
+                for idx, p_in, p_out in zip(
+                    group.index[:n_subs], sub_in, sub_out
+                ):
+                    assert df.ix[idx, 'is_sub']
+                    df.ix[idx, 'sub_in'] = p_in
+                    df.ix[idx, 'sub_out'] = p_out
+                    df.ix[idx, 'sub_team'] = tm
+                    df.ix[idx, 'detail'] = (
+                        '{} enters the game for {}'.format(p_in, p_out)
+                    )
+                # third, if applicable, remove old sub entries when there are
+                # redundant subs
+                n_extra = len(group) - len(sub_in)
+                if n_extra:
+                    extra_idxs = group.index[-n_extra:]
+                    df.drop(extra_idxs, axis=0, inplace=True)
+
+        df.reset_index(drop=True, inplace=True)
+
+        # add column for pts and score
         df['pts'] = (df['is_ftm'] + 2 * df['is_fgm'] +
                      (df['is_fgm'] & df['is_three']))
         df['hm_pts'] = np.where(df.team == df.home, df.pts, 0)
         df['aw_pts'] = np.where(df.team == df.away, df.pts, 0)
+        df['hm_score'] = np.cumsum(df['hm_pts'])
+        df['aw_score'] = np.cumsum(df['aw_pts'])
 
-        # TODO: track current lineup for each team
+        # get lineup data
         if dense_lineups:
             df = pd.concat(
                 (df, sportsref.nba.pbp.get_dense_lineups(df)), axis=1
@@ -322,22 +405,6 @@ class BoxScore(
                 (df, sportsref.nba.pbp.get_sparse_lineups(df)), axis=1
             )
 
-        # TODO: track possession number for each possession
-
         # TODO: add shot clock as a feature
-
-        # get rid of redundant subs (player subs in and out immediately)
-        plays_to_drop = []
-        for t, group in df[df.is_sub].groupby('secs_elapsed'):
-            for (idx1, p1), (idx2, p2) in itertools.combinations(
-                group.to_dict('index').items(), 2
-            ):
-                if (
-                    p1['sub_in'] == p2['sub_out'] and
-                    p1['sub_out'] == p2['sub_in']
-                ):
-                    plays_to_drop.extend([idx1, idx2])
-        df.drop(plays_to_drop, axis=0, inplace=True)
-        df.reset_index(drop=True, inplace=True)
 
         return df
