@@ -167,40 +167,24 @@ def get_class_instance_key(cls, args, kwargs):
     return tuple(sorted(l))
 
 
-# technically not a decorator, but it's similar enough
+# used as a metaclass for classes that should be memoized
+# (technically not a decorator, but it's similar enough)
 Cached = mementos.memento_factory('Cached', get_class_instance_key)
 
 
 def memoize(fun):
-    """A decorator for memoizing functions."""
+    """A decorator for memoizing functions.
+
+    Only works on functions that take simple arguments - arguments that take
+    list-like or dict-like arguments will not be memoized, and this function
+    will raise a TypeError.
+    """
     @funcutils.wraps(fun)
     def wrapper(*args, **kwargs):
 
-        # deal with lists in args
-        def isList(a):
-            return isinstance(a, list) or isinstance(a, np.ndarray)
-
-        def deListify(arg):
-            if isList(arg):
-                return tuple(map(deListify, arg))
-            else:
-                return arg
-
-        # deal with dicts in args
-        def isDict(d):
-            return isinstance(d, dict) or isinstance(d, pd.Series)
-
-        def deDictify(arg):
-            if isDict(arg):
-                items = dict(arg).items()
-                items = [(k, deListify(deDictify(v))) for k, v in items]
-                return frozenset(sorted(items))
-            else:
-                return arg
-
-        clean_args = tuple(map(deListify, args))
-        clean_args = tuple(map(deDictify, clean_args))
-        clean_kwargs = deDictify(kwargs)
+        hash_args = tuple(args)
+        hash_kwargs = frozenset(sorted(kwargs.items()))
+        key = (hash_args, hash_kwargs)
 
         def _copy(v):
             if isinstance(v, pq):
@@ -208,7 +192,6 @@ def memoize(fun):
             else:
                 return copy.deepcopy(v)
 
-        key = (clean_args, clean_kwargs)
         try:
             ret = _copy(cache[key])
             return ret
@@ -217,8 +200,9 @@ def memoize(fun):
             ret = _copy(cache[key])
             return ret
         except TypeError:
-            print 'memoization type error here', fun.__name__, key
-            return fun(*args, **kwargs)
+            print('memoization type error in function {} for arguments {}'
+                  .format(fun.__name__, key))
+            raise
 
     cache = {}
     return wrapper
@@ -247,7 +231,7 @@ def kind_rpb(include_type=False):
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df['is_playoffs'] = (kind == 'P')
+                    df.ix[:, 'is_playoffs'] = (kind == 'P')
                 return df
         return wrapper
     return decorator
