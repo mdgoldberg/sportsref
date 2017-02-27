@@ -75,7 +75,7 @@ class BoxScore(
         """
         doc = self.get_doc()
         table = doc('table.linescore')
-        relURL = table('tr').eq(1)('a').eq(2).attr['href']
+        relURL = table('tr').eq(2)('a').eq(2).attr['href']
         home = sportsref.utils.rel_url_to_id(relURL)
         return home
 
@@ -86,7 +86,7 @@ class BoxScore(
         """
         doc = self.get_doc()
         table = doc('table.linescore')
-        relURL = table('tr').eq(2)('a').eq(2).attr['href']
+        relURL = table('tr').eq(1)('a').eq(2).attr['href']
         away = sportsref.utils.rel_url_to_id(relURL)
         return away
 
@@ -97,7 +97,7 @@ class BoxScore(
         """
         doc = self.get_doc()
         table = doc('table.linescore')
-        home_score = table('tr').eq(1)('td')[-1].text_content()
+        home_score = table('tr').eq(2)('td')[-1].text_content()
         return int(home_score)
 
     @sportsref.decorators.memoize
@@ -107,7 +107,7 @@ class BoxScore(
         """
         doc = self.get_doc()
         table = doc('table.linescore')
-        away_score = table('tr').eq(2)('td')[-1].text_content()
+        away_score = table('tr').eq(1)('td')[-1].text_content()
         return int(away_score)
 
     @sportsref.decorators.memoize
@@ -129,8 +129,10 @@ class BoxScore(
         :returns: Integer from 1 to 21.
         """
         doc = self.get_doc()
-        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
-        match = re.search(r'Week (\d+)', rawTxt)
+        raw = doc('div#div_other_scores h2 a').attr['href']
+        match = re.match(
+            r'/years/{}/week_(\d+)\.htm'.format(self.season()), raw
+        )
         if match:
             return int(match.group(1))
         else:
@@ -144,15 +146,8 @@ class BoxScore(
 
         :returns: An int representing the year of the season.
         """
-        doc = self.get_doc()
-        rawTxt = doc('div#page_content table').eq(0)('tr td').eq(0).text()
-        match = re.search(r'Week \d+ (\d{4})', rawTxt)
-        if match:
-            return int(match.group(1))
-        else:
-            # else, it's the super bowl; super bowl happens in calendar year
-            # after the season's year
-            return self.date().year - 1
+        date = self.date()
+        return date.year - 1 if date.month <= 3 else date.year
 
     @sportsref.decorators.memoize
     def starters(self):
@@ -306,6 +301,14 @@ class BoxScore(
     def pbp(self):
         """Returns a dataframe of the play-by-play data from the game.
 
+        Order of function calls:
+            1. parse_table on the play-by-play table
+            2. expand_details
+                - calls parse_play_details & _clean_features
+            3. _add_team_columns
+            4. various fixes to clean data
+            5. _add_team_features
+
         :returns: pandas DataFrame of play-by-play. Similar to GPF.
         """
         doc = self.get_doc()
@@ -320,7 +323,7 @@ class BoxScore(
         feats = sportsref.nfl.pbp.expand_details(df)
 
         # add team and opp columns by iterating through rows
-        df = sportsref.nfl.pbp.add_team_columns(feats)
+        df = sportsref.nfl.pbp._add_team_columns(feats)
         # add WPA column (requires diff, can't be done row-wise)
         df['home_wpa'] = df.home_wp.diff()
         # lag score columns, fill in 0-0 to start
@@ -338,7 +341,7 @@ class BoxScore(
             df.ix[i, 'home_wp'] = initwp
             df.ix[i, 'home_wpa'] = df.ix[i + 1, 'home_wp'] - initwp
         # fix last play border after diffing/shifting for WP and WPA
-        lastPlayIdx = df.iloc[-1].name
+        lastPlayIdx = df.index[-1]
         lastPlayWP = df.ix[lastPlayIdx, 'home_wp']
         # if a tie, final WP is 50%; otherwise, determined by winner
         winner = self.winner()
@@ -354,7 +357,7 @@ class BoxScore(
                 wpa = finalWP - df.ix[to + 1, 'home_wp']
             df.ix[to + 1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
-        df = df.apply(sportsref.nfl.pbp.add_team_features, axis=1)
+        df = sportsref.nfl.pbp._add_team_features(df)
         # fill distToGoal NaN's
         df['distToGoal'] = np.where(df.isKickoff, 65, df.distToGoal)
         df.distToGoal.fillna(method='bfill', inplace=True)
@@ -383,9 +386,28 @@ class BoxScore(
         tableIDs = ('player_offense', 'player_defense', 'returns', 'kicking')
         dfs = []
         for tID in tableIDs:
-            table = doc('#{}'.format(tID))
+            table = doc('table#{}'.format(tID))
             dfs.append(sportsref.utils.parse_table(table))
         df = pd.concat(dfs, ignore_index=True)
         df = df.reset_index(drop=True)
         df['team'] = df['team'].str.lower()
         return df
+
+    @sportsref.decorators.memoize
+    def snap_counts(self):
+        """Gets the snap counts for both teams' players and returns them in a
+        DataFrame.
+        :returns: DataFrame of snap count data
+        """
+        # TODO: combine duplicate players, see 201312150mia - ThomDa03
+        doc = self.get_doc()
+        table_ids = ('vis_snap_counts', 'home_snap_counts')
+        tms = (self.away(), self.home())
+        df = pd.concat([
+            sportsref.utils.parse_table(doc('table#{}'.format(table_id)))
+            .assign(is_home=bool(i), team=tms[i], opp=tms[i*-1+1])
+            for i, table_id in enumerate(table_ids)
+        ])
+        if df.empty:
+            return df
+        return df.set_index('player_id')
