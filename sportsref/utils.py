@@ -161,11 +161,15 @@ def parse_table(table, flatten=True, footer=False):
 
     # add month, day, year columns based on date_game
     if 'date_game' in df.columns:
-        date_df = df['date_game'].str.extract(
-            'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
-            expand=True
-        )
-        df = pd.concat((df, date_df), axis=1)
+        date_re = r'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)'
+        if df['date_game'].str.search(date_re).any():
+            date_df = df['date_game'].str.extract(
+                'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)',
+                expand=True
+            )
+            df = pd.concat((df, date_df), axis=1)
+        else:
+            df.rename(columns={'date_game': 'boxscore_id'}, inplace=True)
 
     # converts number-y things to floats
     def convert_to_float(val):
