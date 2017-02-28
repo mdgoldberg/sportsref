@@ -133,8 +133,14 @@ class BoxScore(
             return d.year
 
     @sportsref.decorators.memoize
-    def basic_stats(self):
-        """Returns a DataFrame of basic player stats from the game."""
+    def _get_player_stats(self, table_id_fmt):
+        """Returns a DataFrame of player stats from the game (either basic or
+        advanced, depending on the argument.
+
+        :param table_id_fmt: Format string for str.format with a placeholder
+            for the team ID (e.g. 'box_{}_basic')
+        :returns: DataFrame of player stats
+        """
 
         def time_to_mp(t):
             if not t or t.find(':') == -1:
@@ -146,17 +152,17 @@ class BoxScore(
         # get data
         doc = self.get_main_doc()
         tms = self.away(), self.home()
-        tm_ids = ['box_{}_basic'.format(tm) for tm in tms]
+        tm_ids = [table_id_fmt.format(tm) for tm in tms]
         tables = [doc('table#{}'.format(tm_id).lower()) for tm_id in tm_ids]
         dfs = [sportsref.utils.parse_table(table) for table in tables]
 
         # clean data and add features
         for i, (tm, df) in enumerate(zip(tms, dfs)):
             if 'mp' in df.columns:
-                got_time = df['mp'].str.find(':')
+                no_time = df['mp'].astype(bool)
                 stat_cols = [c for c, t in df.dtypes.iteritems()
                              if t != object]
-                df.ix[got_time == -1, stat_cols] = 0
+                df.ix[no_time, stat_cols] = 0
                 df.ix[:, 'mp'] = df.mp.map(time_to_mp)
             df.ix[:, 'team'] = tm
             df.ix[:, 'is_home'] = i == 1
@@ -166,10 +172,14 @@ class BoxScore(
         return pd.concat(dfs)
 
     @sportsref.decorators.memoize
+    def basic_stats(self):
+        """Returns a DataFrame of basic player stats from the game."""
+        return self._get_player_stats('box_{}_basic')
+
+    @sportsref.decorators.memoize
     def advanced_stats(self):
         """Returns a DataFrame of advanced player stats from the game."""
-        # TODO: include a "is_starter" column
-        pass
+        return self._get_player_stats('box_{}_advanced')
 
     @sportsref.decorators.memoize
     def pbp(self, dense_lineups=False, sparse_lineups=False):
