@@ -142,13 +142,6 @@ class BoxScore(
         :returns: DataFrame of player stats
         """
 
-        def time_to_mp(t):
-            if not t or t.find(':') == -1:
-                return 0.
-            else:
-                mins, secs = map(int, t.split(':'))
-                return mins + secs / 60.
-
         # get data
         doc = self.get_main_doc()
         tms = self.away(), self.home()
@@ -158,12 +151,10 @@ class BoxScore(
 
         # clean data and add features
         for i, (tm, df) in enumerate(zip(tms, dfs)):
-            if 'mp' in df.columns:
-                no_time = df['mp'].astype(bool)
-                stat_cols = [c for c, t in df.dtypes.iteritems()
-                             if t != object]
-                df.ix[no_time, stat_cols] = 0
-                df.ix[:, 'mp'] = df.mp.map(time_to_mp)
+            no_time = df['mp'] == 0
+            stat_cols = [c for c, t in df.dtypes.iteritems()
+                         if t != object]
+            df.ix[no_time, stat_cols] = 0
             df.ix[:, 'team'] = tm
             df.ix[:, 'is_home'] = i == 1
             df.ix[:, 'is_starter'] = [i < 5 for i in range(df.shape[0])]

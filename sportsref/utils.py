@@ -169,14 +169,21 @@ def parse_table(table, flatten=True, footer=False):
         else:
             df.rename(columns={'date_game': 'boxscore_id'}, inplace=True)
 
+    # mp: (min:sec) -> float(min + sec / 60), notes -> NaN, new column
+    if 'mp' in df.columns and df.dtypes['mp'] == object:
+        mp_df = df['mp'].str.extract(
+            r'(?P<m>\d+):(?P<s>\d+)', expand=True).astype(float)
+        no_match = mp_df.isnull().all(axis=1)
+        if no_match.any():
+            df.ix[no_match, 'note'] = df.ix[no_match, 'mp']
+            df['mp'] = mp_df['m'] + mp_df['s'] / 60.
+
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
         m = re.search(r'([-\.\d]+)\%', str(val))
         if m:
             return float(m.group(1)) / 100. if m else val
-        # minutes played: (min:sec) -> float(min + sec / 60)
-        m = re.search(r'(\d+):(\d+)', str(val))
         if m:
             return int(m.group(1)) + int(m.group(2)) / 60.
         # generally try to coerce to float, unless it's an int or bool
