@@ -162,7 +162,7 @@ def parse_table(table, flatten=True, footer=False):
     # add month, day, year columns based on date_game
     if 'date_game' in df.columns:
         date_re = r'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)'
-        date_df = df['date_game'].str.extract(date_re)
+        date_df = df['date_game'].str.extract(date_re, expand=True)
         if date_df.notnull().all(axis=1).any():
             df = pd.concat((df, date_df), axis=1)
         else:
