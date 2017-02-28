@@ -1,11 +1,13 @@
+import future
+import future.utils
+
 import numpy as np
 from pyquery import PyQuery as pq
 
 import sportsref
 
 
-@sportsref.decorators.memoized
-class Team:
+class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, teamID):
         self.teamID = teamID
@@ -16,23 +18,23 @@ class Team:
     def __hash__(self):
         return hash(self.teamID)
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def team_year_url(self, yr_str):
         return (sportsref.nba.BASE_URL +
                 '/teams/{}/{}.htm'.format(self.teamID, yr_str))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.teamID)
         teamURL = sportsref.nba.BASE_URL + relURL
         mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def get_year_doc(self, yr_str):
         return pq(sportsref.utils.get_html(self.team_year_url(yr_str)))
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def name(self):
         """Returns the real name of the franchise given the team ID.
 
@@ -43,12 +45,10 @@ class Team:
         :returns: A string corresponding to the team's full name.
         """
         doc = self.get_main_doc()
-        headerwords = doc('div#info_box h1')[0].text_content().split()
-        lastIdx = headerwords.index('Franchise')
-        teamwords = headerwords[:lastIdx]
-        return ' '.join(teamwords)
+        name = doc('div#info h1[itemprop="name"]').text()
+        return name
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def roster(self, year):
         """Returns the roster table for the given year.
 
@@ -57,7 +57,7 @@ class Team:
         """
         raise NotImplementedError('roster')
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def boxscores(self, year):
         """Gets list of BoxScore objects corresponding to the box scores from
         that year.

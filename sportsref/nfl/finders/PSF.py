@@ -13,7 +13,6 @@ PSF_URL = ('http://www.pro-football-reference.com/'
 PSF_CONSTANTS_FILENAME = 'PSFConstants.json'
 
 
-@decorators.memoized
 def PlayerSeasonFinder(**kwargs):
     """ Docstring will be filled in by __init__.py """
 

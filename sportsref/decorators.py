@@ -1,13 +1,14 @@
+import codecs
 import copy
 import datetime
 import hashlib
-import functools
 import os
 import re
-import time
 import urlparse
 
 import appdirs
+from boltons import funcutils
+import mementos
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
@@ -22,7 +23,7 @@ def switch_to_dir(dirPath):
     """
 
     def decorator(func):
-        @functools.wraps(func)
+        @funcutils.wraps(func)
         def wrapper(*args, **kwargs):
             orig_cwd = os.getcwd()
             os.chdir(dirPath)
@@ -113,7 +114,7 @@ def cache_html(func):
     def cacheValidFuncs(s):
         return eval('_cacheValid_' + s)
 
-    @functools.wraps(func)
+    @funcutils.wraps(func)
     def wrapper(url):
         parsed = urlparse.urlparse(url)
         sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' +
@@ -133,56 +134,57 @@ def cache_html(func):
 
         # set time variables (in seconds)
         if os.path.isfile(filename):
-            curtime = int(time.time())
-            modtime = int(os.path.getmtime(filename))
-            time_since_mod = datetime.timedelta(seconds=(curtime - modtime))
-            cacheValid = time_since_mod <= datetime.timedelta(days=12)
+            # curtime = int(time.time())
+            # modtime = int(os.path.getmtime(filename))
+            # time_since_mod = datetime.timedelta(seconds=(curtime - modtime))
+            # cacheValid = time_since_mod <= datetime.timedelta(days=12)
+            cacheValid = True
 
         # if file found and caching is valid, read from file
         if os.path.isfile(filename) and cacheValid:
-            with open(filename, 'r') as f:
+            with codecs.open(filename, 'r', encoding='utf-8',
+                             errors='replace') as f:
                 text = f.read()
             return text
         # otherwise, download html and cache it
         else:
             text = func(url)
-            with open(filename, 'w+') as f:
-                f.write(text.encode('ascii', 'replace'))
+            with codecs.open(filename, 'w+', encoding='utf-8') as f:
+                f.write(text)
             return text
 
     return wrapper
 
 
-def memoized(fun):
-    """A simple memoize decorator."""
-    @functools.wraps(fun)
+def get_class_instance_key(cls, args, kwargs):
+    """
+    Returns a unique identifier for a class instantiation.
+    """
+    l = [id(cls)]
+    for arg in args:
+        l.append(id(arg))
+    l.extend((k, id(v)) for k, v in kwargs.items())
+    return tuple(sorted(l))
+
+
+# used as a metaclass for classes that should be memoized
+# (technically not a decorator, but it's similar enough)
+Cached = mementos.memento_factory('Cached', get_class_instance_key)
+
+
+def memoize(fun):
+    """A decorator for memoizing functions.
+
+    Only works on functions that take simple arguments - arguments that take
+    list-like or dict-like arguments will not be memoized, and this function
+    will raise a TypeError.
+    """
+    @funcutils.wraps(fun)
     def wrapper(*args, **kwargs):
 
-        # deal with lists in args
-        def isList(a):
-            return isinstance(a, list) or isinstance(a, np.ndarray)
-
-        def deListify(arg):
-            if isList(arg):
-                return tuple(map(deListify, arg))
-            else:
-                return arg
-
-        # deal with dicts in args
-        def isDict(d):
-            return isinstance(d, dict) or isinstance(d, pd.Series)
-
-        def deDictify(arg):
-            if isDict(arg):
-                items = dict(arg).items()
-                items = [(k, deListify(deDictify(v))) for k, v in items]
-                return frozenset(sorted(items))
-            else:
-                return arg
-
-        clean_args = tuple(map(deListify, args))
-        clean_args = tuple(map(deDictify, clean_args))
-        clean_kwargs = deDictify(kwargs)
+        hash_args = tuple(args)
+        hash_kwargs = frozenset(sorted(kwargs.items()))
+        key = (hash_args, hash_kwargs)
 
         def _copy(v):
             if isinstance(v, pq):
@@ -190,7 +192,6 @@ def memoized(fun):
             else:
                 return copy.deepcopy(v)
 
-        key = (clean_args, clean_kwargs)
         try:
             ret = _copy(cache[key])
             return ret
@@ -199,8 +200,9 @@ def memoized(fun):
             ret = _copy(cache[key])
             return ret
         except TypeError:
-            print 'memoization type error here', fun.__name__, key
-            return fun(*args, **kwargs)
+            print('memoization type error in function {} for arguments {}'
+                  .format(fun.__name__, key))
+            raise
 
     cache = {}
     return wrapper
@@ -213,7 +215,7 @@ def kind_rpb(include_type=False):
         ('B'). If given 'B', it will call the function with both 'R' and 'P'
         and concatenate the results.
         """
-        @functools.wraps(fun)
+        @funcutils.wraps(fun)
         def wrapper(*args, **kwargs):
             kind = kwargs.get('kind', 'R').upper()
             if kind == 'B':
@@ -229,7 +231,7 @@ def kind_rpb(include_type=False):
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df['is_playoffs'] = (kind == 'P')
+                    df.ix[:, 'is_playoffs'] = (kind == 'P')
                 return df
         return wrapper
     return decorator
