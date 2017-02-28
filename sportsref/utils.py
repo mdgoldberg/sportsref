@@ -1,6 +1,7 @@
 import re
 import time
 
+import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 import requests
@@ -159,7 +160,7 @@ def parse_table(table, flatten=True, footer=False):
         if flatten:
             df['season'] = df['season'].astype(int)
 
-    # add month, day, year columns based on date_game
+    # handle date_game columns (different types)
     if 'date_game' in df.columns:
         date_re = r'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)'
         date_df = df['date_game'].str.extract(date_re, expand=True)
@@ -174,6 +175,10 @@ def parse_table(table, flatten=True, footer=False):
         m = re.search(r'([-\.\d]+)\%', str(val))
         if m:
             return float(m.group(1)) / 100. if m else val
+        # minutes played: (min:sec) -> float(min + sec / 60)
+        m = re.search(r'(\d+):(\d+)', str(val))
+        if m:
+            return int(m.group(1)) + int(m.group(2)) / 60.
         # generally try to coerce to float, unless it's an int or bool
         try:
             if isinstance(val, (int, bool)):
