@@ -32,6 +32,7 @@ def get_html(url):
     with throttle_lock:
         wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
         if wait_left > 0:
+            print 'WAITING...'
             time.sleep(wait_left)
 
     K = 60*3  # K is length of next backoff (in seconds)
