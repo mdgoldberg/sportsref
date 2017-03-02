@@ -1,6 +1,7 @@
 import codecs
 import copy
 import datetime
+import getpass
 import hashlib
 import os
 import re
@@ -107,7 +108,7 @@ def cache_html(func):
     the user cache determined by the appdirs package.
     """
 
-    CACHE_DIR = appdirs.user_cache_dir('sportsref', 'mgoldberg')
+    CACHE_DIR = appdirs.user_cache_dir('sportsref', getpass.getuser())
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
 
