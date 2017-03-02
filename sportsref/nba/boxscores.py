@@ -187,7 +187,8 @@ class BoxScore(
             doc = self.get_subpage_doc('pbp')
         except:
             raise ValueError(
-                'No PBP data found for boxscore "{}"'.format(self.boxscore_id)
+                'Error fetching PBP subpage for boxscore {}'
+                .format(self.boxscore_id)
             )
         table = doc('table#pbp')
         trs = [
