@@ -1,3 +1,6 @@
+from builtins import range
+import ctypes
+import multiprocessing as mp
 import re
 import time
 
@@ -8,6 +11,11 @@ import requests
 
 import sportsref
 
+THROTTLE_DELAY = 0.5
+
+throttle_lock = mp.Lock()
+last_request_time = mp.Value(ctypes.c_longdouble,
+                             time.time() - 2 * THROTTLE_DELAY)
 
 @sportsref.decorators.memoize
 @sportsref.decorators.cache_html
@@ -20,12 +28,17 @@ def get_html(url):
     :returns: a string of HTML.
 
     """
+    # first, sleep until THROTTLE_DELAY secs have passed since last request
+    with throttle_lock:
+        wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
+        if wait_left > 0:
+            time.sleep(wait_left)
+
     K = 60*3  # K is length of next backoff (in seconds)
-    TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
     html = None
-    numTries = 0
-    while not html and numTries < 10:
-        numTries += 1
+    num_tries = 0
+    while not html and num_tries < 10:
+        num_tries += 1
         start = time.time()
         try:
             response = requests.get(url)
@@ -45,19 +58,18 @@ def get_html(url):
                 else:
                     print 'Waiting {} seconds...'.format(K)
                 # sleep
-                for _ in xrange(K):
-                    time.sleep(1)
+                time.sleep(K)
                 # backoff gets doubled, capped at 1 hour
                 K *= 2
                 K = min(K, 60*60)
             else:
                 # Some other error code
                 raise e
-    timeOnRequest = time.time() - start
-    timeRemaining = int(1000 * (TOTAL_TIME - timeOnRequest))  # in milliseconds
-    for _ in xrange(timeRemaining):
-        # wait one millisecond
-        time.sleep(0.001)
+
+    # update last_request_time
+    with throttle_lock:
+        last_request_time.value = time.time()
+
     return html
 
 
