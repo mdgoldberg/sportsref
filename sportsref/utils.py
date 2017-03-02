@@ -11,8 +11,10 @@ import requests
 
 import sportsref
 
+# time between requests, in seconds
 THROTTLE_DELAY = 0.5
 
+# variables used to throttle requests across processes
 throttle_lock = mp.Lock()
 last_request_time = mp.Value(ctypes.c_longdouble,
                              time.time() - 2 * THROTTLE_DELAY)
@@ -29,10 +31,11 @@ def get_html(url):
 
     """
     # first, sleep until THROTTLE_DELAY secs have passed since last request
+    wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
     with throttle_lock:
-        wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
         if wait_left > 0:
             time.sleep(wait_left)
+        last_request_time.value = time.time()
 
     K = 60*3  # K is length of next backoff (in seconds)
     html = None
@@ -65,10 +68,6 @@ def get_html(url):
             else:
                 # Some other error code
                 raise e
-
-    # update last_request_time
-    with throttle_lock:
-        last_request_time.value = time.time()
 
     return html
 
