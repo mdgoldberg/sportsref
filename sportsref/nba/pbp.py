@@ -469,134 +469,33 @@ def get_period_starters(df):
     return period_starters
 
 
-def get_period_starters_pm(boxscore_id):
-    """NOTE: THIS FUNCTION WAS AN IDEA I TRIED THAT DOES NOT WORK AT THE
-    MOMENT. PERHAPS THIS APPROACH COULD WORK IN THE FUTURE.
-
-    Given a game's boxscore ID, returns a list of tuples of sets containing
-    the starters for each period (quarter or OT) in the game. Mainly for use in
-    the get_sparse_lineups and get_dense_lineups functions.
-
-    The ith element of the list returned is a tuple in which the first
-    element is the set of the away team's starters for period i+1, and the
-    second element is the set of the home team's starters for period i+1.
-
-    :param boxscore_id: A string containing the game's boxscore ID.
-    :returns: [(away_set, home_set), ...]
-    """
-
-    def get_width(pq_obj):
-        """Returns the pixel width of a PyQuery object representing a div.
-
-        :pq_obj: PyQuery object with a style attribute containing its width.
-        :returns: Pixel width of the div/element based on obj.attr['style'].
-        :rtype: int
-        """
-        return int(re.search(r'width:(\d+)px', pq_obj.attr['style']).group(1))
-
-    def get_player_intervals(player_pm_div):
-        """Returns the widths at which a player was in the game, given a
-        PyQuery object representing the player's 'div.player-plusminus'.
-
-        :player_pm_div: PyQuery object representing a div with class
-            player-plusminus.
-        :returns: List of (start_width, end_width) tuples
-        """
-        widths = [
-            get_width(div) + 1 for div in player_pm_div.children('div').items()
-        ]
-        in_mask = np.array([
-            (div.hasClass('plus') or div.hasClass('minus') or
-             div.hasClass('even'))
-            for div in player_pm_div.children('div').items()
-        ])
-        in_mask = np.append(in_mask, not in_mask[-1])
-        cum_widths = np.concatenate(([0], np.cumsum(widths)))
-        keep = np.insert(np.diff(in_mask), 0, in_mask[0])
-        in_mask_keep = in_mask[keep]
-        cum_widths_in = cum_widths[keep][in_mask_keep]
-        cum_widths_out = cum_widths[keep][~in_mask_keep]
-        intervals = list(zip(cum_widths_in, cum_widths_out))
-        return intervals
-
-    def per_starters_from_div(div, is_home):
-        """Given a PyQuery object representing one team's section on the
-        BoxScore plus-minus page, returns a list of sets containing the team's
-        starters for each period (quarter or OT) in the game.
-
-        The ith element of the list returned is a set of the given team's
-        starters for period i+1.
-
-        :param div: PyQuery object representing a div.
-        :param is_home: True when the div represents the home team
-        :type is_home: bool
-        :returns: [set_q1, set_q2, ...]
-        """
-        # get player names and start times
-        player_names = (div('div.player span')
-                        .map(lambda i, e: e.text_content()))
-        player_intervals = [get_player_intervals(pm_div) for pm_div in
-                            div('div.player-plusminus').items()]
-
-        # convert player names to player IDs
-        stats = bs.basic_stats().query('is_home == @is_home')
-        name_to_id = stats.set_index('player_name').player_id.to_dict()
-        player_ids = [name_to_id[name] for name in player_names]
-
-        # filter to only times that are beginning of the quarter
-        player_pers = [
-            np.nonzero(
-                [any(start <= p_start < end for start, end in intervals)
-                 for p_start in per_starts]
-            )[0]
-            for intervals in player_intervals
-        ]
-
-        per_starters = [set() for _ in per_widths]
-        for p_id, p_periods in zip(player_ids, player_pers):
-            for per in p_periods:
-                per_starters[per].add(p_id)
-
-        return per_starters
-
-    bs = sportsref.nba.BoxScore(boxscore_id)
-    doc = bs.get_subpage_doc('plus-minus')
-    aw_div, hm_div = doc('div.plusminus > div > div').items()
-
-    # get start pixel values for each period
-    per_widths = [get_width(ch) + (i > 0) for i, ch in
-                  enumerate(hm_div('div.header').eq(0).children().items())]
-    per_starts = np.concatenate(([0], np.cumsum(per_widths)[:-1])).tolist()
-
-    # get each team's starters in each period
-    aw_starters = per_starters_from_div(aw_div, is_home=False)
-    hm_starters = per_starters_from_div(hm_div, is_home=True)
-
-    assert len(aw_starters) == len(hm_starters)
-    # TODO: make sure 5 starters for everything
-
-    return list(zip(aw_starters, hm_starters))
-
-
 def get_sparse_lineups(df):
     """TODO: Docstring for get_sparse_lineups.
 
     :param df: TODO
     :returns: TODO
     """
-
+    # get the lineup data using get_dense_lineups if necessary
     if (set(ALL_LINEUP_COLS) - set(df.columns)):
-        df = get_dense_lineups(df)
+        lineup_df = get_dense_lineups(df)
+    else:
+        lineup_df = df[ALL_LINEUP_COLS]
 
-    all_players = reduce(
-        operator.or_, [set(df[c].unique()) for c in ALL_LINEUP_COLS]
-    )
-
-    rows = df[ALL_LINEUP_COLS].values
-    data = {'{}_in'.format(player_id):
-            np.array([player_id in row for row in rows])
-            for player_id in all_players}
-    sparse_df = pd.DataFrame(data)
+    # create the sparse representation
+    hm_lineups = lineup_df[HM_LINEUP_COLS].values
+    aw_lineups = lineup_df[AW_LINEUP_COLS].values
+    hm_df = pd.DataFrame({
+        '{}_in'.format(player_id):
+        np.array([player_id in row for row in hm_rows])
+        for player_id in hm_players
+    }, dtype=int)
+    aw_df = pd.DataFrame({
+        '{}_in'.format(player_id):
+        np.array([player_id in row for row in aw_rows])
+        for player_id in aw_players
+    }, dtype=int)
+    # +1 for home, -1 for away
+    sparse_df = pd.concat((hm_df, -aw_df), axis=1)
     return sparse_df
 
 
@@ -696,31 +595,37 @@ def get_dense_lineups(df):
         lineup_df.iloc[-1] = lineup_dict(aw_lineup, hm_lineup)
     lineup_df = lineup_df.groupby(df.quarter).fillna(method='bfill')
 
-    # fill in NaN's
+    # fill in NaN's based on minutes played
     bool_mat = lineup_df.isnull()
     mask = bool_mat.any(axis=1)
     if mask.any():
         bs = sportsref.nba.BoxScore(df.boxscore_id[0])
-        hm_roster = bs.basic_stats().query('is_home == True').player_id.values
-
+        # first, get the true minutes played from the box score
         stats = sportsref.nba.BoxScore(df.boxscore_id.iloc[0]).basic_stats()
         true_mp = pd.Series(
             stats.query('mp > 0')[['player_id', 'mp']]
             .set_index('player_id').to_dict()['mp']
         ) * 60
+        # next, calculate minutes played based on the lineup data
         calc_mp = pd.Series(
             {p: (df.secs_elapsed.diff() *
                  [p in row for row in lineup_df.values]).sum()
              for p in stats.query('mp > 0').player_id.values})
+        # finally, figure which players are missing minutes
         diff = true_mp - calc_mp
         players_missing = diff.ix[diff.abs() >= 150]
+        hm_roster = bs.basic_stats().query('is_home == True').player_id.values
         missing_df = pd.DataFrame(
             {'secs': players_missing.values,
              'is_home': players_missing.index.isin(hm_roster)},
             index=players_missing.index
         )
 
-        if not missing_df.empty:
+        if missing_df.empty:
+            # TODO: log this as a warning (or error?)
+            print('There are NaNs in the lineup data, but no players were '
+                  'found to be missing significant minutes')
+        else:
             # import ipdb
             # ipdb.set_trace()
             for is_home, group in missing_df.groupby('is_home'):
