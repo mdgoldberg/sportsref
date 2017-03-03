@@ -376,11 +376,15 @@ def clean_features(df):
     """
     df = pd.DataFrame(df)
 
-    # make indicator columns boolean type (and fill in NaNs)
-    boolVals = set([True, False, None, np.nan])
+    bool_vals = set([True, False, None, np.nan])
+    sparse_vals = set([-1, 0, 1, np.nan])
     for c in df:
-        if set(df[c].unique()[:5]) <= boolVals:
+        # make indicator columns boolean type (and fill in NaNs)
+        if set(df[c].unique()[:5]) <= bool_vals:
             df[c] = df[c].map(lambda x: x is True)
+        # fill NaN's in sparse lineup columns to 0
+        if set(df[c].unique()[:5]) <= sparse_vals:
+            df[c] = df[c].fillna(0)
 
     # fix free throw columns on technicals
     df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
