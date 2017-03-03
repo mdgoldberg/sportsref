@@ -30,12 +30,13 @@ def get_html(url):
     :returns: a string of HTML.
 
     """
-    # first, sleep until THROTTLE_DELAY secs have passed since last request
+    # FIRST, acquire the lock
+    throttle_lock.acquire()
+
+    # sleep until THROTTLE_DELAY secs have passed since last request
     wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
-    with throttle_lock:
-        if wait_left > 0:
-            time.sleep(wait_left)
-        last_request_time.value = time.time()
+    if wait_left > 0:
+        time.sleep(wait_left)
 
     K = 60*3  # K is length of next backoff (in seconds)
     html = None
@@ -53,6 +54,7 @@ def get_html(url):
             html = response.text
             html = html.replace('<!--', '').replace('-->', '')
         except requests.ConnectionError as e:
+            import ipdb; ipdb.set_trace()
             errnum = e.args[0].args[1].errno
             if errnum == 61:
                 # Connection Refused
@@ -67,8 +69,12 @@ def get_html(url):
                 K = min(K, 60*60)
             else:
                 # Some other error code
+                throttle_lock.release()
                 raise e
 
+    # finally, update last request time, release the lock, and return
+    last_request_time.value = time.time()
+    lock.release()
     return html
 
 
