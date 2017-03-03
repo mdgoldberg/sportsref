@@ -167,7 +167,7 @@ def parse_table(table, flatten=True, footer=False):
         no_match = mp_df.isnull().all(axis=1)
         if no_match.any():
             df.ix[no_match, 'note'] = df.ix[no_match, 'mp']
-            df['mp'] = mp_df['m'] + mp_df['s'] / 60.
+        df['mp'] = mp_df['m'] + mp_df['s'] / 60.
 
     # converts number-y things to floats
     def convert_to_float(val):

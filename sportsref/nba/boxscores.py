@@ -132,7 +132,6 @@ class BoxScore(
         else:
             return d.year
 
-    @sportsref.decorators.memoize
     def _get_player_stats(self, table_id_fmt):
         """Returns a DataFrame of player stats from the game (either basic or
         advanced, depending on the argument.
