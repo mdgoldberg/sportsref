@@ -24,57 +24,29 @@ last_request_time = mp.Value(ctypes.c_longdouble,
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
-    Incorporates an exponential timeout starting with 2 seconds.
-
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
-
     """
-    # FIRST, acquire the lock
-    throttle_lock.acquire()
+    with throttle_lock:
 
-    # sleep until THROTTLE_DELAY secs have passed since last request
-    wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
-    if wait_left > 0:
-        time.sleep(wait_left)
+        # sleep until THROTTLE_DELAY secs have passed since last request
+        wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
+        if wait_left > 0:
+            time.sleep(wait_left)
 
-    K = 60*3  # K is length of next backoff (in seconds)
-    html = None
-    num_tries = 0
-    while not html and num_tries < 10:
-        num_tries += 1
-        start = time.time()
-        try:
-            response = requests.get(url)
-            if 400 <= response.status_code < 500:
-                raise ValueError(
-                    'Status Code {} received fetching URL "{}"'
-                    .format(response.status_code, url)
-                )
-            html = response.text
-            html = html.replace('<!--', '').replace('-->', '')
-        except requests.ConnectionError as e:
-            import ipdb; ipdb.set_trace()
-            errnum = e.args[0].args[1].errno
-            if errnum == 61:
-                # Connection Refused
-                if K >= 60:
-                    print 'Waiting {} minutes...'.format(K/60.0)
-                else:
-                    print 'Waiting {} seconds...'.format(K)
-                # sleep
-                time.sleep(K)
-                # backoff gets doubled, capped at 1 hour
-                K *= 2
-                K = min(K, 60*60)
-            else:
-                # Some other error code
-                throttle_lock.release()
-                raise e
+        # make request
+        response = requests.get(url)
+        if 400 <= response.status_code < 500:
+            raise ValueError(
+                'Status Code {} received fetching URL "{}"'
+                .format(response.status_code, url)
+            )
+        html = response.text
+        html = html.replace('<!--', '').replace('-->', '')
 
-    # finally, update last request time, release the lock, and return
-    last_request_time.value = time.time()
-    lock.release()
+        # update last request time for throttling
+        last_request_time.value = time.time()
+
     return html
 
 

@@ -376,9 +376,6 @@ def clean_features(df):
     """
     df = pd.DataFrame(df)
 
-    # drop duplicate rows
-    # df.drop_duplicates(['secs_elapsed', 'detail'], inplace=True)
-
     # make indicator columns boolean type (and fill in NaNs)
     boolVals = set([True, False, None, np.nan])
     for c in df:
