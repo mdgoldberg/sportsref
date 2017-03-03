@@ -36,16 +36,18 @@ def get_html(url):
 
         # make request
         response = requests.get(url)
-        if 400 <= response.status_code < 500:
-            raise ValueError(
-                'Status Code {} received fetching URL "{}"'
-                .format(response.status_code, url)
-            )
-        html = response.text
-        html = html.replace('<!--', '').replace('-->', '')
 
         # update last request time for throttling
         last_request_time.value = time.time()
+
+    # raise ValueError on 4xx status code, get rid of comments, and return
+    if 400 <= response.status_code < 500:
+        raise ValueError(
+            'Status Code {} received fetching URL "{}"'
+            .format(response.status_code, url)
+        )
+    html = response.text
+    html = html.replace('<!--', '').replace('-->', '')
 
     return html
 
