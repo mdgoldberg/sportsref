@@ -387,8 +387,7 @@ def clean_features(df):
             df[c] = df[c].fillna(0)
 
     # fix free throw columns on technicals
-    if 'is_tech_fta' in df.columns:
-        df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
+    df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
 
     # fill in NaN's/fix team, opp columns
     df.team.fillna(method='bfill', inplace=True)
