@@ -147,6 +147,12 @@ def cache_html(func):
             with codecs.open(filename, 'r', encoding='utf-8',
                              errors='replace') as f:
                 text = f.read()
+            new_filename = '{}/{}'.format(
+                CACHE_DIR, hashlib.md5().update(url).hexdigest()
+            )
+            # NOTE: to convert hashes to new system (see TODO above)
+            with codecs.open(new_filename, 'w+', encoding='utf-8') as f:
+                f.write(text)
             return text
         # otherwise, download html and cache it
         else:
