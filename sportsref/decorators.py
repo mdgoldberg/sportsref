@@ -128,6 +128,7 @@ def cache_html(func):
         if parsed.query:
             relURL += '?' + parsed.query
         noPathFN = re.sub(r'\.html?', '', sport + relURL.replace('/', ''))
+        # TODO: change this so we just hash the URL - far simpler
         file_hash = hashlib.md5()
         file_hash.update(noPathFN)
         file_hash = file_hash.hexdigest()
