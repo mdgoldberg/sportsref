@@ -19,7 +19,6 @@ throttle_lock = mp.Lock()
 last_request_time = mp.Value(ctypes.c_longdouble,
                              time.time() - 2 * THROTTLE_DELAY)
 
-@sportsref.decorators.memoize
 @sportsref.decorators.cache_html
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
