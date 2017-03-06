@@ -149,15 +149,14 @@ class BoxScore(
         dfs = [sportsref.utils.parse_table(table) for table in tables]
 
         # clean data and add features
+        df.drop_duplicates(subset='player_id', keep='first', inplace=True)
         for i, (tm, df) in enumerate(zip(tms, dfs)):
             no_time = df['mp'] == 0
-            stat_cols = [c for c, t in df.dtypes.iteritems()
-                         if t != object]
+            stat_cols = df.select_dtypes(exclude=['object'])
             df.ix[no_time, stat_cols] = 0
-            df.ix[:, 'team'] = tm
+            df.ix[:, 'team_id'] = tm
             df.ix[:, 'is_home'] = i == 1
-            df.ix[:, 'is_starter'] = [i < 5 for i in range(df.shape[0])]
-            df.drop_duplicates(subset='player_id', keep='first', inplace=True)
+            df.ix[:, 'is_starter'] = [p < 5 for p in range(df.shape[0])]
 
         return pd.concat(dfs)
 
