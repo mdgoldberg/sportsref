@@ -117,20 +117,9 @@ def cache_html(func):
 
     @funcutils.wraps(func)
     def wrapper(url):
-        parsed = urlparse.urlparse(url)
-        sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' +
-                                          parsed.netloc)
-        if sport is None:
-            for ncaaSport in ('cfb', 'cbb'):
-                if ncaaSport in url:
-                    sport = ncaaSport
-        relURL = parsed.path
-        if parsed.query:
-            relURL += '?' + parsed.query
-        noPathFN = re.sub(r'\.html?', '', sport + relURL.replace('/', ''))
-        # TODO: change this so we just hash the URL - far simpler
+        # hash based on the URL
         file_hash = hashlib.md5()
-        file_hash.update(noPathFN)
+        file_hash.update(url)
         file_hash = file_hash.hexdigest()
         filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
@@ -147,13 +136,6 @@ def cache_html(func):
             with codecs.open(filename, 'r', encoding='utf-8',
                              errors='replace') as f:
                 text = f.read()
-            new_filename = '{}/{}'.format(
-                CACHE_DIR, hashlib.md5().update(url).hexdigest()
-            )
-            # NOTE: to convert hashes to new system (see TODO above)
-            with codecs.open(new_filename, 'w+', encoding='utf-8') as f:
-                f.write(text)
-            return text
         # otherwise, download html and cache it
         else:
             text = func(url)
