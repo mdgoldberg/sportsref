@@ -151,7 +151,8 @@ class BoxScore(
         # clean data and add features
         for i, (tm, df) in enumerate(zip(tms, dfs)):
             no_time = df['mp'] == 0
-            stat_cols = df.select_dtypes(exclude=['object'])
+            stat_cols = [col for col, dtype in df.dtypes.iteritems()
+                         if dtype != 'object']
             df.ix[no_time, stat_cols] = 0
             df.ix[:, 'team_id'] = tm
             df.ix[:, 'is_home'] = i == 1
