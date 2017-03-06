@@ -61,8 +61,8 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_assist'] = pd.notnull(p.get('assister'))
         p['is_block'] = pd.notnull(p.get('blocker'))
         shooter_home = p['shooter'] in hm_roster
-        p['team'] = hm if shooter_home else aw
-        p['opp'] = aw if shooter_home else hm
+        p['off_team'] = hm if shooter_home else aw
+        p['def_team'] = aw if shooter_home else hm
         return p
 
     # parsing jump balls
@@ -89,8 +89,8 @@ def parse_play(boxscore_id, details, is_hm):
         else:
             reb_home = p['rebounder'] in hm_roster
             p['reb_team'], other = (hm, aw) if reb_home else (aw, hm)
-        p['team'] = p['reb_team'] if p['is_oreb'] else other
-        p['opp'] = p['reb_team'] if p['is_dreb'] else other
+        p['off_team'] = p['reb_team'] if p['is_oreb'] else other
+        p['def_team'] = p['reb_team'] if p['is_dreb'] else other
         return p
 
     # parsing free throws
@@ -114,8 +114,8 @@ def parse_play(boxscore_id, details, is_hm):
         ft_home = p['ft_shooter'] in hm_roster
         p['ft_team'] = hm if ft_home else aw
         if not p['is_tech_fta']:
-            p['team'] = hm if ft_home else aw
-            p['opp'] = aw if ft_home else hm
+            p['off_team'] = hm if ft_home else aw
+            p['def_team'] = aw if ft_home else hm
         return p
 
     # parsing substitutions
@@ -152,12 +152,12 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_discont_dribble'] = p['to_type'] == 'discontinued dribble'
         p['is_carry'] = p['to_type'] == 'palming'
         if p['to_by'] == 'Team':
-            p['team'] = hm if is_hm else aw
-            p['opp'] = aw if is_hm else hm
+            p['off_team'] = hm if is_hm else aw
+            p['def_team'] = aw if is_hm else hm
         else:
             to_home = p['to_by'] in hm_roster
-            p['team'] = hm if to_home else aw
-            p['opp'] = aw if to_home else hm
+            p['off_team'] = hm if to_home else aw
+            p['def_team'] = aw if to_home else hm
         return p
 
     # parsing shooting fouls
@@ -170,9 +170,9 @@ def parse_play(boxscore_id, details, is_hm):
         p.update(m.groupdict())
         p['is_block_foul'] = bool(p['is_block_foul'])
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing offensive fouls
@@ -188,9 +188,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_charge'] = bool(p['is_charge'])
         p['fouler'] = p['to_by']
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = hm if foul_on_home else aw
-        p['opp'] = aw if foul_on_home else hm
-        p['foul_team'] = p['team']
+        p['off_team'] = hm if foul_on_home else aw
+        p['def_team'] = aw if foul_on_home else hm
+        p['foul_team'] = p['off_team']
         return p
 
     # parsing personal fouls
@@ -204,9 +204,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_take_foul'] = bool(p['is_take_foul'])
         p['is_block_foul'] = bool(p['is_block_foul'])
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # TODO: parsing double personal fouls
@@ -216,7 +216,7 @@ def parse_play(boxscore_id, details, is_hm):
     # if m:
     #     p['is_pf'] = True
     #     p.update(m.groupdict())
-    #     p['team'] =
+    #     p['off_team'] =
 
     # parsing loose ball fouls
     looseBallRE = (r'Loose ball foul by (?P<fouler>{0})'
@@ -256,9 +256,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_inbound_foul'] = True
         p.update(m.groupdict())
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing flagrant fouls
@@ -282,9 +282,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_clear_path_foul'] = True
         p.update(m.groupdict())
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing timeouts
@@ -344,9 +344,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_def_three_secs'] = True
         p.update(m.groupdict())
         foul_on_home = p['tech_fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing violations
@@ -390,12 +390,12 @@ def clean_features(df):
     df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
 
     # fill in NaN's/fix team, opp columns
-    df.team.fillna(method='bfill', inplace=True)
-    df.opp.fillna(method='bfill', inplace=True)
-    df.team.fillna(method='ffill', inplace=True)
-    df.opp.fillna(method='ffill', inplace=True)
+    df.off_team.fillna(method='bfill', inplace=True)
+    df.def_team.fillna(method='bfill', inplace=True)
+    df.off_team.fillna(method='ffill', inplace=True)
+    df.def_team.fillna(method='ffill', inplace=True)
     if 'is_jump_ball' in df.columns:
-        df.ix[df['is_jump_ball'], ['team', 'opp']] = np.nan
+        df.ix[df['is_jump_ball'], ['off_team', 'def_team']] = np.nan
 
     return df
 

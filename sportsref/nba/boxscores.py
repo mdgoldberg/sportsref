@@ -312,7 +312,7 @@ class BoxScore(
         df.reset_index(drop=True, inplace=True)
 
         # track possession number for each possession
-        new_poss = (df.team == df.home).diff().fillna(False)
+        new_poss = (df.off_team == df.home).diff().fillna(False)
         # def rebound considered part of the new possession
         df['poss_num'] = np.cumsum(new_poss) + df.is_dreb
         # create poss_num with rebs -> new possessions for granular groupbys
@@ -332,20 +332,20 @@ class BoxScore(
 
         # makes sure team and poss_num are correct for subs after rearranging
         # some possessions above
-        df.ix[df['is_sub'], ['team', 'opp', 'poss_num']] = np.nan
-        df.team.fillna(method='bfill', inplace=True)
-        df.opp.fillna(method='bfill', inplace=True)
+        df.ix[df['is_sub'], ['off_team', 'def_team', 'poss_num']] = np.nan
+        df.off_team.fillna(method='bfill', inplace=True)
+        df.def_team.fillna(method='bfill', inplace=True)
         df.poss_num.fillna(method='bfill', inplace=True)
-        # make sure 'team' is the team shooting tech FTs
+        # make sure 'off_team' is the team shooting tech FTs
         # (impt for keeping track of the score)
         if 'is_tech_fta' in df.columns:
             tech_fta = df['is_tech_fta']
-            df.ix[tech_fta, 'team'] = df.ix[tech_fta, 'ft_team']
-            df.ix[tech_fta, 'opp'] = np.where(
-                df.ix[tech_fta, 'team'] == home, away, home
+            df.ix[tech_fta, 'off_team'] = df.ix[tech_fta, 'ft_team']
+            df.ix[tech_fta, 'def_team'] = np.where(
+                df.ix[tech_fta, 'off_team'] == home, away, home
             )
         # redefine poss_num_reb
-        new_poss = (df.team == df.home).diff().fillna(False)
+        new_poss = (df.off_team == df.home).diff().fillna(False)
         poss_num_reb = np.cumsum(new_poss | df.is_reb)
 
         # get rid of redundant subs
@@ -390,10 +390,11 @@ class BoxScore(
         # add column for pts and score
         df['pts'] = (df['is_ftm'] + 2 * df['is_fgm'] +
                      (df['is_fgm'] & df['is_three']))
-        df['hm_pts'] = np.where(df.team == df.home, df.pts, 0)
-        df['aw_pts'] = np.where(df.team == df.away, df.pts, 0)
+        df['hm_pts'] = np.where(df.off_team == df.home, df.pts, 0)
+        df['aw_pts'] = np.where(df.off_team == df.away, df.pts, 0)
         df['hm_score'] = np.cumsum(df['hm_pts'])
         df['aw_score'] = np.cumsum(df['aw_pts'])
+        df['hm_off'] = df.off_team == df.home
 
         # get lineup data
         if dense_lineups:
