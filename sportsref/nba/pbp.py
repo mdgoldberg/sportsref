@@ -476,12 +476,6 @@ def get_sparse_lineups(df):
     :param df: TODO
     :returns: TODO
     """
-    # get each team's rosters
-    assert df.boxscore_id.nunique() == 1
-    bs = sportsref.nba.BoxScore(df.boxscore_id.iloc[0])
-    stats = bs.basic_stats()
-    hm_players = stats.ix[stats.is_home, 'player_id']
-    aw_players = stats.ix[~stats.is_home, 'player_id']
 
     # get the lineup data using get_dense_lineups if necessary
     if (set(ALL_LINEUP_COLS) - set(df.columns)):
@@ -492,18 +486,16 @@ def get_sparse_lineups(df):
     # create the sparse representation
     hm_lineups = lineup_df[HM_LINEUP_COLS].values
     aw_lineups = lineup_df[AW_LINEUP_COLS].values
-    hm_df = pd.DataFrame({
-        '{}_in'.format(player_id):
-        np.array([player_id in lineup for lineup in hm_lineups])
-        for player_id in hm_players
-    }, dtype=int)
-    aw_df = pd.DataFrame({
-        '{}_in'.format(player_id):
-        np.array([player_id in lineup for lineup in aw_lineups])
-        for player_id in aw_players
-    }, dtype=int)
     # +1 for home, -1 for away
-    sparse_df = pd.concat((hm_df, -aw_df), axis=1)
+    hm_df = pd.DataFrame([
+        {'{}_in'.format(player_id): 1 for player_id in lineup}
+        for lineup in hm_lineups
+    ], dtype=int)
+    aw_df = pd.DataFrame([
+        {'{}_in'.format(player_id): -1 for player_id in lineup}
+        for lineup in aw_lineups
+    ], dtype=int)
+    sparse_df = pd.concat((hm_df, aw_df), axis=1).fillna(0)
     return sparse_df
 
 
