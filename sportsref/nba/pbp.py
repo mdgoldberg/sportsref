@@ -15,6 +15,11 @@ AW_LINEUP_COLS = ['aw_player{}'.format(i) for i in range(1, 6)]
 ALL_LINEUP_COLS = AW_LINEUP_COLS + HM_LINEUP_COLS
 
 
+def sparse_lineup_cols(df):
+    regex = '{}_in'.format(PLAYER_RE)
+    return [c for c in df.columns if re.match(regex, c)]
+
+
 def parse_play(boxscore_id, details, is_hm):
     """Parse play details from a play-by-play string describing a play.
 
@@ -377,13 +382,13 @@ def clean_features(df):
     df = pd.DataFrame(df)
 
     bool_vals = set([True, False, None, np.nan])
-    sparse_vals = set([-1, 0, 1, np.nan])
+    sparse_cols = sparse_lineup_cols(df)
     for c in df:
         # make indicator columns boolean type (and fill in NaNs)
         if set(df[c].unique()[:5]) <= bool_vals:
             df[c] = df[c].map(lambda x: x is True)
         # fill NaN's in sparse lineup columns to 0
-        if set(df[c].unique()[:5]) <= sparse_vals:
+        elif c in sparse_cols:
             df[c] = df[c].fillna(0)
 
     # fix free throw columns on technicals
