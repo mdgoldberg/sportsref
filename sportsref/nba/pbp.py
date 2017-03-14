@@ -414,6 +414,7 @@ def clean_multigame_features(df):
     :df: TODO
     :returns: TODO
     """
+    df = pd.DataFrame(df)
 
     df = clean_features(df)
 
