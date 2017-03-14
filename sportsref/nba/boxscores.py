@@ -315,9 +315,9 @@ class BoxScore(
         # track possession number for each possession
         new_poss = (df.off_team == df.home).diff().fillna(False)
         # def rebound considered part of the new possession
-        df['poss_num'] = np.cumsum(new_poss) + df.is_dreb
-        # create poss_num with rebs -> new possessions for granular groupbys
-        poss_num_reb = np.cumsum(new_poss | df.is_reb)
+        df['poss_id'] = np.cumsum(new_poss) + df.is_dreb
+        # create poss_id with rebs -> new possessions for granular groupbys
+        poss_id_reb = np.cumsum(new_poss | df.is_reb)
 
         # make sure plays with the same clock time are in the right order
         sort_cols = [col for col in
@@ -325,18 +325,18 @@ class BoxScore(
                       'is_ejection', 'is_tech_fta', 'is_timeout', 'is_pf_fta',
                       'is_sub']
                      if col in df.columns]
-        for label, group in df.groupby([df.secs_elapsed, poss_num_reb]):
+        for label, group in df.groupby([df.secs_elapsed, poss_id_reb]):
             if len(group) > 1:
                 df.ix[group.index, :] = group.sort_values(
                     sort_cols, ascending=False
                 ).values
 
-        # makes sure team and poss_num are correct for subs after rearranging
+        # makes sure off/def and poss_id are correct for subs after rearranging
         # some possessions above
-        df.ix[df['is_sub'], ['off_team', 'def_team', 'poss_num']] = np.nan
+        df.ix[df['is_sub'], ['off_team', 'def_team', 'poss_id']] = np.nan
         df.off_team.fillna(method='bfill', inplace=True)
         df.def_team.fillna(method='bfill', inplace=True)
-        df.poss_num.fillna(method='bfill', inplace=True)
+        df.poss_id.fillna(method='bfill', inplace=True)
         # make sure 'off_team' is the team shooting tech FTs
         # (impt for keeping track of the score)
         if 'is_tech_fta' in df.columns:
@@ -345,13 +345,13 @@ class BoxScore(
             df.ix[tech_fta, 'def_team'] = np.where(
                 df.ix[tech_fta, 'off_team'] == home, away, home
             )
-        # redefine poss_num_reb
+        # redefine poss_id_reb
         new_poss = (df.off_team == df.home).diff().fillna(False)
-        poss_num_reb = np.cumsum(new_poss | df.is_reb)
+        poss_id_reb = np.cumsum(new_poss | df.is_reb)
 
         # get rid of redundant subs
         for (se, tm, pnum), group in df[df.is_sub].groupby(
-            [df.secs_elapsed, df.sub_team, poss_num_reb]
+            [df.secs_elapsed, df.sub_team, poss_id_reb]
         ):
             if len(group) > 1:
                 sub_in = set()
@@ -395,6 +395,13 @@ class BoxScore(
         df['aw_pts'] = np.where(df.off_team == df.away, df.pts, 0)
         df['hm_score'] = np.cumsum(df['hm_pts'])
         df['aw_score'] = np.cumsum(df['aw_pts'])
+
+        # more helpful columns
+        # "play" is differentiated from "poss" by counting OReb as new play
+        # "plays" end with ORB, DRB, FGM, TO, or last FTM
+        new_play = df.eval('is_reb | is_fgm | is_to |'
+                           '(is_ftm & fta_num == tot_fta)')
+        df['play_id'] = np.cumsum(new_play).shift(1).fillna(0) + df.is_reb
         df['hm_off'] = df.off_team == df.home
 
         # get lineup data

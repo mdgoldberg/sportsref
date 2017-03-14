@@ -17,6 +17,7 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
+# TODO: move PSFConstants and GPFConstants to appdirs cache dir
 def switch_to_dir(dirPath):
     """
     Decorator that switches to given directory before executing function, and

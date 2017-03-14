@@ -383,24 +383,47 @@ def clean_features(df):
 
     bool_vals = set([True, False, None, np.nan])
     sparse_cols = sparse_lineup_cols(df)
-    for c in df:
+    for col in df:
+
         # make indicator columns boolean type (and fill in NaNs)
-        if set(df[c].unique()[:5]) <= bool_vals:
-            df[c] = df[c].map(lambda x: x is True)
+        if set(df[col].unique()[:5]) <= bool_vals:
+            df[col] = (df[col] == True)
+
         # fill NaN's in sparse lineup columns to 0
-        elif c in sparse_cols:
-            df[c] = df[c].fillna(0)
+        elif col in sparse_cols:
+            df[col] = df[col].fillna(0)
 
     # fix free throw columns on technicals
     df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
 
-    # fill in NaN's/fix team, opp columns
+    # fill in NaN's/fix off_team and def_team columns
     df.off_team.fillna(method='bfill', inplace=True)
     df.def_team.fillna(method='bfill', inplace=True)
     df.off_team.fillna(method='ffill', inplace=True)
     df.def_team.fillna(method='ffill', inplace=True)
+
     if 'is_jump_ball' in df.columns:
         df.ix[df['is_jump_ball'], ['off_team', 'def_team']] = np.nan
+
+    return df
+
+
+def clean_multigame_features(df):
+    """TODO: Docstring for clean_multigame_features.
+
+    :df: TODO
+    :returns: TODO
+    """
+
+    df = clean_features(df)
+
+    # if it's many games in one DataFrame, make poss_id and play_id unique
+    for col in ('play_id', 'poss_id'):
+        diffs = df[col].diff().fillna(0)
+        if (diffs < 0).any():
+            multi_game = True
+            new_col = np.cumsum(np.where(diffs < 0, 0, diffs))
+            df.eval('{} = @new_col'.format(col), inplace=True)
 
     return df
 
