@@ -423,7 +423,8 @@ class BoxScore(
         # (or double lane viol)
         new_qtr = df.quarter.diff().shift(-1).fillna(False).astype(bool)
         and1 = (df.is_fgm & df.is_pf.shift(-1).fillna(False) &
-                df.is_fta.shift(-2).fillna(False))
+                df.is_fta.shift(-2).fillna(False) &
+                ~df.secs_elapsed.diff().shift(-1).fillna(False).astype(bool))
         double_lane = (df.viol_type == 'double lane')
         new_play = df.eval('(is_fga & ~(@and1)) | is_to | @new_qtr |'
                            '(is_fta & ~is_tech_fta & fta_num == tot_fta) |'
