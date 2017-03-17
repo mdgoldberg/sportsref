@@ -328,7 +328,7 @@ class BoxScore(
         sort_cols = [col for col in
                      ['is_reb', 'is_fga', 'is_pf', 'is_tech_foul',
                       'is_ejection', 'is_tech_fta', 'is_timeout', 'is_pf_fta',
-                      'fta_num', 'is_sub']
+                      'fta_num', 'is_viol', 'is_sub']
                      if col in df.columns]
         asc_true = ['fta_num']
         ascend = [(col in asc_true) for col in sort_cols]
@@ -420,11 +420,14 @@ class BoxScore(
         # more helpful columns
         # "play" is differentiated from "poss" by counting OReb as new play
         # "plays" end with non-and1 FGA, TO, last non-tech FTA, or end of qtr
+        # (or double lane viol)
         new_qtr = df.quarter.diff().shift(-1).fillna(False).astype(bool)
         and1 = (df.is_fgm & df.is_pf.shift(-1).fillna(False) &
                 df.is_fta.shift(-2).fillna(False))
+        double_lane = (df.viol_type == 'double lane')
         new_play = df.eval('(is_fga & ~(@and1)) | is_to | @new_qtr |'
-                           '(is_fta & ~is_tech_fta & fta_num == tot_fta)')
+                           '(is_fta & ~is_tech_fta & fta_num == tot_fta) |'
+                           '@double_lane')
         df['play_id'] = np.cumsum(new_play).shift(1).fillna(0)
         # new_play = df.eval('is_reb | is_fgm | is_to | @new_qtr |'
         #                    '(is_ftm & ~is_tech_fta & fta_num == tot_fta)')
