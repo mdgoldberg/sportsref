@@ -301,10 +301,23 @@ class BoxScore(
         df['month'] = date.month
         df['day'] = date.day
 
+        # get rid of 'rebounds' after FTM, non-final FTA, or tech FTA
+        df.reset_index(drop=True, inplace=True)
+        no_reb_mask = (
+            (df.fta_num < df.tot_fta) | df.is_ftm |
+            df.get('is_tech_fta', False)
+        ).shift(1).fillna(False)
+        no_reb_mask |= (df.fta_num == df.tot_fta).shift(-1).fillna(False)
+        drop_mask = (
+            (df.rebounder == 'Team') & no_reb_mask
+        ).nonzero()[0]
+        df.drop(drop_mask, axis=0, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
         # track possession number for each possession
         # TODO: make this more specific than just "when off_team switches"
         # TODO: see 201604130PHO, secs_elapsed == 2756;
-        # wrong poss_num -> wrong_order
+        # wrong poss_id -> wrong_order
         new_poss = (df.off_team == df.home).diff().fillna(False)
         # def rebound considered part of the new possession
         df['poss_id'] = np.cumsum(new_poss) + df.is_dreb
@@ -325,14 +338,15 @@ class BoxScore(
                     sort_cols, ascending=ascend, kind='mergesort'
                 ).values
 
-        # get rid of 'rebounds' after FTM, non-final FTA, or tech FTA
+        # 2nd pass: get rid of 'rebounds' after FTM, non-final FTA, etc.
         df.reset_index(drop=True, inplace=True)
         no_reb_mask = (
             (df.fta_num < df.tot_fta) | df.is_ftm |
             df.get('is_tech_fta', False)
-        )
+        ).shift(1).fillna(False)
+        no_reb_mask |= (df.fta_num == df.tot_fta).shift(-1).fillna(False)
         drop_mask = (
-            df.is_reb & no_reb_mask.shift(1).fillna(False)
+            (df.rebounder == 'Team') & no_reb_mask
         ).nonzero()[0]
         df.drop(drop_mask, axis=0, inplace=True)
         df.reset_index(drop=True, inplace=True)
@@ -405,11 +419,16 @@ class BoxScore(
 
         # more helpful columns
         # "play" is differentiated from "poss" by counting OReb as new play
-        # "plays" end with ORB, DRB, FGM, TO, last non-tech FTM, or end of qtr
-        new_qtr = df.quarter.diff().fillna(False).astype(bool)
-        new_play = df.eval('is_reb | is_fgm | is_to | @new_qtr |'
-                           '(is_ftm & ~is_tech_fta & fta_num == tot_fta)')
-        df['play_id'] = np.cumsum(new_play).shift(1).fillna(0) + df.is_reb
+        # "plays" end with non-and1 FGA, TO, last non-tech FTA, or end of qtr
+        new_qtr = df.quarter.diff().shift(-1).fillna(False).astype(bool)
+        and1 = (df.is_fgm & df.is_pf.shift(-1).fillna(False) &
+                df.is_fta.shift(-2).fillna(False))
+        new_play = df.eval('(is_fga & ~(@and1)) | is_to | @new_qtr |'
+                           '(is_fta & ~is_tech_fta & fta_num == tot_fta)')
+        df['play_id'] = np.cumsum(new_play).shift(1).fillna(0)
+        # new_play = df.eval('is_reb | is_fgm | is_to | @new_qtr |'
+        #                    '(is_ftm & ~is_tech_fta & fta_num == tot_fta)')
+        # df['play_id'] = np.cumsum(new_play).shift(1).fillna(0) + df.is_reb
         df['hm_off'] = df.off_team == df.home
 
         # get lineup data
