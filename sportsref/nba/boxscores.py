@@ -287,6 +287,7 @@ class BoxScore(
 
         # convert to DataFrame and clean columns
         df = pd.DataFrame.from_records(data)
+        df.sort_values('secs_elapsed', inplace=True, kind='mergesort')
         df = sportsref.nba.pbp.clean_features(df)
 
         # add columns for home team, away team, boxscore_id, date
@@ -300,6 +301,30 @@ class BoxScore(
         df['month'] = date.month
         df['day'] = date.day
 
+        # track possession number for each possession
+        # TODO: make this more specific than just "when off_team switches"
+        # TODO: see 201604130PHO, secs_elapsed == 2756;
+        # wrong poss_num -> wrong_order
+        new_poss = (df.off_team == df.home).diff().fillna(False)
+        # def rebound considered part of the new possession
+        df['poss_id'] = np.cumsum(new_poss) + df.is_dreb
+        # create poss_id with rebs -> new possessions for granular groupbys
+        poss_id_reb = np.cumsum(new_poss | df.is_reb)
+
+        # make sure plays with the same clock time are in the right order
+        sort_cols = [col for col in
+                     ['is_reb', 'is_fga', 'is_pf', 'is_tech_foul',
+                      'is_ejection', 'is_tech_fta', 'is_timeout', 'is_pf_fta',
+                      'fta_num', 'is_sub']
+                     if col in df.columns]
+        asc_true = ['fta_num']
+        ascend = [(col in asc_true) for col in sort_cols]
+        for label, group in df.groupby([df.secs_elapsed, poss_id_reb]):
+            if len(group) > 1:
+                df.ix[group.index, :] = group.sort_values(
+                    sort_cols, ascending=ascend, kind='mergesort'
+                ).values
+
         # get rid of 'rebounds' after FTM, non-final FTA, or tech FTA
         df.reset_index(drop=True, inplace=True)
         no_reb_mask = (
@@ -312,39 +337,21 @@ class BoxScore(
         df.drop(drop_mask, axis=0, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
-        # track possession number for each possession
-        new_poss = (df.off_team == df.home).diff().fillna(False)
-        # def rebound considered part of the new possession
-        df['poss_id'] = np.cumsum(new_poss) + df.is_dreb
-        # create poss_id with rebs -> new possessions for granular groupbys
-        poss_id_reb = np.cumsum(new_poss | df.is_reb)
-
-        # make sure plays with the same clock time are in the right order
-        sort_cols = [col for col in
-                     ['is_reb', 'is_fga', 'is_pf', 'is_tech_foul',
-                      'is_ejection', 'is_tech_fta', 'is_timeout', 'is_pf_fta',
-                      'is_sub']
-                     if col in df.columns]
-        for label, group in df.groupby([df.secs_elapsed, poss_id_reb]):
-            if len(group) > 1:
-                df.ix[group.index, :] = group.sort_values(
-                    sort_cols, ascending=False
-                ).values
-
         # makes sure off/def and poss_id are correct for subs after rearranging
         # some possessions above
         df.ix[df['is_sub'], ['off_team', 'def_team', 'poss_id']] = np.nan
         df.off_team.fillna(method='bfill', inplace=True)
         df.def_team.fillna(method='bfill', inplace=True)
         df.poss_id.fillna(method='bfill', inplace=True)
-        # make sure 'off_team' is the team shooting tech FTs
+        # make sure 'off_team' is always the team shooting FTs, even on techs
         # (impt for keeping track of the score)
         if 'is_tech_fta' in df.columns:
             tech_fta = df['is_tech_fta']
-            df.ix[tech_fta, 'off_team'] = df.ix[tech_fta, 'ft_team']
+            df.ix[tech_fta, 'off_team'] = df.ix[tech_fta, 'fta_team']
             df.ix[tech_fta, 'def_team'] = np.where(
                 df.ix[tech_fta, 'off_team'] == home, away, home
             )
+        df.drop('fta_team', axis=1, inplace=True)
         # redefine poss_id_reb
         new_poss = (df.off_team == df.home).diff().fillna(False)
         poss_id_reb = np.cumsum(new_poss | df.is_reb)
@@ -398,9 +405,10 @@ class BoxScore(
 
         # more helpful columns
         # "play" is differentiated from "poss" by counting OReb as new play
-        # "plays" end with ORB, DRB, FGM, TO, or last FTM
-        new_play = df.eval('is_reb | is_fgm | is_to |'
-                           '(is_ftm & fta_num == tot_fta)')
+        # "plays" end with ORB, DRB, FGM, TO, last non-tech FTM, or end of qtr
+        new_qtr = df.quarter.diff().fillna(False).astype(bool)
+        new_play = df.eval('is_reb | is_fgm | is_to | @new_qtr |'
+                           '(is_ftm & ~is_tech_fta & fta_num == tot_fta)')
         df['play_id'] = np.cumsum(new_play).shift(1).fillna(0) + df.is_reb
         df['hm_off'] = df.off_team == df.home
 

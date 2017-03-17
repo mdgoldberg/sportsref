@@ -117,7 +117,7 @@ def parse_play(boxscore_id, details, is_hm):
         if p['fta_num']:
             p['fta_num'] = int(p['fta_num'])
         ft_home = p['ft_shooter'] in hm_roster
-        p['ft_team'] = hm if ft_home else aw
+        p['fta_team'] = hm if ft_home else aw
         if not p['is_tech_fta']:
             p['off_team'] = hm if ft_home else aw
             p['def_team'] = aw if ft_home else hm
@@ -189,6 +189,7 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_pf'] = True
         p['is_off_foul'] = True
         p['is_to'] = True
+        p['to_type'] = 'offensive foul'
         p.update(m.groupdict())
         p['is_charge'] = bool(p['is_charge'])
         p['fouler'] = p['to_by']
@@ -361,6 +362,9 @@ def parse_play(boxscore_id, details, is_hm):
     if m:
         p['is_viol'] = True
         p.update(m.groupdict())
+        if p['viol_type'] == 'kicked_ball':
+            p['is_to'] = True
+            p['to_by'] = p['violator']
         if p['violator'] == 'Team':
             p['viol_team'] = hm if is_hm else aw
         else:
@@ -422,7 +426,6 @@ def clean_multigame_features(df):
     for col in ('play_id', 'poss_id'):
         diffs = df[col].diff().fillna(0)
         if (diffs < 0).any():
-            multi_game = True
             new_col = np.cumsum(np.where(diffs < 0, 0, diffs))
             df.eval('{} = @new_col'.format(col), inplace=True)
 
