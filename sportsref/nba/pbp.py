@@ -419,6 +419,8 @@ def clean_multigame_features(df):
     :returns: TODO
     """
     df = pd.DataFrame(df)
+    if df.index.value_counts().max() > 1:
+        df.reset_index(drop=True, inplace=True)
 
     df = clean_features(df)
 
