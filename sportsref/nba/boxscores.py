@@ -429,9 +429,6 @@ class BoxScore(
                            '(is_fta & ~is_tech_fta & fta_num == tot_fta) |'
                            '@double_lane')
         df['play_id'] = np.cumsum(new_play).shift(1).fillna(0)
-        # new_play = df.eval('is_reb | is_fgm | is_to | @new_qtr |'
-        #                    '(is_ftm & ~is_tech_fta & fta_num == tot_fta)')
-        # df['play_id'] = np.cumsum(new_play).shift(1).fillna(0) + df.is_reb
         df['hm_off'] = df.off_team == df.home
 
         # get lineup data

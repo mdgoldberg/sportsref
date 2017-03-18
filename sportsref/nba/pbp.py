@@ -426,7 +426,7 @@ def clean_multigame_features(df):
     for col in ('play_id', 'poss_id'):
         diffs = df[col].diff().fillna(0)
         if (diffs < 0).any():
-            new_col = np.cumsum(np.where(diffs < 0, 0, diffs))
+            new_col = np.cumsum(diffs.astype(bool))
             df.eval('{} = @new_col'.format(col), inplace=True)
 
     return df
