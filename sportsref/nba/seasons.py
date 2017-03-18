@@ -87,7 +87,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
-    def get_schedule(self, kind='R'):
+    def schedule(self, kind='R'):
         """Returns a list of BoxScore IDs for every game in the season.
         Only needs to handle 'R' or 'P' options because decorator handles 'B'.
 

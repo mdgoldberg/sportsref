@@ -57,18 +57,15 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """
         raise NotImplementedError('roster')
 
+    # TODO: kind_rpb
     @sportsref.decorators.memoize
-    def boxscores(self, year):
-        """Gets list of BoxScore objects corresponding to the box scores from
-        that year.
+    def schedule(self, year):
+        """Gets schedule information for a team-season.
 
-        :year: The year for which we want the boxscores; defaults to current
-        year.
-        :returns: np.array of strings representing boxscore IDs.
+        :year: The year for which we want the schedule.
+        :returns: DataFrame of schedule information.
         """
         doc = self.get_year_doc('{}_games'.format(year))
-        table = doc('table#teams_games')
+        table = doc('table#games')
         df = sportsref.utils.parse_table(table)
-        if df.empty:
-            return np.array([])
-        return df.box_score_text.dropna().values
+        return df
