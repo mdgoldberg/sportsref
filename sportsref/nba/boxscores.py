@@ -301,18 +301,27 @@ class BoxScore(
         df['month'] = date.month
         df['day'] = date.day
 
+        def _clean_rebs(df):
+            df.reset_index(drop=True, inplace=True)
+            no_reb_after = (
+                (df.fta_num < df.tot_fta) | df.is_ftm |
+                df.get('is_tech_fta', False)
+            ).shift(1).fillna(False)
+            no_reb_before = (
+                (df.fta_num == df.tot_fta)
+            ).shift(-1).fillna(False)
+            se_end_qtr = df.loc[df.clock_time == '0:00.0', 'secs_elapsed'].unique()
+            no_reb_when = df.secs_elapsed.isin(se_end_qtr)
+            drop_mask = (
+                (df.rebounder == 'Team') &
+                (no_reb_after | no_reb_before | no_reb_when)
+            ).nonzero()[0]
+            df.drop(drop_mask, axis=0, inplace=True)
+            df.reset_index(drop=True, inplace=True)
+            return df
+
         # get rid of 'rebounds' after FTM, non-final FTA, or tech FTA
-        df.reset_index(drop=True, inplace=True)
-        no_reb_mask = (
-            (df.fta_num < df.tot_fta) | df.is_ftm |
-            df.get('is_tech_fta', False)
-        ).shift(1).fillna(False)
-        no_reb_mask |= (df.fta_num == df.tot_fta).shift(-1).fillna(False)
-        drop_mask = (
-            (df.rebounder == 'Team') & no_reb_mask
-        ).nonzero()[0]
-        df.drop(drop_mask, axis=0, inplace=True)
-        df.reset_index(drop=True, inplace=True)
+        df = _clean_rebs(df)
 
         # track possession number for each possession
         # TODO: make this more specific than just "when off_team switches"
@@ -339,17 +348,7 @@ class BoxScore(
                 ).values
 
         # 2nd pass: get rid of 'rebounds' after FTM, non-final FTA, etc.
-        df.reset_index(drop=True, inplace=True)
-        no_reb_mask = (
-            (df.fta_num < df.tot_fta) | df.is_ftm |
-            df.get('is_tech_fta', False)
-        ).shift(1).fillna(False)
-        no_reb_mask |= (df.fta_num == df.tot_fta).shift(-1).fillna(False)
-        drop_mask = (
-            (df.rebounder == 'Team') & no_reb_mask
-        ).nonzero()[0]
-        df.drop(drop_mask, axis=0, inplace=True)
-        df.reset_index(drop=True, inplace=True)
+        df = _clean_rebs(df)
 
         # makes sure off/def and poss_id are correct for subs after rearranging
         # some possessions above
@@ -425,7 +424,7 @@ class BoxScore(
         and1 = (df.is_fgm & df.is_pf.shift(-1).fillna(False) &
                 df.is_fta.shift(-2).fillna(False) &
                 ~df.secs_elapsed.diff().shift(-1).fillna(False).astype(bool))
-        double_lane = (df.viol_type == 'double lane')
+        double_lane = (df.get('viol_type') == 'double lane')
         new_play = df.eval('(is_fga & ~(@and1)) | is_to | @new_qtr |'
                            '(is_fta & ~is_tech_fta & fta_num == tot_fta) |'
                            '@double_lane')
