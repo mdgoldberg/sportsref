@@ -310,7 +310,9 @@ class BoxScore(
             no_reb_before = (
                 (df.fta_num == df.tot_fta)
             ).shift(-1).fillna(False)
-            se_end_qtr = df.loc[df.clock_time == '0:00.0', 'secs_elapsed'].unique()
+            se_end_qtr = df.loc[
+                df.clock_time == '0:00.0', 'secs_elapsed'
+            ].unique()
             no_reb_when = df.secs_elapsed.isin(se_end_qtr)
             drop_mask = (
                 (df.rebounder == 'Team') &
@@ -324,9 +326,10 @@ class BoxScore(
         df = _clean_rebs(df)
 
         # track possession number for each possession
-        # TODO: make this more specific than just "when off_team switches"
-        # TODO: see 201604130PHO, secs_elapsed == 2756;
-        # wrong poss_id -> wrong_order
+        # TODO: see 201604130PHO, secs_elapsed == 2756
+        # things that end a poss:
+        # FGM, dreb, TO, end of Q, made last FT, lost jump ball,
+        # def goaltending, shot clock violation
         new_poss = (df.off_team == df.home).diff().fillna(False)
         # def rebound considered part of the new possession
         df['poss_id'] = np.cumsum(new_poss) + df.is_dreb
@@ -334,10 +337,14 @@ class BoxScore(
         poss_id_reb = np.cumsum(new_poss | df.is_reb)
 
         # make sure plays with the same clock time are in the right order
+        # TODO: make sort_cols depend on what cols are in the play?
+        # or combine related plays, like and-1 shot and foul
+        # issues come up with FGA after timeout in 201604130LAL
+        # issues come up with PF between FGA and DREB in 201604120SAS
         sort_cols = [col for col in
                      ['is_reb', 'is_fga', 'is_pf', 'is_tech_foul',
                       'is_ejection', 'is_tech_fta', 'is_timeout', 'is_pf_fta',
-                      'fta_num', 'is_viol', 'is_sub']
+                      'fta_num', 'is_viol', 'is_to', 'is_jump_ball', 'is_sub']
                      if col in df.columns]
         asc_true = ['fta_num']
         ascend = [(col in asc_true) for col in sort_cols]
@@ -356,6 +363,10 @@ class BoxScore(
         df.off_team.fillna(method='bfill', inplace=True)
         df.def_team.fillna(method='bfill', inplace=True)
         df.poss_id.fillna(method='bfill', inplace=True)
+        # make off_team and def_team NaN for jump balls
+        if 'is_jump_ball' in df.columns:
+            df.ix[df['is_jump_ball'], ['off_team', 'def_team']] = np.nan
+
         # make sure 'off_team' is always the team shooting FTs, even on techs
         # (impt for keeping track of the score)
         if 'is_tech_fta' in df.columns:

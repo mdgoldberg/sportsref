@@ -406,9 +406,6 @@ def clean_features(df):
     df.off_team.fillna(method='ffill', inplace=True)
     df.def_team.fillna(method='ffill', inplace=True)
 
-    if 'is_jump_ball' in df.columns:
-        df.ix[df['is_jump_ball'], ['off_team', 'def_team']] = np.nan
-
     return df
 
 
