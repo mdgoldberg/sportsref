@@ -151,7 +151,8 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc()
         table = doc(selector)
         df = sportsref.utils.parse_table(table)
-        df = df.drop('ranker', axis=1)
+        df.set_index('team_id', inplace=True)
+        df.drop('ranker', axis=1, inplace=True)
         return df
 
     def team_stats_per_game(self):
