@@ -9,23 +9,23 @@ import sportsref
 
 class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
-    def __init__(self, teamID):
-        self.teamID = teamID
+    def __init__(self, team_id):
+        self.team_id = team_id
 
     def __eq__(self, other):
-        return (self.teamID == other.teamID)
+        return (self.team_id == other.team_id)
 
     def __hash__(self):
-        return hash(self.teamID)
+        return hash(self.team_id)
 
     @sportsref.decorators.memoize
     def team_year_url(self, yr_str):
         return (sportsref.nba.BASE_URL +
-                '/teams/{}/{}.htm'.format(self.teamID, yr_str))
+                '/teams/{}/{}.htm'.format(self.team_id, yr_str))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
-        relURL = '/teams/{}'.format(self.teamID)
+        relURL = '/teams/{}'.format(self.team_id)
         teamURL = sportsref.nba.BASE_URL + relURL
         mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
