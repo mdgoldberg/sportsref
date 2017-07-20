@@ -147,6 +147,29 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             return np.array([])
         return df.boxscore_id.values
 
+    @sportsref.decorators.memoize
+    def _year_info_pq(self, year, keyword):
+        """Returns a PyQuery object containing the info from the meta div at
+        the top of the team year page with the given keyword.
+
+        :year: Int representing the season.
+        :keyword: A keyword to filter to a single p tag in the meta div.
+        :returns: A PyQuery object for the selected p element.
+        """
+        doc = self.get_year_doc(year)
+        p_tags = doc('div#meta div:not(.logo) p')
+        texts = [p_tag.text_content().strip() for p_tag in p_tags]
+        try:
+            return next(
+                pq(p_tag) for p_tag, text in zip(p_tags, texts)
+                if keyword.lower() in text.lower()
+            )
+        except StopIteration:
+            if len(texts):
+                raise ValueError('Keyword not found in any p tag.')
+            else:
+                raise ValueError('No meta div p tags found.')
+
     # TODO: add functions for OC, DC, PF, PA, W-L, etc.
     # TODO: Also give a function at BoxScore.homeCoach and BoxScore.awayCoach
     # TODO: BoxScore needs a gameNum function to do this?
@@ -160,23 +183,21 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         played (including playoffs). Each entry is the head coach's ID for that
         game in the season.
         """
-        doc = self.get_year_doc(year)
-        coaches = (doc('div#meta p')
-                   .filter(lambda i, e: 'Coach:' in e.text_content()))
-        coachStr = sportsref.utils.flatten_links(coaches)
+        coach_str = self._year_info_pq(year, 'Coach').text()
         regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
         coachAndTenure = []
-        while coachStr:
-            m = re.search(regex, coachStr)
+        m = True
+        while m:
+            m = re.search(regex, coach_str)
             coachID, wins, losses, ties = m.groups()
             nextIndex = m.end(4) + 1
             coachStr = coachStr[nextIndex:]
             tenure = int(wins) + int(losses) + int(ties)
             coachAndTenure.append((coachID, tenure))
 
-        coachIDs = [[cID for _ in xrange(games)]
-                    for cID, games in coachAndTenure]
-        coachIDs = [cID for sublist in coachIDs for cID in sublist]
+        coachIDs = [
+            cID for cID, games in coachAndTenure for _ in xrange(games)
+        ]
         return np.array(coachIDs[::-1])
 
     @sportsref.decorators.memoize
@@ -186,11 +207,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SRS.
         """
-        doc = self.get_year_doc(year)
-        srsText = (doc('div#meta p')
-                   .filter(lambda i, e: 'SRS' in e.text_content())
-                   .text())
-        m = re.match(r'SRS\s*?:\s*?(\S+)', srsText)
+        srs_text = self._year_info_pq(year, 'SRS').text()
+        m = re.match(r'SRS\s*?:\s*?(\S+)', srs_text)
         if m:
             return float(m.group(1))
         else:
@@ -204,14 +222,39 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SOS.
         """
-        doc = self.get_year_doc(year)
-        sosText = (doc('div#meta p')
-                   .filter(lambda i, e: 'SOS' in e.text_content())
-                   .text())
-        m = re.search(r'SOS\s*?:\s*?(\S+)', sosText)
+        sos_text = self._year_info_pq(year, 'SOS').text()
+        m = re.search(r'SOS\s*:\s*(\S+)', sos_text)
         if m:
             return float(m.group(1))
         else:
+            return np.nan
+
+    @sportsref.decorators.memoize
+    def off_coordinator(self, year):
+        """Returns the coach ID for the team's OC in a given year.
+
+        :year: An int representing the year.
+        :returns: A string containing the coach ID of the OC.
+        """
+        try:
+            oc_anchor = self._year_info_pq(year, 'Offensive Coordinator')('a')
+            if oc_anchor:
+                return oc_anchor.attr['href']
+        except ValueError:
+            return np.nan
+
+    @sportsref.decorators.memoize
+    def def_coordinator(self, year):
+        """Returns the coach ID for the team's DC in a given year.
+
+        :year: An int representing the year.
+        :returns: A string containing the coach ID of the DC.
+        """
+        try:
+            dc_anchor = self._year_info_pq(year, 'Defensive Coordinator')('a')
+            if dc_anchor:
+                return dc_anchor.attr['href']
+        except ValueError:
             return np.nan
 
     @sportsref.decorators.memoize
@@ -222,11 +265,38 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year in question.
         :returns: A string representing the stadium ID.
         """
-        doc = self.get_year_doc(year)
-        anchor = (doc('div#meta p')
-                  .filter(lambda i, e: 'Stadium' in e.text_content())
-                  )('a')
+        anchor = self._year_info_pq(year, 'Stadium')('a')
         return sportsref.utils.rel_url_to_id(anchor.attr['href'])
+
+    @sportsref.decorators.memoize
+    def off_scheme(self, year):
+        """Returns the name of the offensive scheme the team ran in the given
+        year.
+
+        :year: Int representing the season year.
+        :returns: A string representing the offensive scheme.
+        """
+        scheme_text = self._year_info_pq(year, 'Offensive Scheme').text()
+        m = re.search(r'Offensive Scheme[:\s]*(.+)\s*', scheme_text, re.I)
+        if m:
+            return m.group(1)
+        else:
+            return None
+
+    @sportsref.decorators.memoize
+    def def_alignment(self, year):
+        """Returns the name of the defensive alignment the team ran in the
+        given year.
+
+        :year: Int representing the season year.
+        :returns: A string representing the defensive alignment.
+        """
+        scheme_text = self._year_info_pq(year, 'Defensive Alignment').text()
+        m = re.search(r'Defensive Alignment[:\s]*(.+)\s*', scheme_text, re.I)
+        if m:
+            return m.group(1)
+        else:
+            return None
 
     @sportsref.decorators.memoize
     def team_stats(self, year):
