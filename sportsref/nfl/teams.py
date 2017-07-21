@@ -337,3 +337,38 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         table = doc('#rushing_and_receiving')
         df = sportsref.utils.parse_table(table)
         return df
+
+    @sportsref.decorators.memoize
+    def off_splits(self, year):
+        """Returns a DataFrame of offensive team splits for a season.
+
+        :year: int representing the season.
+        :returns: Pandas DataFrame of split data.
+        """
+        doc = self.get_year_doc('{}_splits'.format(year))
+        tables = doc('table.stats_table')
+        dfs = [sportsref.utils.parse_table(table) for table in tables.items()]
+        dfs = [
+            df.assign(split=df.columns[0])
+            .rename(columns={df.columns[0]: 'split_value'})
+            for df in dfs
+        ]
+        return pd.concat(dfs).reset_index(drop=True)
+
+    @sportsref.decorators.memoize
+    def def_splits(self, year):
+        """Returns a DataFrame of defensive team splits (i.e. opponent splits)
+        for a season.
+
+        :year: int representing the season.
+        :returns: Pandas DataFrame of split data.
+        """
+        doc = self.get_year_doc('{}_opp_splits'.format(year))
+        tables = doc('table.stats_table')
+        dfs = [sportsref.utils.parse_table(table) for table in tables.items()]
+        dfs = [
+            df.assign(split=df.columns[0])
+            .rename(columns={df.columns[0]: 'split_value'})
+            for df in dfs
+        ]
+        return pd.concat(dfs).reset_index(drop=True)

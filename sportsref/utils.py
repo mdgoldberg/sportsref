@@ -172,10 +172,13 @@ def parse_table(table, flatten=True, footer=False):
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
         m = re.search(r'([-\.\d]+)\%', str(val))
-        if m:
-            return float(m.group(1)) / 100. if m else val
-        if m:
-            return int(m.group(1)) + int(m.group(2)) / 60.
+        try:
+            if m:
+                return float(m.group(1)) / 100. if m else val
+            if m:
+                return int(m.group(1)) + int(m.group(2)) / 60.
+        except ValueError:
+            return val
         # generally try to coerce to float, unless it's an int or bool
         try:
             if isinstance(val, (int, bool)):
@@ -288,4 +291,4 @@ def rel_url_to_id(url):
             return filter(None, match.groups())[0]
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
-    return 'noIDer00'
+    return url
