@@ -127,8 +127,17 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame containing roster information for that year.
         """
         doc = self.get_year_doc('{}_roster'.format(year))
-        table = doc('table#games_played_team')
-        df = sportsref.utils.parse_table(table)
+        roster_table = doc('table#games_played_team')
+        df = sportsref.utils.parse_table(roster_table)
+        starter_table = doc('table#starters')
+        start_df = sportsref.utils.parse_table(starter_table)
+        start_df = start_df.dropna(axis=0, subset=['position'])
+        starters = start_df.set_index('position').player_id
+        df['is_starter'] = df.player_id.isin(starters)
+        df['starting_pos'] = df.player_id.map(
+            lambda pid: (starters[starters == pid].index[0]
+                         if pid in starters.values else np.nan)
+        )
         return df
 
     @sportsref.decorators.memoize
