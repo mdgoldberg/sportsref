@@ -97,7 +97,8 @@ def parse_table(table, flatten=True, footer=False):
 
     # cleaning the DataFrame
 
-    df.drop(['Xxx', 'Yyy', 'Zzz'], axis=1, inplace=True, errors='ignore')
+    df.drop(['ranker', 'Xxx', 'Yyy', 'Zzz'],
+            axis=1, inplace=True, errors='ignore')
 
     # year_id -> year (as int)
     if 'year_id' in df.columns:
@@ -171,13 +172,22 @@ def parse_table(table, flatten=True, footer=False):
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
-        m = re.search(r'([-\.\d]+)\%', str(val))
+        m = re.search(ur'([-\.\d]+)\%',
+                      val if isinstance(val, basestring) else str(val), re.U)
         try:
             if m:
                 return float(m.group(1)) / 100. if m else val
             if m:
                 return int(m.group(1)) + int(m.group(2)) / 60.
         except ValueError:
+            return val
+        # salaries: $ABC,DEF,GHI -> float(ABCDEFGHI)
+        m = re.search(ur'\$[\d,]+',
+                      val if isinstance(val, basestring) else str(val), re.U)
+        try:
+            if m:
+                return float(re.sub(ur'\$|,', '', val))
+        except Exception:
             return val
         # generally try to coerce to float, unless it's an int or bool
         try:
