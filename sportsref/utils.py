@@ -124,7 +124,7 @@ def parse_table(table, flatten=True, footer=False):
     df.replace(re.compile(ur'[\*\+\u2605]', re.U), '', inplace=True)
     for col in df.columns:
         if hasattr(df[col], 'str'):
-            df.ix[:, col] = df.ix[:, col].str.strip()
+            df.loc[:, col] = df.loc[:, col].str.strip()
 
     # player -> player_id
     if 'player' in df.columns:
@@ -132,19 +132,19 @@ def parse_table(table, flatten=True, footer=False):
             df.rename(columns={'player': 'player_id'}, inplace=True)
             # when flattening, keep a column for names
             player_names = parse_table(table, flatten=False)['player_name']
-            df.ix[:, 'player_name'] = player_names
+            df.loc[:, 'player_name'] = player_names
         else:
             df.rename(columns={'player': 'player_name'}, inplace=True)
 
     # team_name -> team_id
     if 'team_name' in df.columns:
         # first, get rid of faulty rows
-        df = df.ix[~df['team_name'].isin(['XXX'])]
+        df = df.loc[~df['team_name'].isin(['XXX'])]
         if flatten:
             df.rename(columns={'team_name': 'team_id'}, inplace=True)
             # when flattening, keep a column for names
             team_names = parse_table(table, flatten=False)['team_name']
-            df.ix[:, 'team_name'] = team_names
+            df.loc[:, 'team_name'] = team_names
 
     # season -> int
     if 'season' in df.columns:
@@ -166,7 +166,7 @@ def parse_table(table, flatten=True, footer=False):
             r'(?P<m>\d+):(?P<s>\d+)', expand=True).astype(float)
         no_match = mp_df.isnull().all(axis=1)
         if no_match.any():
-            df.ix[no_match, 'note'] = df.ix[no_match, 'mp']
+            df.loc[no_match, 'note'] = df.loc[no_match, 'mp']
         df['mp'] = mp_df['m'] + mp_df['s'] / 60.
 
     # converts number-y things to floats
@@ -198,7 +198,7 @@ def parse_table(table, flatten=True, footer=False):
         except Exception:
             return val
 
-    df = df.ix[df.astype(bool).any(axis=1)]
+    df = df.loc[df.astype(bool).any(axis=1)]
     df = df.applymap(convert_to_float)
 
     return df

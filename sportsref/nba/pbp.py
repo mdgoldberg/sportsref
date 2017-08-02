@@ -398,7 +398,7 @@ def clean_features(df):
             df[col] = df[col].fillna(0)
 
     # fix free throw columns on technicals
-    df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
+    df.loc[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
 
     # fill in NaN's/fix off_team and def_team columns
     df.off_team.fillna(method='bfill', inplace=True)
@@ -599,12 +599,12 @@ def get_dense_lineups(df):
 
     # loop through select plays to determine lineups
     sub_or_per_start = df.is_sub | df.quarter.diff().astype(bool)
-    for i, row in df.ix[sub_or_per_start].iterrows():
+    for i, row in df.loc[sub_or_per_start].iterrows():
         if row['quarter'] > cur_qtr:
             # first row in a quarter
             assert row['quarter'] == cur_qtr + 1
             # first, finish up the last quarter's lineups
-            if cur_qtr > 0 and not df.ix[i-1, 'is_sub']:
+            if cur_qtr > 0 and not df.loc[i-1, 'is_sub']:
                 lineups[i-1] = lineup_dict(aw_lineup, hm_lineup)
             # then, move on to the quarter, and enter the starting lineups
             cur_qtr += 1
@@ -644,7 +644,7 @@ def get_dense_lineups(df):
              for p in stats.query('mp > 0').player_id.values})
         # finally, figure which players are missing minutes
         diff = true_mp - calc_mp
-        players_missing = diff.ix[diff.abs() >= 150]
+        players_missing = diff.loc[diff.abs() >= 150]
         hm_roster = bs.basic_stats().query('is_home == True').player_id.values
         missing_df = pd.DataFrame(
             {'secs': players_missing.values,
@@ -663,9 +663,9 @@ def get_dense_lineups(df):
                 player_id = group.index.item()
                 tm_cols = (sportsref.nba.pbp.HM_LINEUP_COLS if is_home else
                            sportsref.nba.pbp.AW_LINEUP_COLS)
-                row_mask = lineup_df.ix[:, tm_cols].isnull().any(axis=1)
-                lineup_df.ix[row_mask, tm_cols] = (
-                    lineup_df.ix[row_mask, tm_cols].fillna(player_id).values
+                row_mask = lineup_df.loc[:, tm_cols].isnull().any(axis=1)
+                lineup_df.loc[row_mask, tm_cols] = (
+                    lineup_df.loc[row_mask, tm_cols].fillna(player_id).values
                 )
 
     return lineup_df

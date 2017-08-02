@@ -222,7 +222,7 @@ def kind_rpb(include_type=False):
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df.ix[:, 'is_playoffs'] = (kind == 'P')
+                    df.loc[:, 'is_playoffs'] = (kind == 'P')
                 return df
         return wrapper
     return decorator

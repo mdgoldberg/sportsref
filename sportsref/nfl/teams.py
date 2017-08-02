@@ -318,7 +318,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
-        return df.ix[df.player_id == 'Team Stats'].iloc[0]
+        return df.loc[df.player_id == 'Team Stats'].iloc[0]
 
     @sportsref.decorators.memoize
     def opp_stats(self, year):
@@ -331,7 +331,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
-        return df.ix[df.player_id == 'Opp. Stats'].iloc[0]
+        return df.loc[df.player_id == 'Opp. Stats'].iloc[0]
 
     @sportsref.decorators.memoize
     def passing(self, year):

@@ -73,7 +73,8 @@ class BoxScore(
             for tr in table('tr.thead').next_all('tr').items()
         ]
 
-        return pd.DataFrame(data, columns=columns, dtype='float')
+        return pd.DataFrame(data, index=['away', 'home'],
+                            columns=columns, dtype='float')
 
     @sportsref.decorators.memoize
     def home(self):
@@ -81,7 +82,7 @@ class BoxScore(
         :returns: 3-character string representing home team's ID.
         """
         linescore = self.linescore()
-        return linescore.ix[1, 'team_id']
+        return linescore.loc['home', 'team_id']
 
     @sportsref.decorators.memoize
     def away(self):
@@ -89,7 +90,7 @@ class BoxScore(
         :returns: 3-character string representing away team's ID.
         """
         linescore = self.linescore()
-        return linescore.ix[0, 'team_id']
+        return linescore.loc['away', 'team_id']
 
     @sportsref.decorators.memoize
     def home_score(self):
@@ -97,7 +98,7 @@ class BoxScore(
         :returns: int of the home score.
         """
         linescore = self.linescore()
-        return linescore.ix[1, 'T']
+        return linescore.loc['home', 'T']
 
     @sportsref.decorators.memoize
     def away_score(self):
@@ -105,7 +106,7 @@ class BoxScore(
         :returns: int of the away score.
         """
         linescore = self.linescore()
-        return linescore.ix[0, 'T']
+        return linescore.loc['away', 'T']
 
     @sportsref.decorators.memoize
     def winner(self):
@@ -153,10 +154,10 @@ class BoxScore(
             no_time = df['mp'] == 0
             stat_cols = [col for col, dtype in df.dtypes.iteritems()
                          if dtype != 'object']
-            df.ix[no_time, stat_cols] = 0
-            df.ix[:, 'team_id'] = tm
-            df.ix[:, 'is_home'] = i == 1
-            df.ix[:, 'is_starter'] = [p < 5 for p in range(df.shape[0])]
+            df.loc[no_time, stat_cols] = 0
+            df.loc[:, 'team_id'] = tm
+            df.loc[:, 'is_home'] = i == 1
+            df.loc[:, 'is_starter'] = [p < 5 for p in range(df.shape[0])]
             df.drop_duplicates(subset='player_id', keep='first', inplace=True)
 
         return pd.concat(dfs)
@@ -350,7 +351,7 @@ class BoxScore(
         ascend = [(col in asc_true) for col in sort_cols]
         for label, group in df.groupby([df.secs_elapsed, poss_id_reb]):
             if len(group) > 1:
-                df.ix[group.index, :] = group.sort_values(
+                df.loc[group.index, :] = group.sort_values(
                     sort_cols, ascending=ascend, kind='mergesort'
                 ).values
 
@@ -359,21 +360,21 @@ class BoxScore(
 
         # makes sure off/def and poss_id are correct for subs after rearranging
         # some possessions above
-        df.ix[df['is_sub'], ['off_team', 'def_team', 'poss_id']] = np.nan
+        df.loc[df['is_sub'], ['off_team', 'def_team', 'poss_id']] = np.nan
         df.off_team.fillna(method='bfill', inplace=True)
         df.def_team.fillna(method='bfill', inplace=True)
         df.poss_id.fillna(method='bfill', inplace=True)
         # make off_team and def_team NaN for jump balls
         if 'is_jump_ball' in df.columns:
-            df.ix[df['is_jump_ball'], ['off_team', 'def_team']] = np.nan
+            df.loc[df['is_jump_ball'], ['off_team', 'def_team']] = np.nan
 
         # make sure 'off_team' is always the team shooting FTs, even on techs
         # (impt for keeping track of the score)
         if 'is_tech_fta' in df.columns:
             tech_fta = df['is_tech_fta']
-            df.ix[tech_fta, 'off_team'] = df.ix[tech_fta, 'fta_team']
-            df.ix[tech_fta, 'def_team'] = np.where(
-                df.ix[tech_fta, 'off_team'] == home, away, home
+            df.loc[tech_fta, 'off_team'] = df.loc[tech_fta, 'fta_team']
+            df.loc[tech_fta, 'def_team'] = np.where(
+                df.loc[tech_fta, 'off_team'] == home, away, home
             )
         df.drop('fta_team', axis=1, inplace=True)
         # redefine poss_id_reb
@@ -403,11 +404,11 @@ class BoxScore(
                 for idx, p_in, p_out in zip(
                     group.index[:n_subs], sub_in, sub_out
                 ):
-                    assert df.ix[idx, 'is_sub']
-                    df.ix[idx, 'sub_in'] = p_in
-                    df.ix[idx, 'sub_out'] = p_out
-                    df.ix[idx, 'sub_team'] = tm
-                    df.ix[idx, 'detail'] = (
+                    assert df.loc[idx, 'is_sub']
+                    df.loc[idx, 'sub_in'] = p_in
+                    df.loc[idx, 'sub_out'] = p_out
+                    df.loc[idx, 'sub_team'] = tm
+                    df.loc[idx, 'detail'] = (
                         '{} enters the game for {}'.format(p_in, p_out)
                     )
                 # third, if applicable, remove old sub entries when there are
