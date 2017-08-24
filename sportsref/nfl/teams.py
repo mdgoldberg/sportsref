@@ -170,8 +170,9 @@ class Team:
             df['week'] = df['week'].astype(int)
             # drop rows if player is None
             df = df[df['playerID'] != 'None'].reset_index(drop=True)
+            df['player_id'] = df['playerID']
         # set col order
-        cols = ['season', 'week', 'team', 'playerID', 'status', 'didNotPlay']
+        cols = ['season', 'week', 'team', 'player_id', 'status', 'didNotPlay']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]

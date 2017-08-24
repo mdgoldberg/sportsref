@@ -23,11 +23,12 @@ def get_season_boxscores_IDs(year):
     doc = pq(sportsref.utils.get_html(url))
     table = doc('table#games')
     df = sportsref.utils.parse_table(table)
-    df['week_num'] = df['week_num'].replace(to_replace={'WildCard': '18',
-                                                        'Division': '19',
-                                                        'ConfChamp':'20',
-                                                        'SuperBowl':'21'})
-    df['week_num'] = df['week_num'].apply(pd.to_numeric)
+    if df['week_num'].dtype == 'O':
+        df['week_num'] = df['week_num'].replace(to_replace={'WildCard': '18',
+                                                            'Division': '19',
+                                                            'ConfChamp':'20',
+                                                            'SuperBowl':'21'})
+        df['week_num'] = df['week_num'].apply(pd.to_numeric)
     df.set_index(['week_num'], inplace=True)
     return df['boxscore_id']
 

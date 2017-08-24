@@ -588,7 +588,7 @@ def team_and_opp(struct, curTm=None, curOpp=None):
         return curTm, curOpp
 
     # use row's class to determine when possession changes
-    if struct['hasClass_divider']:
+    if struct['has_class_divider']:
         return curOpp, curTm
     else:
         return curTm, curOpp
