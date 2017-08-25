@@ -40,7 +40,7 @@ def expand_details(df, detailCol='detail'):
     df['isError'] = False
     df.loc[errors, 'isError'] = True
     # fill in some NaN's necessary for _clean_features
-    df.ix[0, 'qtr_time_remain'] = '15:00'
+    df.loc[0, 'qtr_time_remain'] = '15:00'
     df.qtr_time_remain.fillna(method='bfill', inplace=True)
     df.qtr_time_remain.fillna(
         pd.Series(np.where(df.quarter == 4, '0:00', '15:00')), inplace=True
@@ -575,7 +575,7 @@ def _team_and_opp(struct, curTm=None, curOpp=None):
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
             snaps = bs.snap_counts()
-            curTm = snaps.ix[pID, 'team']
+            curTm = snaps.loc[pID, 'team']
             curOpp = bs.home() if bs.home() != curTm else bs.away()
 
         return curTm, curOpp

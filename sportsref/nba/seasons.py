@@ -87,7 +87,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
-    def get_schedule(self, kind='R'):
+    def schedule(self, kind='R'):
         """Returns a list of BoxScore IDs for every game in the season.
         Only needs to handle 'R' or 'P' options because decorator handles 'B'.
 
@@ -151,7 +151,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc()
         table = doc(selector)
         df = sportsref.utils.parse_table(table)
-        df = df.drop('ranker', axis=1)
+        df.set_index('team_id', inplace=True)
         return df
 
     def team_stats_per_game(self):
@@ -199,7 +199,6 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_sub_doc(identifier)
         table = doc('table#{}_stats'.format(identifier))
         df = sportsref.utils.parse_table(table)
-        df = df.drop('ranker', axis=1)
         return df
 
     def player_stats_per_game(self):
