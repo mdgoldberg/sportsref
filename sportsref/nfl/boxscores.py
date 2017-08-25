@@ -448,7 +448,7 @@ class BoxScore(
         df['team'] = df['team'].str.lower()
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_team(self):
         """Gets the summarized stats for each team.
         :returns: A DataFrame containing team stats.
@@ -544,7 +544,7 @@ class BoxScore(
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_offense(self):
         """Gets the stats for offense of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -587,7 +587,7 @@ class BoxScore(
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_defense(self):
         """Gets the stats for defense of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -612,7 +612,7 @@ class BoxScore(
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_returns(self):
         """Gets the stats for returns of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -635,7 +635,7 @@ class BoxScore(
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def stats_kicking(self):
         """Gets the stats for kicking of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -663,7 +663,7 @@ class BoxScore(
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def pass_directions(self):
         """Gets the stats for kicking of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -708,7 +708,7 @@ class BoxScore(
         df = df[cols]
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def snap_counts(self):
         """Gets the snap counts of individual players in the game.
         :returns: A DataFrame containing individual player stats.
@@ -750,7 +750,7 @@ class BoxScore(
         df = df.reset_index(drop=True)
         return df
 
-    @sportsref.decorators.memoized
+    @sportsref.decorators.memoize
     def game_info(self):
         """Returns a one row dataframe of game info.
 
