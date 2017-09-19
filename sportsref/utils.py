@@ -213,12 +213,13 @@ def parse_info_table(table):
     :returns: A dictionary representing the information.
     """
     ret = {}
-    for tr in table('tbody tr').items():
-        th, td = tr('th, td').items()
+    for tr in table('tr').items():
+        th = tr('th')
+        td = tr('td')
         key = th.text().lower()
         key = re.sub(r'\W', '_', key)
         val = sportsref.utils.flatten_links(td)
-        ret[key] = val
+        if key: ret[key] = val
     return ret
 
 
