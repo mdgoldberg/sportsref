@@ -181,7 +181,7 @@ class BoxScore(
         * player_id - the PFR player ID for the player (note that this column
         is not necessarily all unique; that is, one player can be a starter in
         multiple positions, in theory).
-        * playerName - the listed name of the player; this too is not
+        * player_name - the listed name of the player; this too is not
         necessarily unique.
         * position - the position at which the player started for their team.
         * team - the team for which the player started.
@@ -206,7 +206,7 @@ class BoxScore(
                     datum['player_id'] = sportsref.utils.rel_url_to_id(
                         row('a')[0].attrib['href']
                     )
-                    datum['playerName'] = row('th').text()
+                    datum['player_name'] = row('th').text()
                     datum['position'] = row('td').text()
                     datum['team'] = team
                     datum['home'] = (h == 1)
@@ -214,7 +214,7 @@ class BoxScore(
                     data.append(datum)
         df = pd.DataFrame(data)
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             teamMap = {
@@ -224,8 +224,8 @@ class BoxScore(
             df['team'] = df['home'].map(teamMap)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id',
-                'playerName', 'position', 'home', 'offense']
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id',
+                'player_name', 'position', 'home', 'offense']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -316,9 +316,9 @@ class BoxScore(
 
         Keys of the returned dict:
         * temp
-        * windChill
-        * relHumidity
-        * windMPH
+        * wind_chill
+        * humidity
+        * wind_mph
 
         :returns: Dict of weather data.
         """
@@ -328,9 +328,9 @@ class BoxScore(
         if 'weather' in giTable:
             regex = (
                 r'(?:(?P<temp>\-?\d+) degrees )?'
-                r'(?:relative humidity (?P<relHumidity>\d+)%, )?'
-                r'(?:wind (?P<windMPH>\d+) mph, )?'
-                r'(?:wind chill (?P<windChill>\-?\d+))?'
+                r'(?:relative humidity (?P<humidity>\d+)%, )?'
+                r'(?:wind (?P<wind_mph>\d+) mph, )?'
+                r'(?:wind chill (?P<wind_chill>\-?\d+))?'
             )
             m = re.match(regex, giTable['weather'])
             d = m.groupdict()
@@ -343,15 +343,15 @@ class BoxScore(
                     pass
 
             # one-off fixes
-            d['windChill'] = (d['windChill'] if pd.notnull(d['windChill'])
+            d['wind_chill'] = (d['wind_chill'] if pd.notnull(d['wind_chill'])
                               else d['temp'])
-            d['windMPH'] = d['windMPH'] if pd.notnull(d['windMPH']) else 0
+            d['wind_mph'] = d['wind_mph'] if pd.notnull(d['wind_mph']) else 0
             return d
         else:
             # no weather found, because it's a dome
             # TODO: what's relative humidity in a dome?
             return {
-                'temp': 70, 'windChill': 70, 'relHumidity': None, 'windMPH': 0
+                'temp': 70, 'wind_chill': 70, 'humidity': None, 'wind_mph': 0
             }
 
     @sportsref.decorators.memoize
@@ -463,7 +463,7 @@ class BoxScore(
             df.columns = df.iloc[0]
             df.columns.name = None
             df.drop(['stat'], inplace=True)
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = [self.away(), self.home()]
@@ -526,21 +526,36 @@ class BoxScore(
             # }
             # df.rename(columns = newCols, inplace=True)
             df.reset_index(drop=True, inplace=True)
-            df.rename(columns={'First Downs':'firstDowns',
-                               'Net Pass Yards':'netPassYards',
-                               'Total Yards':'totalYards',
+            df.rename(columns={'First Downs':'first_downs',
+                               'passAtt':'pass_attempts',
+                               'passCmp':'pass_completions',
+                               'passYds':'pass_yards',
+                               'Net Pass Yards':'net_pass_yards',
+                               'passTds':'pass_tds',
+                               'rushAtt':'rush_attempts',
+                               'rushYds':'rush_yards',
+                               'rushTds':'rush_tds',
+                               'Total Yards':'total_yards',
+                               'sacksYds':'sacks_yards',
+                               'passInt':'pass_interceptions',
+                               'fumblesLost':'fumbles_lost',
                                'Turnovers':'turnovers',
-                               'Time of Possession':'timeOfPossession'
+                               'pentaltiesYds':'penalty_yards',
+                               'Time of Possession':'time_of_possession',
+                               'thirdDownAtt':'third_down_attempts',
+                               'thirdDownConv':'third_down_conversions',
+                               'fourthDownAtt':'fourth_down_attempts',
+                               'fourthDownConv':'fourth_down_conversions'
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team',
-                'home', 'passAtt', 'passCmp','passYds', 'netPassYards','passTds',
-                'rushAtt', 'rushYds', 'rushTds', 'totalYards',
-                'firstDowns', 'sacks', 'sacksYds',
-                'passInt', 'fumbles', 'fumblesLost', 'turnovers',
-                'timeOfPossession', 'pentalties', 'pentaltiesYds',
-                'thirdDownAtt', 'thirdDownConv', 'fourthDownAtt', 'fourthDownConv']
+        cols = ['season', 'week', 'boxscore_id', 'team',
+                'home', 'pass_attempts', 'pass_completions','pass_yards', 'net_pass_yards','pass_tds',
+                'rush_attempts', 'rush_yards', 'rush_tds', 'total_yards',
+                'first_downs', 'sacks', 'sacks_yards',
+                'pass_interceptions', 'fumbles', 'fumbles_lost', 'turnovers',
+                'time_of_possession', 'pentalties', 'penalty_yards',
+                'third_down_attempts', 'third_down_conversions', 'fourth_down_attempts', 'fourth_down_conversions']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -555,35 +570,35 @@ class BoxScore(
         table = doc('#player_offense')
         df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
-            df.rename(columns={'pass_att':'passAtt',
-                               'pass_cmp':'passCmp',
-                               'pass_yds':'passYds',
-                               'pass_td':'passTds',
-                               'pass_long':'passLong',
-                               'pass_rating':'passRating',
-                               'pass_sacked':'passSacked',
-                               'pass_sacked_yds':'passSackedYds',
-                               'pass_int':'passInt',
+            df.rename(columns={'pass_att':'pass_attempts',
+                               'pass_cmp':'pass_completions',
+                               'pass_yds':'pass_yards',
+                               'pass_td':'pass_tds',
+                            #    'pass_long':'pass_long',
+                            #    'pass_rating':'passRating',
+                            #    'pass_sacked':'passSacked',
+                            #    'pass_sacked_yds':'passSackedYds',
+                            #    'pass_int':'passInt',
                                'rec_yds':'recYds',
-                               'rec_td':'recTds',
-                               'rec_long':'recLong',
-                               'rush_att':'rushAtt',
-                               'rush_yds':'rushYds',
-                               'rush_td':'rushTd',
-                               'rush_long':'rushLong',
-                               'fumbles_lost':'fumblesLost'
+                            #    'rec_td':'rec_tds',
+                            #    'rec_long':'recLong',
+                            #    'rush_att':'rushAtt',
+                            #    'rush_yds':'rushYds',
+                               'rush_td':'rush_tds'
+                            #    'rush_long':'rushLong',
+                            #    'fumbles_lost':'fumblesLost'
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id',
-                'passAtt', 'passCmp', 'passYds', 'passTds', 'passLong', 'passRating',
-                'passSacked', 'passSackedYds', 'passInt',
-                'targets', 'rec', 'recYds', 'recTds', 'recLong',
-                'rushAtt', 'rushYds', 'rushTd', 'rushLong', 'fumbles', 'fumblesLost']
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id',
+                'pass_attempts', 'pass_completions', 'pass_yards', 'pass_tds', 'pass_long', 'pass_rating',
+                'pass_sacked', 'pass_sacked_yds', 'pass_int',
+                'targets', 'rec', 'rec_yds', 'rec_tds', 'rec_long',
+                'rush_att', 'rush_yds', 'rush_tds', 'rush_long', 'fumbles', 'fumbles_lost']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -599,13 +614,13 @@ class BoxScore(
         df = sportsref.utils.parse_table(table)
         # make sure all cols are in the df
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id',
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id',
                 'sacks', 'tackles_solo', 'tackles_assists',
                 'def_int', 'def_int_yds', 'def_int_td', 'def_int_long',
                 'fumbles_forced', 'fumbles_rec', 'fumbles_rec_yds', 'fumbles_rec_td']
@@ -623,13 +638,13 @@ class BoxScore(
         table = doc('#returns')
         df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id',
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id',
                 'kick_ret', 'kick_ret_yds', 'kick_ret_yds_per_ret', 'kick_ret_long', 'kick_ret_td',
                 'punt_ret', 'punt_ret_yds', 'punt_ret_yds_per_ret', 'punt_ret_long', 'punt_ret_td']
         for col in cols:
@@ -646,20 +661,24 @@ class BoxScore(
         table = doc('#kicking')
         df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
             df.rename(columns={'punt':'punts',
-                               'punt_yds':'puntYds',
-                               'punt_yds_per_punt':'puntYdsAvg',
-                               'punt_long':'puntLong'
+                               'xpa':'extra_point_attempts',
+                               'xpm':'extra_point_made',
+                               'fga':'field_goal_attempts'
+                               'fgm','field_goal_made'
+                            #    'punt_yds':'puntYds',
+                            #    'punt_yds_per_punt':'puntYdsAvg',
+                            #    'punt_long':'puntLong'
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id',
-                'xpa', 'xpm', 'fga', 'fgm',
-                'punts', 'puntYds', 'puntYdsAvg', 'puntLong']
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id',
+                'extra_point_attempts', 'extra_point_made', 'field_goal_attempts', 'field_goal_made',
+                'punts', 'punt_yds', 'punt_yds_per_punt', 'punt_long']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -674,7 +693,7 @@ class BoxScore(
         table = doc('#targets_directions')
         df = sportsref.utils.parse_table(table)
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['team'] = df['team'].str.lower()
@@ -697,7 +716,7 @@ class BoxScore(
                                     ]].sum(axis=1)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id',
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id',
                 'rec_catches_d', 'rec_catches_dl', 'rec_catches_dm', 'rec_catches_dr',
                 'rec_catches_s', 'rec_catches_sl', 'rec_catches_sm', 'rec_catches_sr',
                 'rec_targets_d', 'rec_targets_dl', 'rec_targets_dm', 'rec_targets_dr',
@@ -726,26 +745,26 @@ class BoxScore(
             dfV['team'] = self.away()
         df = pd.concat([dfH, dfV], ignore_index=True)
         if not df.empty:
-            df['bsID'] = self.boxscore_id
+            df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
             df['off_pct'] = df['off_pct'].astype('float')/100
             df['def_pct'] = df['def_pct'].astype('float')/100
             df['st_pct'] = df['st_pct'].astype('float')/100
             df.rename(columns={'pos':'position',
-                               'offense':'offSnaps',
-                               'off_pct':'offSnapsPct',
-                               'defense':'defSnaps',
-                               'def_pct':'defSnapsPct',
-                               'special_teams':'stSnaps',
-                               'st_pct':'stSnapsPct'
+                               'offense':'off_snaps',
+                               'off_pct':'off_snaps_pct',
+                               'defense':'def_snaps',
+                               'def_pct':'def_snaps_pct',
+                               'special_teams':'st_snaps',
+                               'st_pct':'st_snaps_pct'
                               }, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID', 'team', 'player_id', 'position',
-                'offSnaps', 'offSnapsPct',
-                'defSnaps', 'defSnapsPct',
-                'stSnaps', 'stSnapsPct']
+        cols = ['season', 'week', 'boxscore_id', 'team', 'player_id', 'position',
+                'off_snaps', 'off_snaps_pct',
+                'def_snaps', 'def_snaps_pct',
+                'st_snaps', 'st_snaps_pct']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -762,30 +781,30 @@ class BoxScore(
         d = {
             'season':self.season(),
             'week':self.week(),
-            'bsID':self.boxscore_id,
+            'boxscore_id':self.boxscore_id,
             'date':self.date(),
             'weekday':self.weekday(),
             'home':self.home(),
             'away':self.away(),
-            'homeScore':self.home_score(),
-            'awayScore':self.away_score(),
+            'home_score':self.home_score(),
+            'away_score':self.away_score(),
             'winner':self.winner(),
             'line':self.line(),
-            'overUnder':self.over_under(),
+            'over_under':self.over_under(),
             'roof':self.roof(),
             'surface':self.surface()
         }
         d.update(self.weather())
         rawTxt = doc('div.scorebox_meta div').eq(1).text()
-        regex = (r"(?:Start Time : (?P<startTime>\d+:\d+ ?[apAP][mM]))?")
+        regex = (r"(?:Start Time : (?P<start_time>\d+:\d+ ?[apAP][mM]))?")
         d.update(re.match(regex, rawTxt).groupdict())
         df = pd.DataFrame(d, index=[0])
         df['season'] = df['season'].astype(int)
         df['week'] = df['week'].astype(int)
-        cols = ['season', 'week', 'bsID',
-                'date', 'weekday', 'startTime', 'home', 'away', 'winner',
-                'homeScore', 'awayScore', 'line', 'overUnder', 'roof', 'surface',
-                'temp', 'relHumidity', 'windChill', 'windMPH']
+        cols = ['season', 'week', 'boxscore_id',
+                'date', 'weekday', 'start_time', 'home', 'away', 'winner',
+                'home_score', 'away_score', 'line', 'over_under', 'roof', 'surface',
+                'temp', 'humidity', 'wind_chill', 'wind_mph']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]

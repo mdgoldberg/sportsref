@@ -161,12 +161,12 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
                 'None':'None'
             }
             df['status'] = df.value.str[1:].map(statusMap)
-            didNotPlayMap = {
+            did_not_play_map = {
                 '1':True,
                 '0':False
             }
-            df['didNotPlay'] = df.value.str[0].map(didNotPlayMap)
-            #df['didNotPlay'] = df['didNotPlay'].astype(bool)
+            df['did_not_play'] = df.value.str[0].map(did_not_play_map)
+            #df['did_not_play'] = df['did_not_play'].astype(bool)
             #df.drop(['variable','value'], axis=1, inplace=True)
             df['season'] = df['season'].astype(int)
             df['week'] = df['week'].astype(int)
@@ -174,7 +174,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             df = df[df['playerID'] != 'None'].reset_index(drop=True)
             df['player_id'] = df['playerID']
         # set col order
-        cols = ['season', 'week', 'team', 'player_id', 'status', 'didNotPlay']
+        cols = ['season', 'week', 'team', 'player_id', 'status', 'did_not_play']
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]
@@ -193,23 +193,21 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         if not df.empty:
             df['season'] = int(year)
             df['team'] = self.teamID
-            playerNames = [c.text for c in table('tbody tr td a[href]') 
+            player_names = [c.text for c in table('tbody tr td a[href]')
                            if c.attrib['href'][1:8]=='players']
-            if len(df) == len(playerNames):
-                df['playerName'] = playerNames
+            if len(df) == len(player_names):
+                df['player_name'] = player_names
             df.rename(columns={'pos':'position',
-                               'uniform_number':'uniformNumber',
-                               'g':'gamesPlayed',
-                               'gs':'gamesStarted',
-                               'birth_date_mod':'birthDate',
-                               'av':'pfrApproxValue',
-                               'college_id':'college',
-                               'draft_info':'draftInfo'
+                               'g':'games_played',
+                               'gs':'games_started',
+                               'birth_date_mod':'birth_date',
+                               'av':'pfr_approx_value',
+                               'college_id':'college'
                               }, inplace=True)
         cols = ['season', 'team', 'player_id',
-                'playerName', 'position', 'uniformNumber', 'gamesPlayed', 'gamesStarted',
-                'pfrApproxValue', 'experience', 'age', 'birthDate', 'height', 'weight',
-                'college', 'draftInfo', 'salary',]
+                'player_name', 'position', 'uniform_number', 'games_played', 'games_started',
+                'pfr_approx_value', 'experience', 'age', 'birth_date', 'height', 'weight',
+                'college', 'draft_info', 'salary',]
         for col in cols:
             if col not in df: df[col] = np.nan
         df = df[cols]

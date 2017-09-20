@@ -63,7 +63,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Age in years as a float.
         """
         doc = self.get_main_doc()
-        date_string = doc('span[itemprop="birthDate"]').attr('data-birth')
+        date_string = doc('span[itemprop="birth_date"]').attr('data-birth')
         regex = r'(\d{4})\-(\d{2})\-(\d{2})'
         date_args = map(int, re.match(regex, date_string).groups())
         birth_date = datetime.date(*date_args)

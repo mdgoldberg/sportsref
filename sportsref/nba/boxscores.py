@@ -200,7 +200,7 @@ class BoxScore(
         n_rows = len(trs)
         data = []
         cur_qtr = 0
-        bsid = self.boxscore_id
+        boxscore_id = self.boxscore_id
 
         for i in range(n_rows):
             tr = trs[i]
@@ -233,7 +233,7 @@ class BoxScore(
                     p['is_jump_ball'] = True
                     jb_str = sportsref.utils.flatten_links(desc)
                     p.update(
-                        sportsref.nba.pbp.parse_play(bsid, jb_str, None)
+                        sportsref.nba.pbp.parse_play(boxscore_id, jb_str, None)
                     )
                 # ignore rows marking beginning/end of quarters
                 elif (
@@ -259,7 +259,7 @@ class BoxScore(
                 desc = hm_desc if is_hm_play else aw_desc
                 desc = sportsref.utils.flatten_links(desc)
                 # parse the play
-                new_p = sportsref.nba.pbp.parse_play(bsid, desc, is_hm_play)
+                new_p = sportsref.nba.pbp.parse_play(boxscore_id, desc, is_hm_play)
                 if not new_p:
                     continue
                 elif isinstance(new_p, list):
