@@ -668,8 +668,8 @@ class BoxScore(
             df.rename(columns={'punt':'punts',
                                'xpa':'extra_point_attempts',
                                'xpm':'extra_point_made',
-                               'fga':'field_goal_attempts'
-                               'fgm','field_goal_made'
+                               'fga':'field_goal_attempts',
+                               'fgm':'field_goal_made'
                             #    'punt_yds':'puntYds',
                             #    'punt_yds_per_punt':'puntYdsAvg',
                             #    'punt_long':'puntLong'
