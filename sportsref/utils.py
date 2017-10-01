@@ -1,62 +1,53 @@
+from builtins import range
+import ctypes
+import multiprocessing as mp
 import re
 import time
 
+import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 import requests
 
 import sportsref
 
+# time between requests, in seconds
+THROTTLE_DELAY = 0.5
 
-@sportsref.decorators.memoize
+# variables used to throttle requests across processes
+throttle_lock = mp.Lock()
+last_request_time = mp.Value(ctypes.c_longdouble,
+                             time.time() - 2 * THROTTLE_DELAY)
+
 @sportsref.decorators.cache_html
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
-    Incorporates an exponential timeout starting with 2 seconds.
-
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
-
     """
-    K = 60*3  # K is length of next backoff (in seconds)
-    TOTAL_TIME = 0.4  # num of secs we we wait between last request & return
-    html = None
-    numTries = 0
-    while not html and numTries < 10:
-        numTries += 1
-        start = time.time()
-        try:
-            response = requests.get(url)
-            if 400 <= response.status_code < 500:
-                raise ValueError(
-                    'Status Code {} received fetching URL "{}"'
-                    .format(response.status_code, url)
-                )
-            html = response.text
-            html = html.replace('<!--', '').replace('-->', '')
-        except requests.ConnectionError as e:
-            errnum = e.args[0].args[1].errno
-            if errnum == 61:
-                # Connection Refused
-                if K >= 60:
-                    print 'Waiting {} minutes...'.format(K/60.0)
-                else:
-                    print 'Waiting {} seconds...'.format(K)
-                # sleep
-                for _ in xrange(K):
-                    time.sleep(1)
-                # backoff gets doubled, capped at 1 hour
-                K *= 2
-                K = min(K, 60*60)
-            else:
-                # Some other error code
-                raise e
-    timeOnRequest = time.time() - start
-    timeRemaining = int(1000 * (TOTAL_TIME - timeOnRequest))  # in milliseconds
-    for _ in xrange(timeRemaining):
-        # wait one millisecond
-        time.sleep(0.001)
+    with throttle_lock:
+
+        # sleep until THROTTLE_DELAY secs have passed since last request
+        wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
+        if wait_left > 0:
+            time.sleep(wait_left)
+
+        # make request
+        response = requests.get(url)
+
+        # update last request time for throttling
+        last_request_time.value = time.time()
+
+    # raise ValueError on 4xx status code, get rid of comments, and return
+    if 400 <= response.status_code < 500:
+        raise ValueError(
+            'Status Code {} received fetching URL "{}"'
+            .format(response.status_code, url)
+        )
+    html = response.text
+    html = html.replace('<!--', '').replace('-->', '')
+
     return html
 
 
@@ -106,7 +97,8 @@ def parse_table(table, flatten=True, footer=False):
 
     # cleaning the DataFrame
 
-    df.drop(['Xxx', 'Yyy', 'Zzz'], axis=1, inplace=True, errors='ignore')
+    df.drop(['ranker', 'Xxx', 'Yyy', 'Zzz'],
+            axis=1, inplace=True, errors='ignore')
 
     # year_id -> year (as int)
     if 'year_id' in df.columns:
@@ -132,7 +124,7 @@ def parse_table(table, flatten=True, footer=False):
     df.replace(re.compile(ur'[\*\+\u2605]', re.U), '', inplace=True)
     for col in df.columns:
         if hasattr(df[col], 'str'):
-            df.ix[:, col] = df.ix[:, col].str.strip()
+            df.loc[:, col] = df.loc[:, col].str.strip()
 
     # player -> player_id
     if 'player' in df.columns:
@@ -140,40 +132,63 @@ def parse_table(table, flatten=True, footer=False):
             df.rename(columns={'player': 'player_id'}, inplace=True)
             # when flattening, keep a column for names
             player_names = parse_table(table, flatten=False)['player_name']
-            df.ix[:, 'player_name'] = player_names
+            df.loc[:, 'player_name'] = player_names
         else:
             df.rename(columns={'player': 'player_name'}, inplace=True)
 
     # team_name -> team_id
     if 'team_name' in df.columns:
         # first, get rid of faulty rows
-        df = df.ix[~df['team_name'].isin(['XXX'])]
+        df = df.loc[~df['team_name'].isin(['XXX'])]
         if flatten:
             df.rename(columns={'team_name': 'team_id'}, inplace=True)
             # when flattening, keep a column for names
             team_names = parse_table(table, flatten=False)['team_name']
-            df.ix[:, 'team_name'] = team_names
+            df.loc[:, 'team_name'] = team_names
 
     # season -> int
     if 'season' in df.columns:
         if flatten:
             df['season'] = df['season'].astype(int)
 
-    # add month, day, year columns based on date_game
+    # handle date_game columns (different types)
     if 'date_game' in df.columns:
         date_re = r'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)'
-        date_df = df['date_game'].str.extract(date_re)
+        date_df = df['date_game'].str.extract(date_re, expand=True)
         if date_df.notnull().all(axis=1).any():
             df = pd.concat((df, date_df), axis=1)
         else:
             df.rename(columns={'date_game': 'boxscore_id'}, inplace=True)
 
+    # mp: (min:sec) -> float(min + sec / 60), notes -> NaN, new column
+    if 'mp' in df.columns and df.dtypes['mp'] == object:
+        mp_df = df['mp'].str.extract(
+            r'(?P<m>\d+):(?P<s>\d+)', expand=True).astype(float)
+        no_match = mp_df.isnull().all(axis=1)
+        if no_match.any():
+            df.loc[no_match, 'note'] = df.loc[no_match, 'mp']
+        df['mp'] = mp_df['m'] + mp_df['s'] / 60.
+
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
-        m = re.search(r'([-\.\d]+)\%', str(val))
-        if m:
-            return float(m.group(1)) / 100. if m else val
+        m = re.search(ur'([-\.\d]+)\%',
+                      val if isinstance(val, basestring) else str(val), re.U)
+        try:
+            if m:
+                return float(m.group(1)) / 100. if m else val
+            if m:
+                return int(m.group(1)) + int(m.group(2)) / 60.
+        except ValueError:
+            return val
+        # salaries: $ABC,DEF,GHI -> float(ABCDEFGHI)
+        m = re.search(ur'\$[\d,]+',
+                      val if isinstance(val, basestring) else str(val), re.U)
+        try:
+            if m:
+                return float(re.sub(ur'\$|,', '', val))
+        except Exception:
+            return val
         # generally try to coerce to float, unless it's an int or bool
         try:
             if isinstance(val, (int, bool)):
@@ -183,7 +198,7 @@ def parse_table(table, flatten=True, footer=False):
         except Exception:
             return val
 
-    df = df.ix[df.astype(bool).any(axis=1)]
+    df = df.loc[df.astype(bool).any(axis=1)]
     df = df.applymap(convert_to_float)
 
     return df
@@ -198,12 +213,13 @@ def parse_info_table(table):
     :returns: A dictionary representing the information.
     """
     ret = {}
-    for tr in table('tbody tr').items():
-        th, td = tr('th, td').items()
+    for tr in table('tr').items():
+        th = tr('th')
+        td = tr('td')
         key = th.text().lower()
         key = re.sub(r'\W', '_', key)
         val = sportsref.utils.flatten_links(td)
-        ret[key] = val
+        if key: ret[key] = val
     return ret
 
 
@@ -286,4 +302,4 @@ def rel_url_to_id(url):
             return filter(None, match.groups())[0]
 
     print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
-    return 'noIDer00'
+    return url

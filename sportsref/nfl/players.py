@@ -69,8 +69,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})',
                                 birthstring).groups()
             dateargs = map(int, dateargs)
-            birthDate = datetime.date(*dateargs)
-            delta = datetime.date(year=year, month=month, day=day) - birthDate
+            birth_date = datetime.date(*dateargs)
+            delta = datetime.date(year=year, month=month, day=day) - birth_date
             age = delta.days / 365.
             return age
         except Exception:

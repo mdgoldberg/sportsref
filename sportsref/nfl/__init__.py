@@ -6,6 +6,7 @@ import winProb
 import pbp
 
 from players import Player
+from seasons import Season
 from teams import Team
 from boxscores import BoxScore
 from finders import GamePlayFinder, PlayerSeasonFinder
@@ -18,6 +19,7 @@ __all__ = [
     'finders', 'GamePlayFinder', 'PlayerSeasonFinder',
     'boxscores', 'BoxScore',
     'players', 'Player',
+    'seasons', 'Season',
     'teams', 'Team',
     'winProb',
     'pbp',

@@ -2,6 +2,7 @@ import collections
 import json
 import os
 import time
+import urllib
 
 from pyquery import PyQuery as pq
 
@@ -77,68 +78,50 @@ def _kwargs_to_qs(**kwargs):
             else:
                 kwargs['year_min'] = v
                 kwargs['year_max'] = v
-        # pos, position, positions => pos_is_X
-        elif k.lower() in ('position', 'positions'):
+        # pos, position, positions => pos[]
+        elif k.lower() in ('pos', 'position', 'positions'):
             if isinstance(v, basestring):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
-            kwargs['pos'] = v
-        # draft_pos, ... => draft_pos_is_X
-        elif k.lower() in ('draftpos', 'draftposition', 'draftpositions',
-                           'draft_position', 'draft_positions'):
+            kwargs['pos[]'] = v
+        # draft_pos, ... => draft_pos[]
+        elif k.lower() in (
+            'draft_pos', 'draftpos', 'draftposition', 'draftpositions',
+            'draft_position', 'draft_positions'
+        ):
             if isinstance(v, basestring):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
-            kwargs['draft_pos'] = v
+            kwargs['draft_pos[]'] = v
         # if not one of these cases, put it back in kwargs
         else:
             kwargs[k] = v
-
-    # reset opts values to blank for defined kwargs
-    for k in kwargs:
-        # for regular keys
-        if k in opts:
-            opts[k] = []
-        # for positions
-        if k.startswith('pos_is'):
-            # if a position is defined, mark all pos as 'N'
-            for k in opts:
-                if k.startswith('pos_is'):
-                    opts[k] = ['N']
-        # for draft positions
-        if k.startswith('draft_pos_is'):
-            # if a draft position is defined, mark all draft_pos as 'N'
-            for k in opts:
-                if k.startswith('draft_pos_is'):
-                    opts[k] = ['N']
 
     # update based on kwargs
     for k, v in kwargs.iteritems():
         # if overwriting a default, overwrite it (with a list so the
         # opts -> querystring list comp works)
-        if k in opts:
+        if k in opts or k in ('pos[]', 'draft_pos[]'):
             # if multiple values separated by commas, split em
             if isinstance(v, basestring):
                 v = v.split(',')
             # otherwise, make sure it's a list
             elif not isinstance(v, collections.Iterable):
                 v = [v]
-            # then, add all values to the querystring dict (opts)
-            for val in v:
-                opts[k].append(val)
-            # now, for Y|N inputs, make sure there's only one entry
-            # (if any entries are Y, then the entry becomes Y)
-            if all([val in ('Y', 'y', 'N', 'n') for val in opts[k]]):
-                opts[k] = ('Y' if any([val in ('Y', 'y') for val in opts[k]])
-                           else 'N')
+            # then, add list of values to the querystring dict *opts*
+            opts[k] = v
+        if 'draft' in k:
+            opts['draft'] = [1]
 
     opts['request'] = [1]
     opts['offset'] = [kwargs.get('offset', 0)]
 
-    qs = '&'.join('{}={}'.format(name, val)
-                  for name, vals in sorted(opts.iteritems()) for val in vals)
+    qs = '&'.join(
+        '{}={}'.format(urllib.quote_plus(name), val)
+        for name, vals in sorted(opts.iteritems()) for val in vals
+    )
 
     return qs
 
