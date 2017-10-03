@@ -37,6 +37,25 @@ def get_season_boxscores_IDs(year):
     df.set_index(['week_num'], inplace=True)
     return df['boxscore_id']
 
+@sportsref.decorators.memoize
+def get_future_boxscores_info(year):
+    """Returns a dataframe of future games with basic game info.
+    """
+    url = sportsref.nfl.BASE_URL + '/years/{}/games.htm'.format(year)
+    doc = pq(sportsref.utils.get_html(url))
+    table = doc('table#games')
+    df = sportsref.utils.parse_table(table)
+    df['season'] = year
+    df['week'] = df['week_num'].astype(int)
+    df['date'] = df['boxscore_id'].apply(lambda x: BoxScore(x).date())
+    df['weekday'] = df['boxscore_id'].apply(lambda x: BoxScore(x).weekday())
+    df['start_time'] = df['gametime'].str.lower()
+    df = df[df['pts_win'].isnull()]
+    df = df.rename(columns={'loser':'home','winner':'away'})
+    cols = ['season','week','boxscore_id','date','weekday','start_time','home','away']
+    df = df[cols].reset_index(drop=True)
+    return df
+
 
 class BoxScore(
     future.utils.with_metaclass(sportsref.decorators.Cached, object)
