@@ -90,7 +90,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             feet, inches = map(int, raw.split('-'))
             return feet * 12 + inches
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def weight(self):
@@ -103,7 +103,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             weight = re.match(r'(\d+)lb', raw).group(1)
             return int(weight)
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def hand(self):

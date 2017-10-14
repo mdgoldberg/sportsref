@@ -130,14 +130,15 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         roster_table = doc('table#games_played_team')
         df = sportsref.utils.parse_table(roster_table)
         starter_table = doc('table#starters')
-        start_df = sportsref.utils.parse_table(starter_table)
-        start_df = start_df.dropna(axis=0, subset=['position'])
-        starters = start_df.set_index('position').player_id
-        df['is_starter'] = df.player_id.isin(starters)
-        df['starting_pos'] = df.player_id.map(
-            lambda pid: (starters[starters == pid].index[0]
-                         if pid in starters.values else np.nan)
-        )
+        if not starter_table.empty:
+            start_df = sportsref.utils.parse_table(starter_table)
+            start_df = start_df.dropna(axis=0, subset=['position'])
+            starters = start_df.set_index('position').player_id
+            df['is_starter'] = df.player_id.isin(starters)
+            df['starting_pos'] = df.player_id.map(
+                lambda pid: (starters[starters == pid].index[0]
+                             if pid in starters.values else None)
+            )
         return df
 
     @sportsref.decorators.memoize
@@ -210,18 +211,54 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return np.array(coachIDs[::-1])
 
     @sportsref.decorators.memoize
+    def wins(self, year):
+        """Returns the # of regular season wins a team in a year.
+
+        :year: The year for the season in question.
+        :returns: The number of regular season wins.
+        """
+        schedule = self.schedule(year)
+        if schedule.empty:
+            return np.nan
+        return schedule.query('week_num <= 17').is_win.sum()
+
+    @sportsref.decorators.memoize
+    def schedule(self, year):
+        """Returns a DataFrame with schedule information for the given year.
+
+        :year: The year for the season in question.
+        :returns: Pandas DataFrame with schedule information.
+        """
+        doc = self.get_year_doc(year)
+        table = doc('table#games')
+        df = sportsref.utils.parse_table(table)
+        if df.empty:
+            return pd.DataFrame()
+        df = df.loc[df['week_num'].notnull()]
+        df['week_num'] = np.arange(len(df)) + 1
+        df['is_win'] = df['game_outcome'] == 'W'
+        df['is_loss'] = df['game_outcome'] == 'L'
+        df['is_tie'] = df['game_outcome'] == 'T'
+        df['is_bye'] = df['game_outcome'].isnull()
+        df['is_ot'] = df['overtime'].notnull()
+        return df
+
+    @sportsref.decorators.memoize
     def srs(self, year):
         """Returns the SRS (Simple Rating System) for a team in a year.
 
         :year: The year for the season in question.
         :returns: A float of SRS.
         """
-        srs_text = self._year_info_pq(year, 'SRS').text()
+        try:
+            srs_text = self._year_info_pq(year, 'SRS').text()
+        except ValueError:
+            return None
         m = re.match(r'SRS\s*?:\s*?(\S+)', srs_text)
         if m:
             return float(m.group(1))
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def sos(self, year):
@@ -231,12 +268,15 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SOS.
         """
-        sos_text = self._year_info_pq(year, 'SOS').text()
+        try:
+            sos_text = self._year_info_pq(year, 'SOS').text()
+        except ValueError:
+            return None
         m = re.search(r'SOS\s*:\s*(\S+)', sos_text)
         if m:
             return float(m.group(1))
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def off_coordinator(self, year):
@@ -250,7 +290,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             if oc_anchor:
                 return oc_anchor.attr['href']
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def def_coordinator(self, year):
@@ -264,7 +304,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             if dc_anchor:
                 return dc_anchor.attr['href']
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def stadium(self, year):
@@ -318,6 +358,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
+        if df.empty:
+            return pd.Series()
         return df.loc[df.player_id == 'Team Stats'].iloc[0]
 
     @sportsref.decorators.memoize
@@ -362,6 +404,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             .rename(columns={df.columns[0]: 'split_value'})
             for df in dfs
         ]
+        if not dfs:
+            return pd.DataFrame()
         return pd.concat(dfs).reset_index(drop=True)
 
     @sportsref.decorators.memoize
@@ -380,4 +424,6 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             .rename(columns={df.columns[0]: 'split_value'})
             for df in dfs
         ]
+        if not dfs:
+            return pd.DataFrame()
         return pd.concat(dfs).reset_index(drop=True)

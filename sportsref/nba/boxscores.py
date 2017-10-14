@@ -118,7 +118,7 @@ class BoxScore(
         elif hmScore < awScore:
             return self.away()
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def season(self):
@@ -155,9 +155,9 @@ class BoxScore(
             stat_cols = [col for col, dtype in df.dtypes.iteritems()
                          if dtype != 'object']
             df.loc[no_time, stat_cols] = 0
-            df.loc[:, 'team_id'] = tm
-            df.loc[:, 'is_home'] = i == 1
-            df.loc[:, 'is_starter'] = [p < 5 for p in range(df.shape[0])]
+            df['team_id'] = tm
+            df['is_home'] = i == 1
+            df['is_starter'] = [p < 5 for p in range(df.shape[0])]
             df.drop_duplicates(subset='player_id', keep='first', inplace=True)
 
         return pd.concat(dfs)

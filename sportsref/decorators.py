@@ -1,6 +1,7 @@
 import codecs
 import copy
 import datetime
+import functools
 import getpass
 import hashlib
 import os
@@ -206,7 +207,7 @@ def kind_rpb(include_type=False):
         ('B'). If given 'B', it will call the function with both 'R' and 'P'
         and concatenate the results.
         """
-        @funcutils.wraps(fun)
+        @functools.wraps(fun)
         def wrapper(*args, **kwargs):
             kind = kwargs.get('kind', 'R').upper()
             if kind == 'B':
@@ -222,7 +223,7 @@ def kind_rpb(include_type=False):
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df.loc[:, 'is_playoffs'] = (kind == 'P')
+                    df['is_playoffs'] = (kind == 'P')
                 return df
         return wrapper
     return decorator

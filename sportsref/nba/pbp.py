@@ -663,7 +663,7 @@ def get_dense_lineups(df):
                 player_id = group.index.item()
                 tm_cols = (sportsref.nba.pbp.HM_LINEUP_COLS if is_home else
                            sportsref.nba.pbp.AW_LINEUP_COLS)
-                row_mask = lineup_df.loc[:, tm_cols].isnull().any(axis=1)
+                row_mask = lineup_df[tm_cols].isnull().any(axis=1)
                 lineup_df.loc[row_mask, tm_cols] = (
                     lineup_df.loc[row_mask, tm_cols].fillna(player_id).values
                 )
