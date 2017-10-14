@@ -10,7 +10,7 @@ import sportsref
 class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, team_id):
-        self.team_id = team_id
+        self.team_id = team_id.upper()
 
     def __eq__(self, other):
         return (self.team_id == other.team_id)
@@ -55,7 +55,11 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for which we want the roster; defaults to current year.
         :returns: A DataFrame containing roster information for that year.
         """
-        raise NotImplementedError('roster')
+        doc = self.get_year_doc(year)
+        table = doc('table#roster')
+        df = sportsref.utils.parse_table(table)
+        df['years_experience'] = df['years_experience'].replace('R', 0).astype(int)
+        return df
 
     # TODO: kind_rpb
     @sportsref.decorators.memoize
