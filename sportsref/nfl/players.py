@@ -74,7 +74,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             age = delta.days / 365.
             return age
         except Exception:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def position(self):
@@ -96,7 +96,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             feet, inches = map(int, rawText.split('-'))
             return feet * 12 + inches
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def weight(self):
@@ -106,7 +106,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             weight = re.match(r'(\d+)lb', rawText, re.I).group(1)
             return int(weight)
         except AttributeError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def hand(self):
@@ -117,7 +117,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
                        .text())
             rawHand = re.search(r'Throws\W+(\S+)', rawText, re.I).group(1)
         except AttributeError:
-            return np.nan
+            return None
         return rawHand[0]  # 'L' or 'R'
 
     @sportsref.decorators.memoize
@@ -130,7 +130,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             m = re.match(r'Team: (\w{3})', text)
             return m.group(1)
         except Exception:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def draft_pick(self):
@@ -141,7 +141,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         m = re.search(r'Draft.*? round \((\d+).*?overall\)', rawDraft, re.I)
         # if not drafted or taken in supplemental draft, return NaN
         if m is None or 'Supplemental' in rawDraft:
-            return np.nan
+            return None
         else:
             return int(m.group(1))
 
@@ -153,7 +153,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
                     .text())
         m = re.search(r'Draft.*?of the (\d{4}) NFL', rawDraft, re.I)
         if not m:
-            return np.nan
+            return None
         else:
             return int(m.group(1))
 
@@ -167,7 +167,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             m = re.search(r'Draft\W+(\w+)', draftStr)
             return m.group(1)
         except Exception:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def college(self):
@@ -237,13 +237,28 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         df = sportsref.utils.parse_table(table)
         return df
 
-    def _plays(self, year, play_type):
+    @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def defense(self, kind='R'):
+        """Gets yearly defense stats for the player (also has AV stats for OL).
+
+        :kind: One of 'R', 'P', or 'B'. Case-insensitive; defaults to 'R'.
+        :returns: Pandas DataFrame with rushing/receiving stats.
+        """
+        doc = self.get_doc()
+        table = (doc('table#defense') if kind == 'R' else
+                 doc('table#defense_playoffs'))
+        df = sportsref.utils.parse_table(table)
+        return df
+
+    def _plays(self, year, play_type, expand_details):
         """Returns a DataFrame of plays for a given year for a given play type
         (like rushing, receiving, or passing).
 
         :year: The year for the season.
         :play_type: A type of play for which there are plays (as of this
         writing, either "passing", "rushing", or "receiving")
+        :expand_details: Bool for whether PBP should be parsed.
         :returns: A DataFrame of plays, each row is a play. Returns None if
         there were no such plays in that year.
         """
@@ -251,39 +266,45 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = pq(sportsref.utils.get_html(url))
         table = doc('table#all_plays')
         if table:
-            plays = sportsref.nfl.pbp.expand_details(
-                sportsref.utils.parse_table(table), detailCol='description'
-            )
-            return plays
+            if expand_details:
+                plays = sportsref.nfl.pbp.expand_details(
+                    sportsref.utils.parse_table(table), detailCol='description'
+                )
+                return plays
+            else:
+                return sportsref.utils.parse_table(table)
         else:
             return None
 
     @sportsref.decorators.memoize
-    def passing_plays(self, year):
+    def passing_plays(self, year, expand_details=True):
         """Returns a pbp DataFrame of a player's passing plays in a season.
 
         :year: The year for the season.
+        :expand_details: bool for whether PBP should be parsed.
         :returns: A DataFrame of stats, each row is a play.
         """
-        return self._plays(year, 'passing')
+        return self._plays(year, 'passing', expand_details)
 
     @sportsref.decorators.memoize
-    def rushing_plays(self, year):
+    def rushing_plays(self, year, expand_details=True):
         """Returns a pbp DataFrame of a player's rushing plays in a season.
 
         :year: The year for the season.
+        :expand_details: bool for whether PBP should be parsed.
         :returns: A DataFrame of stats, each row is a play.
         """
-        return self._plays(year, 'rushing')
+        return self._plays(year, 'rushing', expand_details)
 
     @sportsref.decorators.memoize
-    def receiving_plays(self, year):
+    def receiving_plays(self, year, expand_details=True):
         """Returns a pbp DataFrame of a player's receiving plays in a season.
 
         :year: The year for the season.
+        :expand_details: bool for whether PBP should be parsed.
         :returns: A DataFrame of stats, each row is a play.
         """
-        return self._plays(year, 'receiving')
+        return self._plays(year, 'receiving', expand_details)
 
     @sportsref.decorators.memoize
     def splits(self, year=None):
@@ -305,7 +326,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def advanced_splits(self, year=None):
-        """Returns a DataFrame of advanced splits data for a player-year.
+        """Returns a DataFrame of advanced splits data for a player-year. Note:
+            only go back to 2012.
 
         :year: The year for the season in question. If None, returns career
         advanced splits.
@@ -320,3 +342,31 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         if not df.empty:
             df.split_type.fillna(method='ffill', inplace=True)
         return df
+
+
+    @sportsref.decorators.memoize
+    def _simple_year_award(self, award_id):
+        """Template for simple award functions that simply list years, such as
+        pro bowls and first-team all pro.
+
+        :award_id: The div ID that is appended to "leaderboard_" in selecting
+        the table's div.
+        :returns: List of years for the award.
+        """
+        doc = self.get_doc()
+        table = doc('div#leaderboard_{} table'.format(award_id))
+        return map(int, sportsref.utils.parse_awards_table(table))
+
+
+
+    def pro_bowls(self):
+        """Returns a list of years in which the player made the Pro Bowl."""
+        return self._simple_year_award('pro_bowls')
+
+
+    def first_team_all_pros(self):
+        """Returns a list of years in which the player made 1st-Tm All Pro."""
+        return self._simple_year_award('all_pro')
+
+
+    # TODO: other awards like MVP, OPOY, DPOY, NFL Top 100, etc.

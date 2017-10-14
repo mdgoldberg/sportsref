@@ -127,8 +127,18 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame containing roster information for that year.
         """
         doc = self.get_year_doc('{}_roster'.format(year))
-        table = doc('table#games_played_team')
-        df = sportsref.utils.parse_table(table)
+        roster_table = doc('table#games_played_team')
+        df = sportsref.utils.parse_table(roster_table)
+        starter_table = doc('table#starters')
+        if not starter_table.empty:
+            start_df = sportsref.utils.parse_table(starter_table)
+            start_df = start_df.dropna(axis=0, subset=['position'])
+            starters = start_df.set_index('position').player_id
+            df['is_starter'] = df.player_id.isin(starters)
+            df['starting_pos'] = df.player_id.map(
+                lambda pid: (starters[starters == pid].index[0]
+                             if pid in starters.values else None)
+            )
         return df
 
     @sportsref.decorators.memoize
@@ -147,6 +157,29 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             return np.array([])
         return df.boxscore_id.values
 
+    @sportsref.decorators.memoize
+    def _year_info_pq(self, year, keyword):
+        """Returns a PyQuery object containing the info from the meta div at
+        the top of the team year page with the given keyword.
+
+        :year: Int representing the season.
+        :keyword: A keyword to filter to a single p tag in the meta div.
+        :returns: A PyQuery object for the selected p element.
+        """
+        doc = self.get_year_doc(year)
+        p_tags = doc('div#meta div:not(.logo) p')
+        texts = [p_tag.text_content().strip() for p_tag in p_tags]
+        try:
+            return next(
+                pq(p_tag) for p_tag, text in zip(p_tags, texts)
+                if keyword.lower() in text.lower()
+            )
+        except StopIteration:
+            if len(texts):
+                raise ValueError('Keyword not found in any p tag.')
+            else:
+                raise ValueError('No meta div p tags found.')
+
     # TODO: add functions for OC, DC, PF, PA, W-L, etc.
     # TODO: Also give a function at BoxScore.homeCoach and BoxScore.awayCoach
     # TODO: BoxScore needs a gameNum function to do this?
@@ -160,24 +193,55 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         played (including playoffs). Each entry is the head coach's ID for that
         game in the season.
         """
-        doc = self.get_year_doc(year)
-        coaches = (doc('div#meta p')
-                   .filter(lambda i, e: 'Coach:' in e.text_content()))
-        coachStr = sportsref.utils.flatten_links(coaches)
+        coach_str = self._year_info_pq(year, 'Coach').text()
         regex = r'(\S+?) \((\d+)-(\d+)-(\d+)\)'
         coachAndTenure = []
-        while coachStr:
-            m = re.search(regex, coachStr)
+        m = True
+        while m:
+            m = re.search(regex, coach_str)
             coachID, wins, losses, ties = m.groups()
             nextIndex = m.end(4) + 1
             coachStr = coachStr[nextIndex:]
             tenure = int(wins) + int(losses) + int(ties)
             coachAndTenure.append((coachID, tenure))
 
-        coachIDs = [[cID for _ in xrange(games)]
-                    for cID, games in coachAndTenure]
-        coachIDs = [cID for sublist in coachIDs for cID in sublist]
+        coachIDs = [
+            cID for cID, games in coachAndTenure for _ in xrange(games)
+        ]
         return np.array(coachIDs[::-1])
+
+    @sportsref.decorators.memoize
+    def wins(self, year):
+        """Returns the # of regular season wins a team in a year.
+
+        :year: The year for the season in question.
+        :returns: The number of regular season wins.
+        """
+        schedule = self.schedule(year)
+        if schedule.empty:
+            return np.nan
+        return schedule.query('week_num <= 17').is_win.sum()
+
+    @sportsref.decorators.memoize
+    def schedule(self, year):
+        """Returns a DataFrame with schedule information for the given year.
+
+        :year: The year for the season in question.
+        :returns: Pandas DataFrame with schedule information.
+        """
+        doc = self.get_year_doc(year)
+        table = doc('table#games')
+        df = sportsref.utils.parse_table(table)
+        if df.empty:
+            return pd.DataFrame()
+        df = df.loc[df['week_num'].notnull()]
+        df['week_num'] = np.arange(len(df)) + 1
+        df['is_win'] = df['game_outcome'] == 'W'
+        df['is_loss'] = df['game_outcome'] == 'L'
+        df['is_tie'] = df['game_outcome'] == 'T'
+        df['is_bye'] = df['game_outcome'].isnull()
+        df['is_ot'] = df['overtime'].notnull()
+        return df
 
     @sportsref.decorators.memoize
     def srs(self, year):
@@ -186,15 +250,15 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SRS.
         """
-        doc = self.get_year_doc(year)
-        srsText = (doc('div#meta p')
-                   .filter(lambda i, e: 'SRS' in e.text_content())
-                   .text())
-        m = re.match(r'SRS\s*?:\s*?(\S+)', srsText)
+        try:
+            srs_text = self._year_info_pq(year, 'SRS').text()
+        except ValueError:
+            return None
+        m = re.match(r'SRS\s*?:\s*?(\S+)', srs_text)
         if m:
             return float(m.group(1))
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def sos(self, year):
@@ -204,15 +268,43 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SOS.
         """
-        doc = self.get_year_doc(year)
-        sosText = (doc('div#meta p')
-                   .filter(lambda i, e: 'SOS' in e.text_content())
-                   .text())
-        m = re.search(r'SOS\s*?:\s*?(\S+)', sosText)
+        try:
+            sos_text = self._year_info_pq(year, 'SOS').text()
+        except ValueError:
+            return None
+        m = re.search(r'SOS\s*:\s*(\S+)', sos_text)
         if m:
             return float(m.group(1))
         else:
-            return np.nan
+            return None
+
+    @sportsref.decorators.memoize
+    def off_coordinator(self, year):
+        """Returns the coach ID for the team's OC in a given year.
+
+        :year: An int representing the year.
+        :returns: A string containing the coach ID of the OC.
+        """
+        try:
+            oc_anchor = self._year_info_pq(year, 'Offensive Coordinator')('a')
+            if oc_anchor:
+                return oc_anchor.attr['href']
+        except ValueError:
+            return None
+
+    @sportsref.decorators.memoize
+    def def_coordinator(self, year):
+        """Returns the coach ID for the team's DC in a given year.
+
+        :year: An int representing the year.
+        :returns: A string containing the coach ID of the DC.
+        """
+        try:
+            dc_anchor = self._year_info_pq(year, 'Defensive Coordinator')('a')
+            if dc_anchor:
+                return dc_anchor.attr['href']
+        except ValueError:
+            return None
 
     @sportsref.decorators.memoize
     def stadium(self, year):
@@ -222,11 +314,38 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year in question.
         :returns: A string representing the stadium ID.
         """
-        doc = self.get_year_doc(year)
-        anchor = (doc('div#meta p')
-                  .filter(lambda i, e: 'Stadium' in e.text_content())
-                  )('a')
+        anchor = self._year_info_pq(year, 'Stadium')('a')
         return sportsref.utils.rel_url_to_id(anchor.attr['href'])
+
+    @sportsref.decorators.memoize
+    def off_scheme(self, year):
+        """Returns the name of the offensive scheme the team ran in the given
+        year.
+
+        :year: Int representing the season year.
+        :returns: A string representing the offensive scheme.
+        """
+        scheme_text = self._year_info_pq(year, 'Offensive Scheme').text()
+        m = re.search(r'Offensive Scheme[:\s]*(.+)\s*', scheme_text, re.I)
+        if m:
+            return m.group(1)
+        else:
+            return None
+
+    @sportsref.decorators.memoize
+    def def_alignment(self, year):
+        """Returns the name of the defensive alignment the team ran in the
+        given year.
+
+        :year: Int representing the season year.
+        :returns: A string representing the defensive alignment.
+        """
+        scheme_text = self._year_info_pq(year, 'Defensive Alignment').text()
+        m = re.search(r'Defensive Alignment[:\s]*(.+)\s*', scheme_text, re.I)
+        if m:
+            return m.group(1)
+        else:
+            return None
 
     @sportsref.decorators.memoize
     def team_stats(self, year):
@@ -239,7 +358,9 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
-        return df.ix[df.player_id == 'Team Stats'].iloc[0]
+        if df.empty:
+            return pd.Series()
+        return df.loc[df.player_id == 'Team Stats'].iloc[0]
 
     @sportsref.decorators.memoize
     def opp_stats(self, year):
@@ -252,7 +373,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
-        return df.ix[df.player_id == 'Opp. Stats'].iloc[0]
+        return df.loc[df.player_id == 'Opp. Stats'].iloc[0]
 
     @sportsref.decorators.memoize
     def passing(self, year):
@@ -267,3 +388,42 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         table = doc('#rushing_and_receiving')
         df = sportsref.utils.parse_table(table)
         return df
+
+    @sportsref.decorators.memoize
+    def off_splits(self, year):
+        """Returns a DataFrame of offensive team splits for a season.
+
+        :year: int representing the season.
+        :returns: Pandas DataFrame of split data.
+        """
+        doc = self.get_year_doc('{}_splits'.format(year))
+        tables = doc('table.stats_table')
+        dfs = [sportsref.utils.parse_table(table) for table in tables.items()]
+        dfs = [
+            df.assign(split=df.columns[0])
+            .rename(columns={df.columns[0]: 'split_value'})
+            for df in dfs
+        ]
+        if not dfs:
+            return pd.DataFrame()
+        return pd.concat(dfs).reset_index(drop=True)
+
+    @sportsref.decorators.memoize
+    def def_splits(self, year):
+        """Returns a DataFrame of defensive team splits (i.e. opponent splits)
+        for a season.
+
+        :year: int representing the season.
+        :returns: Pandas DataFrame of split data.
+        """
+        doc = self.get_year_doc('{}_opp_splits'.format(year))
+        tables = doc('table.stats_table')
+        dfs = [sportsref.utils.parse_table(table) for table in tables.items()]
+        dfs = [
+            df.assign(split=df.columns[0])
+            .rename(columns={df.columns[0]: 'split_value'})
+            for df in dfs
+        ]
+        if not dfs:
+            return pd.DataFrame()
+        return pd.concat(dfs).reset_index(drop=True)

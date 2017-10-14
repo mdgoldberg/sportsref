@@ -1,6 +1,8 @@
 import codecs
 import copy
 import datetime
+import functools
+import getpass
 import hashlib
 import os
 import re
@@ -16,6 +18,7 @@ from pyquery import PyQuery as pq
 import sportsref
 
 
+# TODO: move PSFConstants and GPFConstants to appdirs cache dir
 def switch_to_dir(dirPath):
     """
     Decorator that switches to given directory before executing function, and
@@ -107,7 +110,7 @@ def cache_html(func):
     the user cache determined by the appdirs package.
     """
 
-    CACHE_DIR = appdirs.user_cache_dir('sportsref', 'mgoldberg')
+    CACHE_DIR = appdirs.user_cache_dir('sportsref', getpass.getuser())
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
 
@@ -116,19 +119,9 @@ def cache_html(func):
 
     @funcutils.wraps(func)
     def wrapper(url):
-        parsed = urlparse.urlparse(url)
-        sport = sportsref.SITE_ABBREV.get(parsed.scheme + '://' +
-                                          parsed.netloc)
-        if sport is None:
-            for ncaaSport in ('cfb', 'cbb'):
-                if ncaaSport in url:
-                    sport = ncaaSport
-        relURL = parsed.path
-        if parsed.query:
-            relURL += '?' + parsed.query
-        noPathFN = re.sub(r'\.html?', '', sport + relURL.replace('/', ''))
+        # hash based on the URL
         file_hash = hashlib.md5()
-        file_hash.update(noPathFN)
+        file_hash.update(url)
         file_hash = file_hash.hexdigest()
         filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
@@ -145,13 +138,12 @@ def cache_html(func):
             with codecs.open(filename, 'r', encoding='utf-8',
                              errors='replace') as f:
                 text = f.read()
-            return text
         # otherwise, download html and cache it
         else:
             text = func(url)
             with codecs.open(filename, 'w+', encoding='utf-8') as f:
                 f.write(text)
-            return text
+        return text
 
     return wrapper
 
@@ -215,7 +207,7 @@ def kind_rpb(include_type=False):
         ('B'). If given 'B', it will call the function with both 'R' and 'P'
         and concatenate the results.
         """
-        @funcutils.wraps(fun)
+        @functools.wraps(fun)
         def wrapper(*args, **kwargs):
             kind = kwargs.get('kind', 'R').upper()
             if kind == 'B':
@@ -231,7 +223,7 @@ def kind_rpb(include_type=False):
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df.ix[:, 'is_playoffs'] = (kind == 'P')
+                    df['is_playoffs'] = (kind == 'P')
                 return df
         return wrapper
     return decorator

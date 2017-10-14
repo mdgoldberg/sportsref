@@ -54,7 +54,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return doc('h1[itemprop="name"]').text()
 
     @sportsref.decorators.memoize
-    def age(self, year, month=10, day=1):
+    def age(self, year, month=2, day=1):
         """Returns the age of the player on a given date.
 
         :year: int representing the year.
@@ -90,7 +90,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             feet, inches = map(int, raw.split('-'))
             return feet * 12 + inches
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def weight(self):
@@ -103,7 +103,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             weight = re.match(r'(\d+)lb', raw).group(1)
             return int(weight)
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def hand(self):

@@ -120,7 +120,7 @@ class BoxScore(
         elif hmScore < awScore:
             return self.away()
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def week(self):
@@ -194,7 +194,7 @@ class BoxScore(
         giTable = sportsref.utils.parse_info_table(table)
         line_text = giTable.get('vegas_line', None)
         if line_text is None:
-            return np.nan
+            return None
         m = re.match(r'(.+?) ([\-\.\d]+)$', line_text)
         if m:
             favorite, line = m.groups()
@@ -232,7 +232,7 @@ class BoxScore(
             ou = giTable['over_under']
             return float(ou.split()[0])
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def coin_toss(self):
@@ -251,7 +251,7 @@ class BoxScore(
             # TODO: finish coinToss function
             pass
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def weather(self):
@@ -330,7 +330,7 @@ class BoxScore(
         for col in ('home_wp', 'pbp_score_hm', 'pbp_score_aw'):
             if col in df.columns:
                 df[col] = df[col].shift(1)
-        df.ix[0, ['pbp_score_hm', 'pbp_score_aw']] = 0
+        df.loc[0, ['pbp_score_hm', 'pbp_score_aw']] = 0
         # fill in WP NaN's
         df.home_wp.fillna(method='ffill', inplace=True)
         # fix first play border after diffing/shifting for WP and WPA
@@ -338,24 +338,24 @@ class BoxScore(
         line = self.line()
         for i in firstPlaysOfGame:
             initwp = sportsref.nfl.winProb.initialWinProb(line)
-            df.ix[i, 'home_wp'] = initwp
-            df.ix[i, 'home_wpa'] = df.ix[i + 1, 'home_wp'] - initwp
+            df.loc[i, 'home_wp'] = initwp
+            df.loc[i, 'home_wpa'] = df.loc[i + 1, 'home_wp'] - initwp
         # fix last play border after diffing/shifting for WP and WPA
         lastPlayIdx = df.index[-1]
-        lastPlayWP = df.ix[lastPlayIdx, 'home_wp']
+        lastPlayWP = df.loc[lastPlayIdx, 'home_wp']
         # if a tie, final WP is 50%; otherwise, determined by winner
         winner = self.winner()
         finalWP = 50. if pd.isnull(winner) else (winner == self.home()) * 100.
-        df.ix[lastPlayIdx, 'home_wpa'] = finalWP - lastPlayWP
+        df.loc[lastPlayIdx, 'home_wpa'] = finalWP - lastPlayWP
         # fix WPA for timeouts and plays after timeouts
         timeouts = df[df.isTimeout].index
         for to in timeouts:
-            df.ix[to, 'home_wpa'] = 0.
+            df.loc[to, 'home_wpa'] = 0.
             if to + 2 in df.index:
-                wpa = df.ix[to + 2, 'home_wp'] - df.ix[to + 1, 'home_wp']
+                wpa = df.loc[to + 2, 'home_wp'] - df.loc[to + 1, 'home_wp']
             else:
-                wpa = finalWP - df.ix[to + 1, 'home_wp']
-            df.ix[to + 1, 'home_wpa'] = wpa
+                wpa = finalWP - df.loc[to + 1, 'home_wp']
+            df.loc[to + 1, 'home_wpa'] = wpa
         # add team-related features to DataFrame
         df = sportsref.nfl.pbp._add_team_features(df)
         # fill distToGoal NaN's
@@ -388,15 +388,19 @@ class BoxScore(
         for tID in tableIDs:
             table = doc('table#{}'.format(tID))
             dfs.append(sportsref.utils.parse_table(table))
-        df = pd.concat(dfs, ignore_index=True)
-        df = df.reset_index(drop=True)
-        df['team'] = df['team'].str.lower()
+        dfs = [df for df in dfs if not df.empty]
+        df = reduce(
+            lambda x, y: pd.merge(
+                x, y, how='outer', on=list(set(x.columns) & set(y.columns))
+            ), dfs
+        ).reset_index(drop=True)
         return df
 
     @sportsref.decorators.memoize
     def snap_counts(self):
         """Gets the snap counts for both teams' players and returns them in a
-        DataFrame.
+        DataFrame. Note: only goes back to 2012.
+
         :returns: DataFrame of snap count data
         """
         # TODO: combine duplicate players, see 201312150mia - ThomDa03

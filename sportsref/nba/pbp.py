@@ -15,6 +15,11 @@ AW_LINEUP_COLS = ['aw_player{}'.format(i) for i in range(1, 6)]
 ALL_LINEUP_COLS = AW_LINEUP_COLS + HM_LINEUP_COLS
 
 
+def sparse_lineup_cols(df):
+    regex = '{}_in'.format(PLAYER_RE)
+    return [c for c in df.columns if re.match(regex, c)]
+
+
 def parse_play(boxscore_id, details, is_hm):
     """Parse play details from a play-by-play string describing a play.
 
@@ -61,8 +66,8 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_assist'] = pd.notnull(p.get('assister'))
         p['is_block'] = pd.notnull(p.get('blocker'))
         shooter_home = p['shooter'] in hm_roster
-        p['team'] = hm if shooter_home else aw
-        p['opp'] = aw if shooter_home else hm
+        p['off_team'] = hm if shooter_home else aw
+        p['def_team'] = aw if shooter_home else hm
         return p
 
     # parsing jump balls
@@ -89,8 +94,8 @@ def parse_play(boxscore_id, details, is_hm):
         else:
             reb_home = p['rebounder'] in hm_roster
             p['reb_team'], other = (hm, aw) if reb_home else (aw, hm)
-        p['team'] = p['reb_team'] if p['is_oreb'] else other
-        p['opp'] = p['reb_team'] if p['is_dreb'] else other
+        p['off_team'] = p['reb_team'] if p['is_oreb'] else other
+        p['def_team'] = p['reb_team'] if p['is_dreb'] else other
         return p
 
     # parsing free throws
@@ -112,10 +117,10 @@ def parse_play(boxscore_id, details, is_hm):
         if p['fta_num']:
             p['fta_num'] = int(p['fta_num'])
         ft_home = p['ft_shooter'] in hm_roster
-        p['ft_team'] = hm if ft_home else aw
+        p['fta_team'] = hm if ft_home else aw
         if not p['is_tech_fta']:
-            p['team'] = hm if ft_home else aw
-            p['opp'] = aw if ft_home else hm
+            p['off_team'] = hm if ft_home else aw
+            p['def_team'] = aw if ft_home else hm
         return p
 
     # parsing substitutions
@@ -152,12 +157,12 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_discont_dribble'] = p['to_type'] == 'discontinued dribble'
         p['is_carry'] = p['to_type'] == 'palming'
         if p['to_by'] == 'Team':
-            p['team'] = hm if is_hm else aw
-            p['opp'] = aw if is_hm else hm
+            p['off_team'] = hm if is_hm else aw
+            p['def_team'] = aw if is_hm else hm
         else:
             to_home = p['to_by'] in hm_roster
-            p['team'] = hm if to_home else aw
-            p['opp'] = aw if to_home else hm
+            p['off_team'] = hm if to_home else aw
+            p['def_team'] = aw if to_home else hm
         return p
 
     # parsing shooting fouls
@@ -170,9 +175,9 @@ def parse_play(boxscore_id, details, is_hm):
         p.update(m.groupdict())
         p['is_block_foul'] = bool(p['is_block_foul'])
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing offensive fouls
@@ -184,13 +189,14 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_pf'] = True
         p['is_off_foul'] = True
         p['is_to'] = True
+        p['to_type'] = 'offensive foul'
         p.update(m.groupdict())
         p['is_charge'] = bool(p['is_charge'])
         p['fouler'] = p['to_by']
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = hm if foul_on_home else aw
-        p['opp'] = aw if foul_on_home else hm
-        p['foul_team'] = p['team']
+        p['off_team'] = hm if foul_on_home else aw
+        p['def_team'] = aw if foul_on_home else hm
+        p['foul_team'] = p['off_team']
         return p
 
     # parsing personal fouls
@@ -204,9 +210,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_take_foul'] = bool(p['is_take_foul'])
         p['is_block_foul'] = bool(p['is_block_foul'])
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # TODO: parsing double personal fouls
@@ -216,7 +222,7 @@ def parse_play(boxscore_id, details, is_hm):
     # if m:
     #     p['is_pf'] = True
     #     p.update(m.groupdict())
-    #     p['team'] =
+    #     p['off_team'] =
 
     # parsing loose ball fouls
     looseBallRE = (r'Loose ball foul by (?P<fouler>{0})'
@@ -256,9 +262,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_inbound_foul'] = True
         p.update(m.groupdict())
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing flagrant fouls
@@ -282,9 +288,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_clear_path_foul'] = True
         p.update(m.groupdict())
         foul_on_home = p['fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing timeouts
@@ -344,9 +350,9 @@ def parse_play(boxscore_id, details, is_hm):
         p['is_def_three_secs'] = True
         p.update(m.groupdict())
         foul_on_home = p['tech_fouler'] in hm_roster
-        p['team'] = aw if foul_on_home else hm
-        p['opp'] = hm if foul_on_home else aw
-        p['foul_team'] = p['opp']
+        p['off_team'] = aw if foul_on_home else hm
+        p['def_team'] = hm if foul_on_home else aw
+        p['foul_team'] = p['def_team']
         return p
 
     # parsing violations
@@ -356,6 +362,9 @@ def parse_play(boxscore_id, details, is_hm):
     if m:
         p['is_viol'] = True
         p.update(m.groupdict())
+        if p['viol_type'] == 'kicked_ball':
+            p['is_to'] = True
+            p['to_by'] = p['violator']
         if p['violator'] == 'Team':
             p['viol_team'] = hm if is_hm else aw
         else:
@@ -376,25 +385,48 @@ def clean_features(df):
     """
     df = pd.DataFrame(df)
 
-    # drop duplicate rows
-    # df.drop_duplicates(['secs_elapsed', 'detail'], inplace=True)
+    bool_vals = set([True, False, None, np.nan])
+    sparse_cols = sparse_lineup_cols(df)
+    for col in df:
 
-    # make indicator columns boolean type (and fill in NaNs)
-    boolVals = set([True, False, None, np.nan])
-    for c in df:
-        if set(df[c].unique()[:5]) <= boolVals:
-            df[c] = df[c].map(lambda x: x is True)
+        # make indicator columns boolean type (and fill in NaNs)
+        if set(df[col].unique()[:5]) <= bool_vals:
+            df[col] = (df[col] == True)
+
+        # fill NaN's in sparse lineup columns to 0
+        elif col in sparse_cols:
+            df[col] = df[col].fillna(0)
 
     # fix free throw columns on technicals
-    df.ix[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
+    df.loc[df.is_tech_fta, ['fta_num', 'tot_fta']] = 1
 
-    # fill in NaN's/fix team, opp columns
-    df.team.fillna(method='bfill', inplace=True)
-    df.opp.fillna(method='bfill', inplace=True)
-    df.team.fillna(method='ffill', inplace=True)
-    df.opp.fillna(method='ffill', inplace=True)
-    if 'is_jump_ball' in df.columns:
-        df.ix[df['is_jump_ball'], ['team', 'opp']] = np.nan
+    # fill in NaN's/fix off_team and def_team columns
+    df.off_team.fillna(method='bfill', inplace=True)
+    df.def_team.fillna(method='bfill', inplace=True)
+    df.off_team.fillna(method='ffill', inplace=True)
+    df.def_team.fillna(method='ffill', inplace=True)
+
+    return df
+
+
+def clean_multigame_features(df):
+    """TODO: Docstring for clean_multigame_features.
+
+    :df: TODO
+    :returns: TODO
+    """
+    df = pd.DataFrame(df)
+    if df.index.value_counts().max() > 1:
+        df.reset_index(drop=True, inplace=True)
+
+    df = clean_features(df)
+
+    # if it's many games in one DataFrame, make poss_id and play_id unique
+    for col in ('play_id', 'poss_id'):
+        diffs = df[col].diff().fillna(0)
+        if (diffs < 0).any():
+            new_col = np.cumsum(diffs.astype(bool))
+            df.eval('{} = @new_col'.format(col), inplace=True)
 
     return df
 
@@ -469,115 +501,6 @@ def get_period_starters(df):
     return period_starters
 
 
-def get_period_starters_pm(boxscore_id):
-    """NOTE: THIS FUNCTION WAS AN IDEA I TRIED THAT DOES NOT WORK AT THE
-    MOMENT. PERHAPS THIS APPROACH COULD WORK IN THE FUTURE.
-
-    Given a game's boxscore ID, returns a list of tuples of sets containing
-    the starters for each period (quarter or OT) in the game. Mainly for use in
-    the get_sparse_lineups and get_dense_lineups functions.
-
-    The ith element of the list returned is a tuple in which the first
-    element is the set of the away team's starters for period i+1, and the
-    second element is the set of the home team's starters for period i+1.
-
-    :param boxscore_id: A string containing the game's boxscore ID.
-    :returns: [(away_set, home_set), ...]
-    """
-
-    def get_width(pq_obj):
-        """Returns the pixel width of a PyQuery object representing a div.
-
-        :pq_obj: PyQuery object with a style attribute containing its width.
-        :returns: Pixel width of the div/element based on obj.attr['style'].
-        :rtype: int
-        """
-        return int(re.search(r'width:(\d+)px', pq_obj.attr['style']).group(1))
-
-    def get_player_intervals(player_pm_div):
-        """Returns the widths at which a player was in the game, given a
-        PyQuery object representing the player's 'div.player-plusminus'.
-
-        :player_pm_div: PyQuery object representing a div with class
-            player-plusminus.
-        :returns: List of (start_width, end_width) tuples
-        """
-        widths = [
-            get_width(div) + 1 for div in player_pm_div.children('div').items()
-        ]
-        in_mask = np.array([
-            (div.hasClass('plus') or div.hasClass('minus') or
-             div.hasClass('even'))
-            for div in player_pm_div.children('div').items()
-        ])
-        in_mask = np.append(in_mask, not in_mask[-1])
-        cum_widths = np.concatenate(([0], np.cumsum(widths)))
-        keep = np.insert(np.diff(in_mask), 0, in_mask[0])
-        in_mask_keep = in_mask[keep]
-        cum_widths_in = cum_widths[keep][in_mask_keep]
-        cum_widths_out = cum_widths[keep][~in_mask_keep]
-        intervals = list(zip(cum_widths_in, cum_widths_out))
-        return intervals
-
-    def per_starters_from_div(div, is_home):
-        """Given a PyQuery object representing one team's section on the
-        BoxScore plus-minus page, returns a list of sets containing the team's
-        starters for each period (quarter or OT) in the game.
-
-        The ith element of the list returned is a set of the given team's
-        starters for period i+1.
-
-        :param div: PyQuery object representing a div.
-        :param is_home: True when the div represents the home team
-        :type is_home: bool
-        :returns: [set_q1, set_q2, ...]
-        """
-        # get player names and start times
-        player_names = (div('div.player span')
-                        .map(lambda i, e: e.text_content()))
-        player_intervals = [get_player_intervals(pm_div) for pm_div in
-                            div('div.player-plusminus').items()]
-
-        # convert player names to player IDs
-        stats = bs.basic_stats().query('is_home == @is_home')
-        name_to_id = stats.set_index('player_name').player_id.to_dict()
-        player_ids = [name_to_id[name] for name in player_names]
-
-        # filter to only times that are beginning of the quarter
-        player_pers = [
-            np.nonzero(
-                [any(start <= p_start < end for start, end in intervals)
-                 for p_start in per_starts]
-            )[0]
-            for intervals in player_intervals
-        ]
-
-        per_starters = [set() for _ in per_widths]
-        for p_id, p_periods in zip(player_ids, player_pers):
-            for per in p_periods:
-                per_starters[per].add(p_id)
-
-        return per_starters
-
-    bs = sportsref.nba.BoxScore(boxscore_id)
-    doc = bs.get_subpage_doc('plus-minus')
-    aw_div, hm_div = doc('div.plusminus > div > div').items()
-
-    # get start pixel values for each period
-    per_widths = [get_width(ch) + (i > 0) for i, ch in
-                  enumerate(hm_div('div.header').eq(0).children().items())]
-    per_starts = np.concatenate(([0], np.cumsum(per_widths)[:-1])).tolist()
-
-    # get each team's starters in each period
-    aw_starters = per_starters_from_div(aw_div, is_home=False)
-    hm_starters = per_starters_from_div(hm_div, is_home=True)
-
-    assert len(aw_starters) == len(hm_starters)
-    # TODO: make sure 5 starters for everything
-
-    return list(zip(aw_starters, hm_starters))
-
-
 def get_sparse_lineups(df):
     """TODO: Docstring for get_sparse_lineups.
 
@@ -585,18 +508,25 @@ def get_sparse_lineups(df):
     :returns: TODO
     """
 
+    # get the lineup data using get_dense_lineups if necessary
     if (set(ALL_LINEUP_COLS) - set(df.columns)):
-        df = get_dense_lineups(df)
+        lineup_df = get_dense_lineups(df)
+    else:
+        lineup_df = df[ALL_LINEUP_COLS]
 
-    all_players = reduce(
-        operator.or_, [set(df[c].unique()) for c in ALL_LINEUP_COLS]
-    )
-
-    rows = df[ALL_LINEUP_COLS].values
-    data = {'{}_in'.format(player_id):
-            np.array([player_id in row for row in rows])
-            for player_id in all_players}
-    sparse_df = pd.DataFrame(data)
+    # create the sparse representation
+    hm_lineups = lineup_df[HM_LINEUP_COLS].values
+    aw_lineups = lineup_df[AW_LINEUP_COLS].values
+    # +1 for home, -1 for away
+    hm_df = pd.DataFrame([
+        {'{}_in'.format(player_id): 1 for player_id in lineup}
+        for lineup in hm_lineups
+    ], dtype=int)
+    aw_df = pd.DataFrame([
+        {'{}_in'.format(player_id): -1 for player_id in lineup}
+        for lineup in aw_lineups
+    ], dtype=int)
+    sparse_df = pd.concat((hm_df, aw_df), axis=1).fillna(0)
     return sparse_df
 
 
@@ -669,12 +599,12 @@ def get_dense_lineups(df):
 
     # loop through select plays to determine lineups
     sub_or_per_start = df.is_sub | df.quarter.diff().astype(bool)
-    for i, row in df.ix[sub_or_per_start].iterrows():
+    for i, row in df.loc[sub_or_per_start].iterrows():
         if row['quarter'] > cur_qtr:
             # first row in a quarter
             assert row['quarter'] == cur_qtr + 1
             # first, finish up the last quarter's lineups
-            if cur_qtr > 0 and not df.ix[i-1, 'is_sub']:
+            if cur_qtr > 0 and not df.loc[i-1, 'is_sub']:
                 lineups[i-1] = lineup_dict(aw_lineup, hm_lineup)
             # then, move on to the quarter, and enter the starting lineups
             cur_qtr += 1
@@ -696,40 +626,46 @@ def get_dense_lineups(df):
         lineup_df.iloc[-1] = lineup_dict(aw_lineup, hm_lineup)
     lineup_df = lineup_df.groupby(df.quarter).fillna(method='bfill')
 
-    # fill in NaN's
+    # fill in NaN's based on minutes played
     bool_mat = lineup_df.isnull()
     mask = bool_mat.any(axis=1)
     if mask.any():
         bs = sportsref.nba.BoxScore(df.boxscore_id[0])
-        hm_roster = bs.basic_stats().query('is_home == True').player_id.values
-
+        # first, get the true minutes played from the box score
         stats = sportsref.nba.BoxScore(df.boxscore_id.iloc[0]).basic_stats()
         true_mp = pd.Series(
             stats.query('mp > 0')[['player_id', 'mp']]
             .set_index('player_id').to_dict()['mp']
         ) * 60
+        # next, calculate minutes played based on the lineup data
         calc_mp = pd.Series(
             {p: (df.secs_elapsed.diff() *
                  [p in row for row in lineup_df.values]).sum()
              for p in stats.query('mp > 0').player_id.values})
+        # finally, figure which players are missing minutes
         diff = true_mp - calc_mp
-        players_missing = diff.ix[diff.abs() >= 150]
+        players_missing = diff.loc[diff.abs() >= 150]
+        hm_roster = bs.basic_stats().query('is_home == True').player_id.values
         missing_df = pd.DataFrame(
             {'secs': players_missing.values,
              'is_home': players_missing.index.isin(hm_roster)},
             index=players_missing.index
         )
 
-        if not missing_df.empty:
+        if missing_df.empty:
+            # TODO: log this as a warning (or error?)
+            print('There are NaNs in the lineup data, but no players were '
+                  'found to be missing significant minutes')
+        else:
             # import ipdb
             # ipdb.set_trace()
             for is_home, group in missing_df.groupby('is_home'):
                 player_id = group.index.item()
                 tm_cols = (sportsref.nba.pbp.HM_LINEUP_COLS if is_home else
                            sportsref.nba.pbp.AW_LINEUP_COLS)
-                row_mask = lineup_df.ix[:, tm_cols].isnull().any(axis=1)
-                lineup_df.ix[row_mask, tm_cols] = (
-                    lineup_df.ix[row_mask, tm_cols].fillna(player_id).values
+                row_mask = lineup_df[tm_cols].isnull().any(axis=1)
+                lineup_df.loc[row_mask, tm_cols] = (
+                    lineup_df.loc[row_mask, tm_cols].fillna(player_id).values
                 )
 
     return lineup_df
