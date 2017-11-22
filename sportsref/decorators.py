@@ -6,6 +6,7 @@ import getpass
 import hashlib
 import os
 import re
+import time
 import urlparse
 
 import appdirs
@@ -38,74 +39,59 @@ def switch_to_dir(dirPath):
     return decorator
 
 
-def _cacheValid_pfr(ct, mt, fn):
-    # TODO: this is not comprehensive, can be a problem
-    # first, if we can ensure that the file won't change,
-    # then we're safe caching it
-    import ipdb
-    ipdb.set_trace()
-    if 'boxscore' in fn:
-        return True
-    # if it's currently the offseason, then we're good
+def _days_valid_pfr(url):
+    # boxscores are static, but refresh quarterly to be sure
+    if 'boxscore' in url:
+        return 90
+    # important dates
     today = datetime.date.today()
-    endOfSeason = datetime.date(today.year, 2, 18)
-    startOfSeason = datetime.date(today.year, 8, 25)
-    if endOfSeason < today < startOfSeason:
-        return True
-    # now, check for a year in the filename
-    m = re.search(r'(\d{4})', fn)
-    if not m:
-        if 'teams' in fn:
-            return True
-        else:
-            return False
-    year = int(m.group(1))
-    # if it was a year prior to the current season, we're good
-    curSeason = today.year - (today <= endOfSeason)
-    if year < curSeason:
-        return True
-    # otherwise, check if new data could have been updated since mod
-    # (assumed that new game data is added the day after that game)
-    modDay = today - datetime.timedelta(seconds=ct - mt)
-    lastGameDay = today
-    while (lastGameDay.weekday() + 1) % 7 not in (0, 1, 2, 5):
-        lastGameDay = lastGameDay - datetime.timedelta(days=1)
-    return modDay >= lastGameDay
+    start_of_season = datetime.date(today.year, 8, 15)
+    end_of_season = datetime.date(today.year, 2, 15)
+    # check for a year in the filename
+    m = re.search(r'(\d{4})', url)
+    if m:
+        # if it was a year prior to the current season, we're good
+        year = int(m.group(1))
+        cur_season = today.year - (today <= end_of_season)
+        if year < cur_season:
+            return 90
+    # if it's the offseason, refresh cache twice a month
+    if end_of_season < today < start_of_season:
+        return 15
+    # otherwise, refresh every 2 days
+    return 2
 
 
-def _cacheValid_bkref(ct, mt, fn):
-    # TODO: this might not be comprehensive
-    # first, if we can ensure that the file won't change,
-    # then we're safe caching it
-    if 'boxscore' in fn:
-        return True
-    # now, check for a year in the filename
-    m = re.search(r'(\d{4})', fn)
-    if not m:
-        return False
-    year = int(m.group(1))
+
+def _days_valid_bkref(url):
+    # boxscores are static, but refresh quarterly to be sure
+    if 'boxscore' in url:
+        return 90
+    # important dates
     today = datetime.date.today()
-    endOfSeason = datetime.date(today.year, 6, 30)
-    startOfSeason = datetime.date(today.year, 9, 23)
-    # if it was a year prior to the current season, we're good
-    curSeason = today.year - (today <= endOfSeason)
-    if year < curSeason:
-        return True
-    # if we're in the offseason, we're good
-    if endOfSeason < today < startOfSeason:
-        return True
-    # otherwise, check if new data could have been updated since mod
-    # (assumed that new game data is added the day after that game)
-    modDay = today - datetime.timedelta(seconds=ct - mt)
-    return modDay >= today
+    start_of_season = datetime.date(today.year, 10, 1)
+    end_of_season = datetime.date(today.year, 7, 1)
+    # check for a year in the filename
+    m = re.search(r'(\d{4})', url)
+    if m:
+        # if it was a year prior to the current season, we're good
+        year = int(m.group(1))
+        cur_season = today.year - (today <= end_of_season) + 1
+        if year < cur_season:
+            return 90
+    # if it's the offseason, refresh cache twice a month
+    if end_of_season < today < start_of_season:
+        return 15
+    # otherwise, refresh every 2 days
+    return 2
 
 
-def _cacheValid_cfb(ct, mt, fn):
+def _days_valid_cfb(url):
     # TODO: caching for CFB
-    return True
+    return 365
 
 
-def cache_html(func):
+def cache(func):
     """Caches the HTML returned by the specified function `func`. Caches it in
     the user cache determined by the appdirs package.
     """
@@ -113,9 +99,6 @@ def cache_html(func):
     CACHE_DIR = appdirs.user_cache_dir('sportsref', getpass.getuser())
     if not os.path.isdir(CACHE_DIR):
         os.makedirs(CACHE_DIR)
-
-    def cacheValidFuncs(s):
-        return eval('_cacheValid_' + s)
 
     @funcutils.wraps(func)
     def wrapper(url):
@@ -125,20 +108,31 @@ def cache_html(func):
         file_hash = file_hash.hexdigest()
         filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
-        # set time variables (in seconds)
-        if os.path.isfile(filename):
-            # curtime = int(time.time())
-            # modtime = int(os.path.getmtime(filename))
-            # time_since_mod = datetime.timedelta(seconds=(curtime - modtime))
-            # cacheValid = time_since_mod <= datetime.timedelta(days=12)
-            cacheValid = True
+        sport_id = None
+        for a_base_url, a_sport_id in sportsref.SITE_ABBREV.items():
+            if url.startswith(a_base_url):
+                sport_id = a_sport_id
+                break
+        else:
+            print('No sport ID found for {}, not able to check cache'.format(url))
 
-        # if file found and caching is valid, read from file
-        if os.path.isfile(filename) and cacheValid:
-            with codecs.open(filename, 'r', encoding='utf-8',
-                             errors='replace') as f:
+        # check whether cache is valid or stale
+        file_exists = os.path.isfile(filename)
+        if sport_id and file_exists:
+            cur_time = int(time.time())
+            mod_time = int(os.path.getmtime(filename))
+            days_since_mod = datetime.timedelta(seconds=(cur_time - mod_time)).days
+            days_cache_valid = globals()['_days_valid_{}'.format(sport_id)](url)
+            cache_is_valid = days_since_mod < days_cache_valid
+        else:
+            cache_is_valid = False
+
+        # if file found and cache is valid, read from file
+        allow_caching = sportsref.get_option('cache')
+        if file_exists and cache_is_valid and allow_caching:
+            with codecs.open(filename, 'r', encoding='utf-8', errors='replace') as f:
                 text = f.read()
-        # otherwise, download html and cache it
+        # otherwise, execute function and cache results
         else:
             text = func(url)
             with codecs.open(filename, 'w+', encoding='utf-8') as f:

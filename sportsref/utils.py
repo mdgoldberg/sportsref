@@ -19,7 +19,7 @@ throttle_lock = mp.Lock()
 last_request_time = mp.Value(ctypes.c_longdouble,
                              time.time() - 2 * THROTTLE_DELAY)
 
-@sportsref.decorators.cache_html
+@sportsref.decorators.cache
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
@@ -242,12 +242,12 @@ def flatten_links(td, _recurse=False):
     """
 
     # helper function to flatten individual strings/links
-    def _flattenC(c):
+    def _flatten_node(c):
         if isinstance(c, basestring):
-            return c.strip('\t\n')
+            return c.strip()
         elif 'href' in c.attrib:
-            cID = rel_url_to_id(c.attrib['href'])
-            return cID if cID else c.text_content().strip('\t\n')
+            c_id = rel_url_to_id(c.attrib['href'])
+            return c_id if c_id else c.text_content().strip()
         else:
             return flatten_links(pq(c), _recurse=True)
 
@@ -255,7 +255,8 @@ def flatten_links(td, _recurse=False):
     if td is None or not td.text():
         return '' if _recurse else None
 
-    return ''.join(_flattenC(c) for c in td.contents())
+    td.remove('span.note')
+    return ''.join(_flatten_node(c) for c in td.contents())
 
 
 @sportsref.decorators.memoize
