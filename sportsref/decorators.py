@@ -168,6 +168,10 @@ def memoize(fun):
     @funcutils.wraps(fun)
     def wrapper(*args, **kwargs):
 
+        do_memoization = sportsref.get_option('memoize')
+        if not do_memoization:
+            return fun(*args, **kwargs)
+
         hash_args = tuple(args)
         hash_kwargs = frozenset(sorted(kwargs.items()))
         key = (hash_args, hash_kwargs)

@@ -1,6 +1,6 @@
 from builtins import range
 import ctypes
-import multiprocessing as mp
+import threading
 import re
 import time
 
@@ -15,9 +15,8 @@ import sportsref
 THROTTLE_DELAY = 0.5
 
 # variables used to throttle requests across processes
-throttle_lock = mp.Lock()
-last_request_time = mp.Value(ctypes.c_longdouble,
-                             time.time() - 2 * THROTTLE_DELAY)
+throttle_lock = threading.Lock()
+last_request_time = time.time() - 10 * THROTTLE_DELAY
 
 @sportsref.decorators.cache
 def get_html(url):
@@ -29,7 +28,7 @@ def get_html(url):
     with throttle_lock:
 
         # sleep until THROTTLE_DELAY secs have passed since last request
-        wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
+        wait_left = THROTTLE_DELAY - (time.time() - last_request_time)
         if wait_left > 0:
             time.sleep(wait_left)
 
@@ -37,7 +36,7 @@ def get_html(url):
         response = requests.get(url)
 
         # update last request time for throttling
-        last_request_time.value = time.time()
+        last_request_time = time.time()
 
     # raise ValueError on 4xx status code, get rid of comments, and return
     if 400 <= response.status_code < 500:
@@ -52,7 +51,7 @@ def get_html(url):
 
 
 def parse_table(table, flatten=True, footer=False):
-    """Parses a table from SR into a pandas dataframe.
+    """Parses a table from sports-reference sites into a pandas dataframe.
 
     :param table: the PyQuery object representing the HTML table
     :param flatten: if True, flattens relative URLs to IDs. otherwise, leaves
