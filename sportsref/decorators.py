@@ -121,7 +121,11 @@ def cache_html(func):
     def wrapper(url):
         # hash based on the URL
         file_hash = hashlib.md5()
-        file_hash.update(b + url)
+
+        #was throwing error that url wasn't encoded after 2to3
+        url_encoded = url.encode('utf-8')
+
+        file_hash.update(url_encoded)
         file_hash = file_hash.hexdigest()
         filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
