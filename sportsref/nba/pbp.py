@@ -34,7 +34,7 @@ def parse_play(boxscore_id, details, is_hm):
     :rtype: dictionary or None
     """
     # if input isn't a string, return None
-    if not details or not isinstance(details, basestring):
+    if not details or not isinstance(details, str):
         return None
 
     bs = sportsref.nba.BoxScore(boxscore_id)
@@ -495,8 +495,8 @@ def get_period_starters(df):
                 break
 
         if len(hm_starters) != 5 or len(aw_starters) != 5:
-            print('WARNING: wrong number of starters for a team in Q{} of {}'
-                  .format(qtr, df.boxscore_id.iloc[0]))
+            print(('WARNING: wrong number of starters for a team in Q{} of {}'
+                  .format(qtr, df.boxscore_id.iloc[0])))
 
     return period_starters
 
@@ -585,9 +585,9 @@ def get_dense_lineups(df):
             ):
                 return aw_lineup, hm_lineup
             # otherwise, let's print and pretend this never happened
-            print('ERROR IN SUB IN {}, Q{}, {}: {}'
+            print(('ERROR IN SUB IN {}, Q{}, {}: {}'
                   .format(row['boxscore_id'], row['quarter'],
-                          row['clock_time'], row['detail']))
+                          row['clock_time'], row['detail'])))
             raise
         return aw_lineup, hm_lineup
 
@@ -608,7 +608,7 @@ def get_dense_lineups(df):
                 lineups[i-1] = lineup_dict(aw_lineup, hm_lineup)
             # then, move on to the quarter, and enter the starting lineups
             cur_qtr += 1
-            aw_lineup, hm_lineup = map(list, per_starters[cur_qtr-1])
+            aw_lineup, hm_lineup = list(map(list, per_starters[cur_qtr-1]))
             lineups[i] = lineup_dict(aw_lineup, hm_lineup)
             # if the first play in the quarter is a sub, handle that
             if row['is_sub']:

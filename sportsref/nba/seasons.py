@@ -58,7 +58,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         if not df.empty:
             return df.index.tolist()
         else:
-            print 'ERROR: no teams found'
+            print('ERROR: no teams found')
             return []
 
     @sportsref.decorators.memoize
@@ -75,7 +75,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         team_names = unflattened['team_name']
         if len(team_names) != len(team_ids):
             raise Exception("team names and team IDs don't align")
-        return dict(zip(team_ids, team_names))
+        return dict(list(zip(team_ids, team_names)))
 
     @sportsref.decorators.memoize
     def team_names_to_ids(self):
@@ -83,7 +83,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Dictionary with tean names as keys and team IDs as values.
         """
         d = self.team_ids_to_names()
-        return {v: k for k, v in d.items()}
+        return {v: k for k, v in list(d.items())}
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)

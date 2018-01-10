@@ -6,7 +6,7 @@ import getpass
 import hashlib
 import os
 import re
-import urlparse
+import urllib.parse
 
 import appdirs
 from boltons import funcutils
@@ -121,7 +121,7 @@ def cache_html(func):
     def wrapper(url):
         # hash based on the URL
         file_hash = hashlib.md5()
-        file_hash.update(url)
+        file_hash.update(b + url)
         file_hash = file_hash.hexdigest()
         filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
@@ -155,7 +155,7 @@ def get_class_instance_key(cls, args, kwargs):
     l = [id(cls)]
     for arg in args:
         l.append(id(arg))
-    l.extend((k, id(v)) for k, v in kwargs.items())
+    l.extend((k, id(v)) for k, v in list(kwargs.items()))
     return tuple(sorted(l))
 
 
@@ -192,8 +192,8 @@ def memoize(fun):
             ret = _copy(cache[key])
             return ret
         except TypeError:
-            print('memoization type error in function {} for arguments {}'
-                  .format(fun.__name__, key))
+            print(('memoization type error in function {} for arguments {}'
+                  .format(fun.__name__, key)))
             raise
 
     cache = {}

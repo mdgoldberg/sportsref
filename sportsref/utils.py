@@ -70,8 +70,7 @@ def parse_table(table, flatten=True, footer=False):
 
     # get data
     rows = list(table('tbody tr' if not footer else 'tfoot tr')
-                .not_('.thead, .stat_total, .stat_average')
-                .items())
+                .not_('.thead, .stat_total, .stat_average').items())
     data = [
         [flatten_links(td) if flatten else td.text()
          for td in row.items('th,td')]
@@ -118,7 +117,7 @@ def parse_table(table, flatten=True, footer=False):
             break
 
     # ignore *, +, and other characters used to note things
-    df.replace(re.compile(ur'[\*\+\u2605]', re.U), '', inplace=True)
+    df.replace(re.compile(r'[\*\+\u2605]', re.U), '', inplace=True)
     for col in df.columns:
         if hasattr(df[col], 'str'):
             df[col] = df[col].str.strip()
@@ -172,8 +171,8 @@ def parse_table(table, flatten=True, footer=False):
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
-        m = re.search(ur'([-\.\d]+)\%',
-                      val if isinstance(val, basestring) else str(val), re.U)
+        m = re.search(r'([-\.\d]+)\%',
+                      val if isinstance(val, str) else str(val), re.U)
         try:
             if m:
                 return float(m.group(1)) / 100. if m else val
@@ -182,11 +181,11 @@ def parse_table(table, flatten=True, footer=False):
         except ValueError:
             return val
         # salaries: $ABC,DEF,GHI -> float(ABCDEFGHI)
-        m = re.search(ur'\$[\d,]+',
-                      val if isinstance(val, basestring) else str(val), re.U)
+        m = re.search(r'\$[\d,]+',
+                      val if isinstance(val, str) else str(val), re.U)
         try:
             if m:
-                return float(re.sub(ur'\$|,', '', val))
+                return float(re.sub(r'\$|,', '', val))
         except Exception:
             return val
         # generally try to coerce to float, unless it's an int or bool
@@ -215,8 +214,8 @@ def parse_info_table(table):
     :returns: A dictionary representing the information.
     """
     ret = {}
-    for tr in table('tr').not_('.thead').items():
-        th, td = tr('th, td').items()
+    for tr in list(table('tr').not_('.thead').items()):
+        th, td = list(tr('th, td').items())
         key = th.text().lower()
         key = re.sub(r'\W', '_', key)
         val = sportsref.utils.flatten_links(td)
@@ -230,7 +229,7 @@ def parse_awards_table(table):
     :table: PyQuery object representing the HTML table.
     :returns: A list of the entries in the table, with flattened links.
     """
-    return [flatten_links(tr) for tr in table('tr').items()]
+    return [flatten_links(tr) for tr in list(table('tr').items())]
 
 
 def flatten_links(td, _recurse=False):
@@ -243,7 +242,7 @@ def flatten_links(td, _recurse=False):
 
     # helper function to flatten individual strings/links
     def _flattenC(c):
-        if isinstance(c, basestring):
+        if isinstance(c, str):
             return c.strip('\t\n')
         elif 'href' in c.attrib:
             cID = rel_url_to_id(c.attrib['href'])
@@ -312,7 +311,7 @@ def rel_url_to_id(url):
     for regex in regexes:
         match = re.match(regex, url, re.I)
         if match:
-            return filter(None, match.groups())[0]
+            return [_f for _f in match.groups() if _f][0]
 
     # things we don't want to match but don't want to print a WARNING
     if any(
@@ -323,7 +322,7 @@ def rel_url_to_id(url):
     ):
         return url
 
-    print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
+    print('WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url))
     return url
 
 
@@ -334,4 +333,4 @@ class ExceptionWrapper(object):
         __,  __, self.tb = sys.exc_info()
 
     def re_raise(self):
-        raise self.ee, None, self.tb
+        raise self.ee.with_traceback(self.tb)

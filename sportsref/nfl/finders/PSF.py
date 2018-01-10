@@ -2,7 +2,7 @@ import collections
 import json
 import os
 import time
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 from pyquery import PyQuery as pq
 
@@ -25,7 +25,7 @@ def PlayerSeasonFinder(**kwargs):
         querystring = _kwargs_to_qs(**kwargs)
         url = '{}?{}'.format(PSF_URL, querystring)
         if kwargs.get('verbose', False):
-            print url
+            print(url)
         html = utils.get_html(url)
         doc = pq(html)
         table = doc('table#results')
@@ -33,7 +33,7 @@ def PlayerSeasonFinder(**kwargs):
         if df.empty:
             break
 
-        thisSeason = zip(df.player_id, df.year)
+        thisSeason = list(zip(df.player_id, df.year))
         playerSeasons.extend(thisSeason)
 
         if doc('*:contains("Next Page")'):
@@ -53,11 +53,11 @@ def _kwargs_to_qs(**kwargs):
     inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
-        for name, dct in inpOptDef.iteritems()
+        for name, dct in inpOptDef.items()
     }
 
     # clean up keys and values
-    for k, v in kwargs.items():
+    for k, v in list(kwargs.items()):
         del kwargs[k]
         # bool => 'Y'|'N'
         if isinstance(v, bool):
@@ -71,8 +71,8 @@ def _kwargs_to_qs(**kwargs):
                 lst = list(v)
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
-            elif isinstance(v, basestring):
-                v = map(int, v.split(','))
+            elif isinstance(v, str):
+                v = list(map(int, v.split(',')))
                 kwargs['year_min'] = min(v)
                 kwargs['year_max'] = max(v)
             else:
@@ -80,7 +80,7 @@ def _kwargs_to_qs(**kwargs):
                 kwargs['year_max'] = v
         # pos, position, positions => pos[]
         elif k.lower() in ('pos', 'position', 'positions'):
-            if isinstance(v, basestring):
+            if isinstance(v, str):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
@@ -90,7 +90,7 @@ def _kwargs_to_qs(**kwargs):
             'draft_pos', 'draftpos', 'draftposition', 'draftpositions',
             'draft_position', 'draft_positions'
         ):
-            if isinstance(v, basestring):
+            if isinstance(v, str):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
@@ -100,12 +100,12 @@ def _kwargs_to_qs(**kwargs):
             kwargs[k] = v
 
     # update based on kwargs
-    for k, v in kwargs.iteritems():
+    for k, v in kwargs.items():
         # if overwriting a default, overwrite it (with a list so the
         # opts -> querystring list comp works)
         if k in opts or k in ('pos[]', 'draft_pos[]'):
             # if multiple values separated by commas, split em
-            if isinstance(v, basestring):
+            if isinstance(v, str):
                 v = v.split(',')
             # otherwise, make sure it's a list
             elif not isinstance(v, collections.Iterable):
@@ -119,8 +119,8 @@ def _kwargs_to_qs(**kwargs):
     opts['offset'] = [kwargs.get('offset', 0)]
 
     qs = '&'.join(
-        '{}={}'.format(urllib.quote_plus(name), val)
-        for name, vals in sorted(opts.iteritems()) for val in vals
+        '{}={}'.format(urllib.parse.quote_plus(name), val)
+        for name, vals in sorted(opts.items()) for val in vals
     )
 
     return qs
@@ -147,7 +147,7 @@ def inputs_options_defaults():
     # otherwise, we must regenerate the dict and rewrite it
     else:
 
-        print 'Regenerating PSFConstants file'
+        print('Regenerating PSFConstants file')
 
         html = utils.get_html(PSF_URL)
         doc = pq(html)

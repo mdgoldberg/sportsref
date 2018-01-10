@@ -3,7 +3,7 @@ import future.utils
 
 import datetime
 import re
-import urlparse
+import urllib.parse
 
 import numpy as np
 from pyquery import PyQuery as pq
@@ -40,12 +40,12 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def _subpage_url(self, page, year=None):
         # if no year, return career version
         if year is None:
-            return urlparse.urljoin(
+            return urllib.parse.urljoin(
                 self.mainURL, '{}/{}/'.format(self.player_id, page)
             )
         # otherwise, return URL for a given year
         else:
-            return urlparse.urljoin(
+            return urllib.parse.urljoin(
                 self.mainURL, '{}/{}/{}/'.format(self.player_id, page, year)
             )
 
@@ -68,7 +68,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         try:
             dateargs = re.match(r'(\d{4})\-(\d{2})\-(\d{2})',
                                 birthstring).groups()
-            dateargs = map(int, dateargs)
+            dateargs = list(map(int, dateargs))
             birthDate = datetime.date(*dateargs)
             delta = datetime.date(year=year, month=month, day=day) - birthDate
             age = delta.days / 365.
@@ -93,7 +93,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_doc()
         rawText = doc('div#meta p span[itemprop="height"]').text()
         try:
-            feet, inches = map(int, rawText.split('-'))
+            feet, inches = list(map(int, rawText.split('-')))
             return feet * 12 + inches
         except ValueError:
             return None
@@ -355,7 +355,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """
         doc = self.get_doc()
         table = doc('div#leaderboard_{} table'.format(award_id))
-        return map(int, sportsref.utils.parse_awards_table(table))
+        return list(map(int, sportsref.utils.parse_awards_table(table)))
 
 
 

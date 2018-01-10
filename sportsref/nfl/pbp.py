@@ -27,9 +27,9 @@ def expand_details(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'].values)
+    dicts = list(map(sportsref.nfl.pbp.parse_play_details, df['detail'].values))
     # clean up unmatched details
-    cols = {c for d in dicts if d for c in d.iterkeys()}
+    cols = {c for d in dicts if d for c in d.keys()}
     blankEntry = {c: np.nan for c in cols}
     newDicts = [d if d else blankEntry for d in dicts]
     # get details DataFrame and merge it with original to create main DataFrame
@@ -60,14 +60,14 @@ def parse_play_details(details):
     """
 
     # if input isn't a string, return None
-    if not isinstance(details, basestring):
+    if not isinstance(details, str):
         return None
 
     rushOptRE = r'(?P<rushDir>{})'.format(
-        r'|'.join(RUSH_OPTS.iterkeys())
+        r'|'.join(iter(RUSH_OPTS.keys()))
     )
     passOptRE = r'(?P<passLoc>{})'.format(
-        r'|'.join(PASS_OPTS.iterkeys())
+        r'|'.join(iter(PASS_OPTS.keys()))
     )
 
     playerRE = r"\S{6,8}\d{2}"
@@ -465,7 +465,7 @@ def _clean_features(struct):
     # creating secsElapsed (in entire game) from qtr_time_remain and quarter
     if pd.notnull(struct.get('qtr_time_remain')):
         qtr = struct['quarter']
-        mins, secs = map(int, struct['qtr_time_remain'].split(':'))
+        mins, secs = list(map(int, struct['qtr_time_remain'].split(':')))
         struct['secsElapsed'] = qtr * 900 - mins * 60 - secs
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
@@ -488,7 +488,7 @@ def _loc_to_features(l):
 
     """
     if l:
-        if isinstance(l, basestring):
+        if isinstance(l, str):
             l = l.strip()
             if ' ' in l:
                 r = l.split()

@@ -21,7 +21,7 @@ def GamePlayFinder(**kwargs):
     url = '{}?{}'.format(GPF_URL, querystring)
     # if verbose, print url
     if kwargs.get('verbose', False):
-        print url
+        print(url)
     html = utils.get_html(url)
     doc = pq(html)
 
@@ -31,7 +31,7 @@ def GamePlayFinder(**kwargs):
 
     # parse score column
     if 'score' in plays.columns:
-        oScore, dScore = zip(*plays.score.apply(lambda s: s.split('-')))
+        oScore, dScore = list(zip(*plays.score.apply(lambda s: s.split('-'))))
         plays['teamScore'] = oScore
         plays['oppScore'] = dScore
     # add parsed pbp info
@@ -50,11 +50,11 @@ def _kwargs_to_qs(**kwargs):
     inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
-        for name, dct in inpOptDef.iteritems()
+        for name, dct in inpOptDef.items()
     }
 
     # clean up keys and values
-    for k, v in kwargs.items():
+    for k, v in list(kwargs.items()):
         # pID, playerID => player_id
         if k.lower() in ('pid', 'playerid'):
             del kwargs[k]
@@ -91,8 +91,8 @@ def _kwargs_to_qs(**kwargs):
                 lst = list(v)
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
-            elif isinstance(v, basestring):
-                v = map(int, v.split(','))
+            elif isinstance(v, str):
+                v = list(map(int, v.split(',')))
                 kwargs['year_min'] = min(v)
                 kwargs['year_max'] = max(v)
             else:
@@ -105,8 +105,8 @@ def _kwargs_to_qs(**kwargs):
                 lst = list(v)
                 kwargs['week_num_min'] = min(lst)
                 kwargs['week_num_max'] = max(lst)
-            elif isinstance(v, basestring):
-                v = map(int, v.split(','))
+            elif isinstance(v, str):
+                v = list(map(int, v.split(',')))
                 kwargs['week_num_min'] = min(v)
                 kwargs['week_num_max'] = max(v)
             else:
@@ -115,7 +115,7 @@ def _kwargs_to_qs(**kwargs):
         # if playoff_round defined, then turn on playoff flag
         if k == 'playoff_round':
             kwargs['game_type'] = 'P'
-        if isinstance(v, basestring):
+        if isinstance(v, str):
             v = v.split(',')
         if not isinstance(v, collections.Iterable):
             v = [v]
@@ -126,11 +126,11 @@ def _kwargs_to_qs(**kwargs):
             opts[k] = []
 
     # update based on kwargs
-    for k, v in kwargs.iteritems():
+    for k, v in kwargs.items():
         # if overwriting a default, overwrite it
         if k in opts:
             # if multiple values separated by commas, split em
-            if isinstance(v, basestring):
+            if isinstance(v, str):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
@@ -140,7 +140,7 @@ def _kwargs_to_qs(**kwargs):
     opts['request'] = [1]
 
     qs = '&'.join('{}={}'.format(name, val)
-                  for name, vals in sorted(opts.iteritems()) for val in vals)
+                  for name, vals in sorted(opts.items()) for val in vals)
 
     return qs
 
@@ -167,7 +167,7 @@ def inputs_options_defaults():
     # otherwise, we must regenerate the dict and rewrite it
     else:
 
-        print 'Regenerating GPFConstants file'
+        print('Regenerating GPFConstants file')
 
         html = utils.get_html(GPF_URL)
         doc = pq(html)
