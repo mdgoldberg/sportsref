@@ -25,6 +25,7 @@ def get_html(url):
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
     """
+    global last_request_time
     with throttle_lock:
 
         # sleep until THROTTLE_DELAY secs have passed since last request
@@ -288,7 +289,7 @@ def rel_url_to_id(url):
     coachRegex = r'.*/coaches/(.+?)\.html?'
     stadiumRegex = r'.*/stadiums/(.+?)\.html?'
     refRegex = r'.*/officials/(.+?r)\.html?'
-    collegeRegex = r'.*/schools/(\S+?)/.*'
+    collegeRegex = r'.*/schools/(\S+?)/.*|.*college=([^&]+)'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)'
     leagueRegex = r'.*/leagues/(.*_\d{4}).*'
