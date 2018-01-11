@@ -1,6 +1,7 @@
 from builtins import range
 import ctypes
 import threading
+import multiprocessing
 import re
 import time
 
@@ -15,8 +16,10 @@ import sportsref
 THROTTLE_DELAY = 0.5
 
 # variables used to throttle requests across processes
-throttle_lock = threading.Lock()
-last_request_time = time.time() - 10 * THROTTLE_DELAY
+throttle_thread_lock = threading.Lock()
+throttle_process_lock = multiprocessing.Lock()
+last_request_time = multiprocessing.Value(ctypes.c_longdouble, time.time() - 10 * THROTTLE_DELAY)
+
 
 @sportsref.decorators.cache
 def get_html(url):
@@ -26,18 +29,18 @@ def get_html(url):
     :returns: a string of HTML.
     """
     global last_request_time
-    with throttle_lock:
+    with throttle_process_lock:
+        with throttle_thread_lock:
+            # sleep until THROTTLE_DELAY secs have passed since last request
+            wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
+            if wait_left > 0:
+                time.sleep(wait_left)
 
-        # sleep until THROTTLE_DELAY secs have passed since last request
-        wait_left = THROTTLE_DELAY - (time.time() - last_request_time)
-        if wait_left > 0:
-            time.sleep(wait_left)
+            # make request
+            response = requests.get(url)
 
-        # make request
-        response = requests.get(url)
-
-        # update last request time for throttling
-        last_request_time = time.time()
+            # update last request time for throttling
+            last_request_time.value = time.time()
 
     # raise ValueError on 4xx status code, get rid of comments, and return
     if 400 <= response.status_code < 500:
