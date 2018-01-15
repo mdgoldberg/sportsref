@@ -16,14 +16,14 @@ __all__ = [
 
 class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
-    """Each instance of this class represents an NBA player, uniquely
+    """Each instance of this class represents an CBB player, uniquely
     identified by a player ID. The instance methods give various data available
-    from the player's Basketball Reference player page."""
+    from the player's Sports Reference player page."""
 
     def __init__(self, player_id):
         self.player_id = player_id
-        self.url_base = (sportsref.nba.BASE_URL +
-                         '/players/{0[0]}/{0}').format(self.player_id)
+        self.url_base = (sportsref.cbb.BASE_URL +
+                         '/players/{0}').format(self.player_id)
         self.main_url = self.url_base + '.htm'
 
     def __eq__(self, other):
