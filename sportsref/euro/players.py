@@ -22,7 +22,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, player_id):
         self.player_id = player_id
-        self.url_base = (sportsref.cbb.BASE_URL +
+        self.url_base = (sportsref.euro.BASE_URL +
                          '/players/{0}').format(self.player_id)
         self.main_url = self.url_base + '.html'
 
