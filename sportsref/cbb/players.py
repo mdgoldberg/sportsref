@@ -23,8 +23,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def __init__(self, player_id):
         self.player_id = player_id
         self.url_base = (sportsref.cbb.BASE_URL +
-                         '/cbb/players/{0}').format(self.player_id)
-        self.main_url = self.url_base + '.htm'
+                         '/players/{0}').format(self.player_id)
+        self.main_url = self.url_base + '.html'
 
     def __eq__(self, other):
         return self.player_id == other.player_id
@@ -105,29 +105,6 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         except ValueError:
             return None
 
-    @sportsref.decorators.memoize
-    def hand(self):
-        """Returns the player's handedness.
-        :returns: 'L' for left-handed, 'R' for right-handed.
-        """
-        doc = self.get_main_doc()
-        hand = re.search(r'Shoots:\s*(L|R)', doc.text()).group(1)
-        return hand
-
-    @sportsref.decorators.memoize
-    def draft_pick(self):
-        """Returns when in the draft the player was picked.
-        :returns: TODO
-        """
-        raise Exception('not yet implemented - nba.Player.draft_pick')
-
-    @sportsref.decorators.memoize
-    def draft_year(self):
-        """Returns the year the player was selected (or undrafted).
-        :returns: TODO
-        """
-        raise Exception('not yet implemented - nba.Player.draft_year')
-
     @sportsref.decorators.kind_rpb(include_type=True)
     def _get_stats_table(self, table_id, kind='R', summary=False):
         """Gets a stats table from the player page; helper function that does
@@ -139,17 +116,20 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame of stats.
         """
         doc = self.get_main_doc()
+        #print(doc)
         table_id = 'table#{}{}'.format(
             'playoffs_' if kind == 'P' else '', table_id)
+
+        print(table_id)
         table = doc(table_id)
-        df = sportsref.utils.parse_table(table, flatten=(not summary),
-                                         footer=summary)
+        print(doc(table_id))
+        df = sportsref.utils.parse_table(table, flatten=(not summary), footer=summary)
         return df
 
     @sportsref.decorators.memoize
     def stats_per_game(self, kind='R', summary=False):
         """Returns a DataFrame of per-game box score stats."""
-        return self._get_stats_table('per_game', kind=kind, summary=summary)
+        return self._get_stats_table('players_per_game', kind=kind, summary=summary)
 
     @sportsref.decorators.memoize
     def stats_totals(self, kind='R', summary=False):

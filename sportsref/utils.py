@@ -54,7 +54,8 @@ def get_html(url):
 def parse_table(table, flatten=True, footer=False):
     """Parses a table from SR into a pandas dataframe.
 
-    :param table: the PyQuery object representing the HTML table
+    :param table: the PyQuery <table class="row_summable sortable stats_table" id="per_game" data-cols-to-freeze="1"><caption>Per Game Table</caption>
+object representing the HTML table
     :param flatten: if True, flattens relative URLs to IDs. otherwise, leaves
         all fields as text without cleaning.
     :param footer: If True, returns the summary/footer of the page. Recommended
