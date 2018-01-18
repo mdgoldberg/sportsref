@@ -120,9 +120,9 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         table_id = 'table#{}{}'.format(
             'playoffs_' if kind == 'P' else '', table_id)
 
-        print(table_id)
+        #print(table_id)
         table = doc(table_id)
-        print(doc(table_id))
+        #print(doc(table_id))
         df = sportsref.utils.parse_table(table, flatten=(not summary), footer=summary)
         return df
 
