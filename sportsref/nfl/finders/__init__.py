@@ -1,8 +1,9 @@
-import GPF
-import PSF
+from __future__ import absolute_import
+from . import GPF
+from . import PSF
 
-from PSF import PlayerSeasonFinder
-from GPF import GamePlayFinder
+from .PSF import PlayerSeasonFinder
+from .GPF import GamePlayFinder
 
 # modules/variables to expose
 __all__ = [

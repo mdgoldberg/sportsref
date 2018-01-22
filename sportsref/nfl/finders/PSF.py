@@ -1,3 +1,4 @@
+from __future__ import print_function
 import collections
 import json
 import os
@@ -25,7 +26,7 @@ def PlayerSeasonFinder(**kwargs):
         querystring = _kwargs_to_qs(**kwargs)
         url = '{}?{}'.format(PSF_URL, querystring)
         if kwargs.get('verbose', False):
-            print url
+            print(url)
         html = utils.get_html(url)
         doc = pq(html)
         table = doc('table#results')
@@ -147,7 +148,7 @@ def inputs_options_defaults():
     # otherwise, we must regenerate the dict and rewrite it
     else:
 
-        print 'Regenerating PSFConstants file'
+        print('Regenerating PSFConstants file')
 
         html = utils.get_html(PSF_URL)
         doc = pq(html)

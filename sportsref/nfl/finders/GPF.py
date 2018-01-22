@@ -1,3 +1,4 @@
+from __future__ import print_function
 import collections
 import json
 import os
@@ -21,7 +22,7 @@ def GamePlayFinder(**kwargs):
     url = '{}?{}'.format(GPF_URL, querystring)
     # if verbose, print url
     if kwargs.get('verbose', False):
-        print url
+        print(url)
     html = utils.get_html(url)
     doc = pq(html)
 
@@ -167,7 +168,7 @@ def inputs_options_defaults():
     # otherwise, we must regenerate the dict and rewrite it
     else:
 
-        print 'Regenerating GPFConstants file'
+        print('Regenerating GPFConstants file')
 
         html = utils.get_html(GPF_URL)
         doc = pq(html)

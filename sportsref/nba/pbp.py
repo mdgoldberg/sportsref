@@ -1,3 +1,4 @@
+from __future__ import print_function
 from builtins import enumerate, int, list, range, zip
 
 import operator

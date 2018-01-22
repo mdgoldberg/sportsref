@@ -1,3 +1,4 @@
+from __future__ import print_function
 import urlparse
 
 import future
@@ -61,7 +62,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         if not df.empty:
             return df.index.tolist()
         else:
-            print 'ERROR: no teams found'
+            print('ERROR: no teams found')
             return []
 
     @sportsref.decorators.memoize

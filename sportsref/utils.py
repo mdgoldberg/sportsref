@@ -1,3 +1,4 @@
+from __future__ import print_function
 from builtins import range
 import ctypes
 import threading
@@ -327,7 +328,7 @@ def rel_url_to_id(url):
     ):
         return url
 
-    print 'WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url)
+    print('WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url))
     return url
 
 
