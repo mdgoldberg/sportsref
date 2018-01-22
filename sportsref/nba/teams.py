@@ -58,7 +58,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#roster')
         df = sportsref.utils.parse_table(table)
-        df['years_experience'] = df['years_experience'].replace('R', 0).astype(int)
+        df['years_experience'] = (df['years_experience']
+                                  .replace('R', 0).replace('', np.nan).astype(float))
         return df
 
     # TODO: kind_rpb

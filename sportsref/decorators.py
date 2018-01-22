@@ -1,6 +1,7 @@
 from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
+
 import codecs
 import copy
 import datetime
@@ -10,12 +11,10 @@ import hashlib
 import os
 import re
 import time
-import urllib.parse
 
 import appdirs
 from boltons import funcutils
 import mementos
-import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
@@ -65,7 +64,6 @@ def _days_valid_pfr(url):
     return 2
 
 
-
 def _days_valid_bkref(url):
     # boxscores are static, but refresh quarterly to be sure
     if 'boxscore' in url:
@@ -82,9 +80,9 @@ def _days_valid_bkref(url):
         cur_season = today.year - (today <= end_of_season) + 1
         if year < cur_season:
             return 90
-    # if it's the offseason, refresh cache twice a month
+    # if it's the offseason, refresh cache once a month
     if end_of_season < today < start_of_season:
-        return 15
+        return 30
     # otherwise, refresh every 2 days
     return 2
 
@@ -107,7 +105,8 @@ def cache(func):
     def wrapper(url):
         # hash based on the URL
         file_hash = hashlib.md5()
-        file_hash.update(url)
+        encoded_url = url.encode(errors='replace')
+        file_hash.update(encoded_url)
         file_hash = file_hash.hexdigest()
         filename = '{}/{}'.format(CACHE_DIR, file_hash)
 
