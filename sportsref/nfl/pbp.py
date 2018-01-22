@@ -1,3 +1,5 @@
+from builtins import map
+from past.builtins import basestring
 import copy
 import re
 
@@ -27,9 +29,9 @@ def expand_details(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'].values)
+    dicts = [sportsref.nfl.pbp.parse_play_details(detail) for detail in df['detail'].values)]
     # clean up unmatched details
-    cols = {c for d in dicts if d for c in d.iterkeys()}
+    cols = {c for d in dicts if d for c in d.keys()}
     blankEntry = {c: np.nan for c in cols}
     newDicts = [d if d else blankEntry for d in dicts]
     # get details DataFrame and merge it with original to create main DataFrame
@@ -64,10 +66,10 @@ def parse_play_details(details):
         return None
 
     rushOptRE = r'(?P<rushDir>{})'.format(
-        r'|'.join(RUSH_OPTS.iterkeys())
+        r'|'.join(RUSH_OPTS.keys())
     )
     passOptRE = r'(?P<passLoc>{})'.format(
-        r'|'.join(PASS_OPTS.iterkeys())
+        r'|'.join(PASS_OPTS.keys())
     )
 
     playerRE = r"\S{6,8}\d{2}"

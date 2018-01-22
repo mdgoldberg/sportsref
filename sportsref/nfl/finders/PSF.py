@@ -1,9 +1,13 @@
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map, zip
+from past.builtins import basestring
 import collections
 import json
 import os
 import time
-import urllib
+import urllib.parse
 
 from pyquery import PyQuery as pq
 
@@ -34,7 +38,7 @@ def PlayerSeasonFinder(**kwargs):
         if df.empty:
             break
 
-        thisSeason = zip(df.player_id, df.year)
+        thisSeason = list(zip(df.player_id, df.year))
         playerSeasons.extend(thisSeason)
 
         if doc('*:contains("Next Page")'):
@@ -54,7 +58,7 @@ def _kwargs_to_qs(**kwargs):
     inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
-        for name, dct in inpOptDef.iteritems()
+        for name, dct in inpOptDef.items()
     }
 
     # clean up keys and values
@@ -73,7 +77,7 @@ def _kwargs_to_qs(**kwargs):
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
             elif isinstance(v, basestring):
-                v = map(int, v.split(','))
+                v = list(map(int, v.split(',')))
                 kwargs['year_min'] = min(v)
                 kwargs['year_max'] = max(v)
             else:
@@ -101,7 +105,7 @@ def _kwargs_to_qs(**kwargs):
             kwargs[k] = v
 
     # update based on kwargs
-    for k, v in kwargs.iteritems():
+    for k, v in kwargs.items():
         # if overwriting a default, overwrite it (with a list so the
         # opts -> querystring list comp works)
         if k in opts or k in ('pos[]', 'draft_pos[]'):
@@ -120,8 +124,8 @@ def _kwargs_to_qs(**kwargs):
     opts['offset'] = [kwargs.get('offset', 0)]
 
     qs = '&'.join(
-        '{}={}'.format(urllib.quote_plus(name), val)
-        for name, vals in sorted(opts.iteritems()) for val in vals
+        '{}={}'.format(urllib.parse.quote_plus(name), val)
+        for name, vals in sorted(opts.items()) for val in vals
     )
 
     return qs

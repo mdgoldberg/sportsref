@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import map, range, zip
 import future
 import future.utils
 
@@ -153,7 +154,7 @@ class BoxScore(
         # clean data and add features
         for i, (tm, df) in enumerate(zip(tms, dfs)):
             no_time = df['mp'] == 0
-            stat_cols = [col for col, dtype in df.dtypes.iteritems()
+            stat_cols = [col for col, dtype in df.dtypes.items()
                          if dtype != 'object']
             df.loc[no_time, stat_cols] = 0
             df['team_id'] = tm

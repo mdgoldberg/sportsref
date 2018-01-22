@@ -20,7 +20,7 @@ paramStr = '\n'.join(
         name,
         ','.join(dct['value'])
     )
-    for name, dct in sorted(IOD.iteritems()))
+    for name, dct in sorted(IOD.items()))
 optsStr = '\n'.join(
     '{}: {}'.format(
         name,
@@ -32,7 +32,7 @@ optsStr = '\n'.join(
         ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
         ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
     )
-    for name, dct in sorted(IOD.iteritems()))
+    for name, dct in sorted(IOD.items()))
 
 
 PSF.PlayerSeasonFinder.__doc__ = """
@@ -65,7 +65,7 @@ paramStr = '\n'.join(
         name,
         ','.join(dct['value'])
     )
-    for name, dct in sorted(IOD.iteritems())
+    for name, dct in sorted(IOD.items())
 )
 
 optsStr = '\n'.join(
@@ -79,7 +79,7 @@ optsStr = '\n'.join(
         ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
         ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
     )
-    for name, dct in sorted(IOD.iteritems())
+    for name, dct in sorted(IOD.items())
 )
 
 GPF.GamePlayFinder.__doc__ = """

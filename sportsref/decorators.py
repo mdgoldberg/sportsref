@@ -1,4 +1,6 @@
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
 import codecs
 import copy
 import datetime
@@ -8,7 +10,7 @@ import hashlib
 import os
 import re
 import time
-import urlparse
+import urllib.parse
 
 import appdirs
 from boltons import funcutils
