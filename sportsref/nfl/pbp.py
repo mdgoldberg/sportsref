@@ -29,7 +29,7 @@ def expand_details(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = [sportsref.nfl.pbp.parse_play_details(detail) for detail in df['detail'].values)]
+    dicts = [sportsref.nfl.pbp.parse_play_details(detail) for detail in df['detail'].values]
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.keys()}
     blankEntry = {c: np.nan for c in cols}
@@ -480,7 +480,7 @@ def _clean_features(struct):
     return pd.Series(struct)
 
 
-def _loc_to_features(l):
+def _loc_to_features(loc):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
 
@@ -489,16 +489,16 @@ def _loc_to_features(l):
     (np.nan) when necessary.
 
     """
-    if l:
-        if isinstance(l, basestring):
-            l = l.strip()
-            if ' ' in l:
-                r = l.split()
+    if loc:
+        if isinstance(loc, basestring):
+            loc = loc.strip()
+            if ' ' in loc:
+                r = loc.split()
                 r[0] = r[0].lower()
                 r[1] = int(r[1])
             else:
-                r = (np.nan, int(l))
-        elif isinstance(l, float):
+                r = (np.nan, int(loc))
+        elif isinstance(loc, float):
             return (np.nan, 50)
     else:
         r = (np.nan, np.nan)

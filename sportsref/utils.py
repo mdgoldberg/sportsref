@@ -1,12 +1,11 @@
 from __future__ import print_function
 from __future__ import division
 from builtins import object, str
-from builtins import basestring
+from past.builtins import basestring
 import ctypes
 import threading
 import multiprocessing
 import re
-import sys
 import time
 
 import pandas as pd
@@ -163,7 +162,6 @@ def parse_table(table, flatten=True, footer=False):
     if 'game_location' in df.columns and flatten:
         df['game_location'] = df['game_location'].isnull()
         df.rename(columns={'game_location': 'is_home'}, inplace=True)
-
 
     # mp: (min:sec) -> float(min + sec / 60), notes -> NaN, new column
     if 'mp' in df.columns and df.dtypes['mp'] == object and flatten:
@@ -331,13 +329,3 @@ def rel_url_to_id(url):
 
     print('WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url))
     return url
-
-
-class ExceptionWrapper(object):
-
-    def __init__(self, ee):
-        self.ee = ee
-        __,  __, self.tb = sys.exc_info()
-
-    def re_raise(self):
-        raise self.ee, None, self.tb
