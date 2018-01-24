@@ -51,7 +51,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def name(self):
         """Returns the name of the player as a string."""
         doc = self.get_main_doc()
-        return doc('h1[itemprop="name"]').text()
+        return doc('h1[itemprop="name"]').text().replace(' Europe Stats', '')
 
     @sportsref.decorators.memoize
     def age(self, year, month=2, day=1):
@@ -77,7 +77,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """TODO: Docstring for position.
         :returns: TODO
         """
-        raise Exception('not yet implemented - nba.Player.position')
+        raise Exception('not yet implemented - euro.Player.position')
 
     @sportsref.decorators.memoize
     def height(self):
@@ -137,6 +137,13 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def stats_per36(self, kind='R', summary=False):
         """Returns a DataFrame of per-36-minutes stats."""
         return self._get_stats_table('per_minute', kind=kind, summary=summary)
+
+    @sportsref.decorators.memoize
+    def stats_advanced(self, kind='R', summary=False):
+        """Returns a dataframe of advanced stats.
+        :returns: TODO (would need to pull from team page, not housed in player page)
+        """
+        raise Exception('not yet implemented - euro.stats_advanced')
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
