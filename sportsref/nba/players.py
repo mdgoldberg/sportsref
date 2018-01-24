@@ -139,6 +139,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame of stats.
         """
         doc = self.get_main_doc()
+        #print(doc)
         table_id = 'table#{}{}'.format(
             'playoffs_' if kind == 'P' else '', table_id)
         #print(table_id)

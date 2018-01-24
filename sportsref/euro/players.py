@@ -24,7 +24,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         self.player_id = player_id
         self.url_base = (sportsref.euro.BASE_URL +
                          '/players/{0}').format(self.player_id)
-        self.main_url = self.url_base + '.html'
+        self.main_url = self.url_base + '.htm'
 
     def __eq__(self, other):
         return self.player_id == other.player_id
@@ -108,28 +108,25 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     @sportsref.decorators.kind_rpb(include_type=True)
     def _get_stats_table(self, table_id, kind='R', summary=False):
         """Gets a stats table from the player page; helper function that does
-        the work for per-game, per-100-poss, etc. stats.
+        the work for per-game, per-36-min, etc. stats.
 
         :table_id: the ID of the HTML table.
-        :kind: specifies regular season, playoffs, or both. One of 'R', 'P',
-            'B'. Defaults to 'R'.
+        :kind: specifies regular season, playoffs. One of 'R', 'P'.
+          Defaults to 'R'.
         :returns: A DataFrame of stats.
         """
         doc = self.get_main_doc()
-        #print(doc)
         table_id = 'table#{}{}'.format(
-            'playoffs_' if kind == 'P' else '', table_id)
+            table_id, 'ALL1' if kind == 'P' else 'ALL0')
 
-        #print(table_id)
         table = doc(table_id)
-        #print(doc(table_id))
         df = sportsref.utils.parse_table(table, flatten=(not summary), footer=summary)
         return df
 
     @sportsref.decorators.memoize
     def stats_per_game(self, kind='R', summary=False):
         """Returns a DataFrame of per-game box score stats."""
-        return self._get_stats_table('players_per_game', kind=kind, summary=summary)
+        return self._get_stats_table('per_game', kind=kind, summary=summary)
 
     @sportsref.decorators.memoize
     def stats_totals(self, kind='R', summary=False):
@@ -140,27 +137,6 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def stats_per36(self, kind='R', summary=False):
         """Returns a DataFrame of per-36-minutes stats."""
         return self._get_stats_table('per_minute', kind=kind, summary=summary)
-
-    @sportsref.decorators.memoize
-    def stats_per100(self, kind='R', summary=False):
-        """Returns a DataFrame of per-100-possession stats."""
-        return self._get_stats_table('per_poss', kind=kind, summary=summary)
-
-    @sportsref.decorators.memoize
-    def stats_advanced(self, kind='R', summary=False):
-        """Returns a DataFrame of advanced stats."""
-        return self._get_stats_table('advanced', kind=kind, summary=summary)
-
-    @sportsref.decorators.memoize
-    def stats_shooting(self, kind='R', summary=False):
-        """Returns a DataFrame of shooting stats."""
-        return self._get_stats_table('shooting', kind=kind, summary=summary)
-
-    @sportsref.decorators.memoize
-    def stats_pbp(self, kind='R', summary=False):
-        """Returns a DataFrame of play-by-play stats."""
-        return self._get_stats_table('advanced_pbp', kind=kind,
-                                     summary=summary)
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
