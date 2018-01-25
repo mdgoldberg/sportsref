@@ -3,6 +3,7 @@ import future.utils
 
 import datetime
 import re
+import requests
 
 import numpy as np
 from pyquery import PyQuery as pq
@@ -41,6 +42,10 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     @sportsref.decorators.memoize
     def get_main_doc(self):
         return pq(sportsref.utils.get_html(self.main_url))
+
+    @sportsref.decorators.memoize
+    def get_doc_url(self, url):
+        return pq(sportsref.utils.get_html(url))  
 
     @sportsref.decorators.memoize
     def get_sub_doc(self, rel_url):
@@ -147,7 +152,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
-    def gamelog_basic(self, year, kind='R'):
+    def gamelog_basic(self, year, league_id):
         """Returns a table of a player's basic game-by-game stats for a season.
 
         :param year: The year representing the desired season.
@@ -157,27 +162,18 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             game of the season.
         :rtype: pd.DataFrame
         """
-        doc = self.get_sub_doc('gamelog/{}'.format(year))
-        table = (doc('table#pgl_basic_playoffs')
-                 if kind == 'P' else doc('table#pgl_basic'))
-        df = sportsref.utils.parse_table(table)
-        return df
 
-    @sportsref.decorators.memoize
-    @sportsref.decorators.kind_rpb(include_type=True)
-    def gamelog_advanced(self, year, kind='R'):
-        """Returns a table of a player's advanced game-by-game stats for a
-        season.
+        params = { 'player_id' : self.player_id,
+                   'year_id' : year,
+                   'lg_id' : league_id
+                  }
 
-        :param year: The year representing the desired season.
-        :param kind: specifies regular season, playoffs, or both. One of 'R',
-            'P', 'B'. Defaults to 'R'.
-        :returns: A DataFrame of the player's advanced stats from each game of
-            the season.
-        :rtype: pd.DataFrame
-        """
-        doc = self.get_sub_doc('gamelog-advanced/{}'.format(year))
-        table = (doc('table#pgl_advanced_playoffs')
-                 if kind == 'P' else doc('table#pgl_advanced'))
-        df = sportsref.utils.parse_table(table)
-        return df
+        url = sportsref.euro.BASE_URL + '/pgl_euro.cgi
+        print(url)
+        doc = self.get_doc_url(url)
+
+        return doc
+        #table = (doc('table#pgl_basic_playoffs')
+        #         if kind == 'P' else doc('table#pgl_basic'))
+        #df = sportsref.utils.parse_table(table)
+        #return df
