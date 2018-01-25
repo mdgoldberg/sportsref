@@ -168,7 +168,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
                    'lg_id' : league_id
                   }
 
-        url = sportsref.euro.BASE_URL + '/pgl_euro.cgi
+        url = sportsref.euro.BASE_URL + '/pgl_euro.cgi'
         print(url)
         doc = self.get_doc_url(url)
 
