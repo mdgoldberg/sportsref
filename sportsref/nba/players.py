@@ -21,6 +21,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     from the player's Basketball Reference player page."""
 
     def __init__(self, player_id):
+        print('init called')
         self.player_id = player_id
         self.url_base = (sportsref.nba.BASE_URL +
                          '/players/{0[0]}/{0}').format(self.player_id)
@@ -40,6 +41,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
+        print('GET_MAIN_DOC called')
         return pq(sportsref.utils.get_html(self.main_url))
 
     @sportsref.decorators.memoize
@@ -200,6 +202,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_sub_doc('gamelog/{}'.format(year))
         table = (doc('table#pgl_basic_playoffs')
                  if kind == 'P' else doc('table#pgl_basic'))
+        print('STARTED PARSING')
         df = sportsref.utils.parse_table(table)
         return df
 

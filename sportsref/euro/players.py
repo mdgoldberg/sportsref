@@ -44,13 +44,26 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return pq(sportsref.utils.get_html(self.main_url))
 
     @sportsref.decorators.memoize
-    def get_doc_url(self, url):
+    def get_gamelog_doc(self, year, league):
+        url = '{}/pgl_euro.cgi?player_id={}&year_id={}&lg_id={}'.format(sportsref.euro.BASE_URL, self.player_id, year, league)
         return pq(sportsref.utils.get_html(url))  
 
     @sportsref.decorators.memoize
     def get_sub_doc(self, rel_url):
         url = '{}/{}'.format(self.url_base, rel_url)
         return pq(sportsref.utils.get_html(url))
+
+    @sportsref.decorators.memoize
+    def available_gamelogs(self):
+
+        tup_list = []
+        doc = self.get_main_doc()
+        for li in doc('#bottom_nav_container')('ul')('li').items():
+            href = li('a').attr('href')
+            if href and 'pgl_euro.cgi?' in href:
+                tup_list.append((int(re.search(r'year_id=(.*?)&', href).group(1)), re.search(r'lg_id=(.*?)$', href).group(1)))
+
+        return tup_list 
 
     @sportsref.decorators.memoize
     def name(self):
@@ -151,8 +164,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         raise Exception('not yet implemented - euro.stats_advanced')
 
     @sportsref.decorators.memoize
-    @sportsref.decorators.kind_rpb(include_type=True)
-    def gamelog_basic(self, year, league_id):
+    @sportsref.decorators.kind_rpb(include_type=False)
+    def gamelog_basic(self, year, league):
         """Returns a table of a player's basic game-by-game stats for a season.
 
         :param year: The year representing the desired season.
@@ -163,17 +176,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :rtype: pd.DataFrame
         """
 
-        params = { 'player_id' : self.player_id,
-                   'year_id' : year,
-                   'lg_id' : league_id
-                  }
+        doc = self.get_gamelog_doc(year, league)
 
-        url = sportsref.euro.BASE_URL + '/pgl_euro.cgi'
-        print(url)
-        doc = self.get_doc_url(url)
-
-        return doc
-        #table = (doc('table#pgl_basic_playoffs')
-        #         if kind == 'P' else doc('table#pgl_basic'))
-        #df = sportsref.utils.parse_table(table)
-        #return df
+        table = doc('table#pgl_basic')
+        df = sportsref.utils.parse_table(table)
+        return df

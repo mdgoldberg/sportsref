@@ -26,7 +26,10 @@ def get_html(url):
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
     """
+    print('GET_HTML called')
+    
     with throttle_lock:
+        print('inside_lock')
 
         # sleep until THROTTLE_DELAY secs have passed since last request
         wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
@@ -34,6 +37,8 @@ def get_html(url):
             time.sleep(wait_left)
 
         # make request
+        print('REQUEST MADE')
+        print('URL: ' + url)
         response = requests.get(url)
 
         # update last request time for throttling
@@ -45,6 +50,8 @@ def get_html(url):
             'Status Code {} received fetching URL "{}"'
             .format(response.status_code, url)
         )
+
+    print('HTML part')
     html = response.text
     html = html.replace('<!--', '').replace('-->', '')
 
