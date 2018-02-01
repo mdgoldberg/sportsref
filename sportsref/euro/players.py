@@ -137,10 +137,10 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :level: specifies Club play (C), Eurocup/Euroleague play (E), or Both (B) - defaults to B
         :returns: A DataFrame of stats.
         """
-        doc = self.get_main_doc(level=level)    
+        doc = self.get_main_doc(level=level)
         if level == 'E': 
             table_id = 'table#{}EUR0'.format(table_id)
-        if level =='C':
+        elif level =='C':
             table_id = 'table#{}{}'.format(table_id, 'CLU1' if kind == 'P' else 'CLU0')   
         else:
             table_id = 'table#{}{}'.format(table_id, 'ALL1' if kind == 'P' else 'ALL0')
