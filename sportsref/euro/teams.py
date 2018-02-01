@@ -45,7 +45,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A string corresponding to the team's full name.
         """
         doc = self.get_main_doc()
-        name = doc('div#info h1[itemprop="name"]').text()
+        name = doc('title').text().replace(' Seasons | Basketball-Reference.com', '')
         return name
 
     @sportsref.decorators.memoize
