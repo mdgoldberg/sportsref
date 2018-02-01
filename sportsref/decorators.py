@@ -178,18 +178,11 @@ def memoize(fun):
     @funcutils.wraps(fun)
     def wrapper(*args, **kwargs):
 
-        print('CACHE BEFORE')
-        print(cache)
-
         hash_args = tuple(args)
         hash_kwargs = frozenset(sorted(kwargs.items()))
         key = (hash_args, hash_kwargs)
 
-        print('KEY in wrapper')
-        print(key)
-
         def _copy(v):
-            print('COPY')
             if isinstance(v, pq):
                 return v.clone()
             else:
@@ -197,11 +190,8 @@ def memoize(fun):
 
         try:
             ret = _copy(cache[key])
-            print('RET worked')
-            print(ret)
             return ret
         except KeyError:
-            print('KEYERROR')
             cache[key] = fun(*args, **kwargs)
             ret = _copy(cache[key])
             return ret

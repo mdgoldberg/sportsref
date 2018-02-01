@@ -138,12 +138,10 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame of stats.
         """
         doc = self.get_main_doc(level=level)
-        if level == 'E':
             table_id = 'table#{}EUR0'.format(table_id)
         else:
             table_id = 'table#{}{}'.format(table_id, 'ALL1' if kind == 'P' else 'ALL0')
 
-        print(table_id)
         table = doc(table_id)
         df = sportsref.utils.parse_table(table, flatten=(not summary), footer=summary)
         return df
