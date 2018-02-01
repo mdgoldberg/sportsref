@@ -10,7 +10,7 @@ import sportsref
 class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, team_id):
-        self.team_id = team_id.upper()
+        self.team_id = team_id
 
     def __eq__(self, other):
         return (self.team_id == other.team_id)
@@ -20,13 +20,13 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def team_year_url(self, yr_str):
-        return (sportsref.nba.BASE_URL +
+        return (sportsref.euro.BASE_URL +
                 '/teams/{}/{}.htm'.format(self.team_id, yr_str))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.team_id)
-        teamURL = sportsref.nba.BASE_URL + relURL
+        teamURL = sportsref.euro.BASE_URL + relURL
         mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
