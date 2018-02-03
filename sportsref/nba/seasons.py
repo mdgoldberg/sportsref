@@ -131,7 +131,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
         if is_past_season:
             team_per_game = self.team_stats_per_game()
-            n_reg_games = team_per_game.g.sum() // 2
+            n_reg_games = int(team_per_game.g.sum() // 2)
         else:
             n_reg_games = len(df)
 
