@@ -198,7 +198,7 @@ def memoize(fun):
         try:
             ret = _copy(cache[key])
             print('RET worked')
-            print(ret)
+            #print(ret)
             return ret
         except KeyError:
             print('KEYERROR')

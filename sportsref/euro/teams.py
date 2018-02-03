@@ -70,6 +70,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def get_stats_table(self, table_id, year, level='B'):
         doc = self.get_year_doc(year, level=level)
         table = doc('table#{}'.format(table_id))
+        print(table_id)
         df = sportsref.utils.parse_table(table)
 
         return df
