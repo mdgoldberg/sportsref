@@ -1,6 +1,8 @@
-# sportsref
-Scraping sports data from sports-reference.com and related sites
+# Develop Todo:
 
-NOTE: Very much still a WIP. Feel free to use, just bear in mind that the API
-is subject to change. Documentation is on the to-do list, once the API is a bit
-more rigid.
+### Figure out why teams/all_teams_opp_stats table isn't parsing
+### comment teams -> merge to master
+
+### euro/seasons
+
+
