@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 from scipy.stats import norm
 
@@ -22,9 +23,9 @@ def winProb(line, margin, secsElapsed, expPts):
     baseMean = -line
     baseStd = 13.46
     expMargin = margin + expPts
-    minRemain = 60. - secsElapsed / 60. + 0.00001
-    adjMean = baseMean * (minRemain / 60.)
-    adjStd = baseStd / np.sqrt(60. / minRemain)
+    minRemain = 60 - secsElapsed / 60 + 0.00001
+    adjMean = baseMean * minRemain / 60
+    adjStd = baseStd / np.sqrt(60 / minRemain)
     probWin = 1. - norm.cdf(-expMargin + 0.5, adjMean, adjStd)
     probTie = (norm.cdf(-expMargin + 0.5, adjMean, adjStd) -
                norm.cdf(-expMargin - 0.5, adjMean, adjStd))

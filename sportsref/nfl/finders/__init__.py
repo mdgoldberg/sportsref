@@ -1,8 +1,9 @@
-import GPF
-import PSF
+from __future__ import absolute_import
+from . import GPF
+from . import PSF
 
-from PSF import PlayerSeasonFinder
-from GPF import GamePlayFinder
+from .PSF import PlayerSeasonFinder
+from .GPF import GamePlayFinder
 
 # modules/variables to expose
 __all__ = [
@@ -19,7 +20,7 @@ paramStr = '\n'.join(
         name,
         ','.join(dct['value'])
     )
-    for name, dct in sorted(IOD.iteritems()))
+    for name, dct in sorted(IOD.items()))
 optsStr = '\n'.join(
     '{}: {}'.format(
         name,
@@ -31,7 +32,7 @@ optsStr = '\n'.join(
         ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
         ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
     )
-    for name, dct in sorted(IOD.iteritems()))
+    for name, dct in sorted(IOD.items()))
 
 
 PSF.PlayerSeasonFinder.__doc__ = """
@@ -64,7 +65,7 @@ paramStr = '\n'.join(
         name,
         ','.join(dct['value'])
     )
-    for name, dct in sorted(IOD.iteritems())
+    for name, dct in sorted(IOD.items())
 )
 
 optsStr = '\n'.join(
@@ -78,7 +79,7 @@ optsStr = '\n'.join(
         ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
         ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
     )
-    for name, dct in sorted(IOD.iteritems())
+    for name, dct in sorted(IOD.items())
 )
 
 GPF.GamePlayFinder.__doc__ = """
