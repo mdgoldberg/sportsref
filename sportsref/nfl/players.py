@@ -1,9 +1,13 @@
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
 import future
 import future.utils
 
 import datetime
 import re
-import urlparse
+import urllib.parse
 
 import numpy as np
 from pyquery import PyQuery as pq
@@ -40,12 +44,12 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def _subpage_url(self, page, year=None):
         # if no year, return career version
         if year is None:
-            return urlparse.urljoin(
+            return urllib.parse.urljoin(
                 self.mainURL, '{}/{}/'.format(self.player_id, page)
             )
         # otherwise, return URL for a given year
         else:
-            return urlparse.urljoin(
+            return urllib.parse.urljoin(
                 self.mainURL, '{}/{}/{}/'.format(self.player_id, page, year)
             )
 
@@ -71,7 +75,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             dateargs = map(int, dateargs)
             birthDate = datetime.date(*dateargs)
             delta = datetime.date(year=year, month=month, day=day) - birthDate
-            age = delta.days / 365.
+            age = delta.days / 365
             return age
         except Exception:
             return None
@@ -355,7 +359,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """
         doc = self.get_doc()
         table = doc('div#leaderboard_{} table'.format(award_id))
-        return map(int, sportsref.utils.parse_awards_table(table))
+        return list(map(int, sportsref.utils.parse_awards_table(table)))
 
 
 
