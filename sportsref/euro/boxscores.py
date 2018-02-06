@@ -60,7 +60,7 @@ class BoxScore(
         return days[wd]
 
     @sportsref.decorators.memoize
-    def get_id(self, home):
+    def get_raw_id(self, home):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
@@ -83,7 +83,8 @@ class BoxScore(
         :returns: 3-character string representing home team's ID.
         """
 
-        return self.get_id(True)
+        l = self.get_raw_id(True)
+        return l.split('/')[2]
 
     @sportsref.decorators.memoize
     def away(self):
@@ -91,7 +92,8 @@ class BoxScore(
         :returns: 3-character string representing away team's ID.
         """
         
-        return self.get_id(False)
+        l = self.get_raw_id(False)
+        return l.split('/')[2]
 
     @sportsref.decorators.memoize
     def home_score(self):
@@ -128,43 +130,23 @@ class BoxScore(
 
         :returns: An int representing the year of the season.
         """
-        d = self.date()
-        if d.month >= 9:
-            return d.year + 1
-        else:
-            return d.year
-
-    def _get_player_stats(self, table_id_fmt):
-        """Returns a DataFrame of player stats from the game (either basic or
-        advanced, depending on the argument.
-
-        :param table_id_fmt: Format string for str.format with a placeholder
-            for the team ID (e.g. 'box_{}_basic')
-        :returns: DataFrame of player stats
-        """
-
-        # get data
-        doc = self.get_main_doc()
-        tms = self.away(), self.home()
-        tm_ids = [table_id_fmt.format(tm) for tm in tms]
-        tables = [doc('table#{}'.format(tm_id).lower()) for tm_id in tm_ids]
-        dfs = [sportsref.utils.parse_table(table) for table in tables]
-
-        # clean data and add features
-        for i, (tm, df) in enumerate(zip(tms, dfs)):
-            no_time = df['mp'] == 0
-            stat_cols = [col for col, dtype in df.dtypes.items()
-                         if dtype != 'object']
-            df.loc[no_time, stat_cols] = 0
-            df['team_id'] = tm
-            df['is_home'] = i == 1
-            df['is_starter'] = [p < 5 for p in range(df.shape[0])]
-            df.drop_duplicates(subset='player_id', keep='first', inplace=True)
-
-        return pd.concat(dfs)
+        l = self.get_raw_id(True)
+        return l.split('/')[3].replace('.html','')
 
     @sportsref.decorators.memoize
-    def basic_stats(self):
-        """Returns a DataFrame of basic player stats from the game."""
-        return self._get_player_stats('box_{}_basic')
+    def get_home_stats(self):
+        doc = self.get_main_doc()
+        table = doc('table#{}'.format('box-score-home'))
+        df = sportsref.utils.parse_table(table)
+
+        return df
+
+    @sportsref.decorators.memoize
+    def get_visitor_stats(self):
+        doc = self.get_main_doc()
+        table = doc('table#{}'.format('box-score-visitor'))
+        df = sportsref.utils.parse_table(table)
+
+        return df
+
 
