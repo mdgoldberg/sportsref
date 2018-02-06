@@ -87,7 +87,7 @@ class BoxScore(
 
         scores = []
         for d in div('.score').items():
-            score.append(int(d.text()))
+            scores.append(int(d.text()))
 		
         if home:
             return scores[1]
