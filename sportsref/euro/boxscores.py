@@ -78,13 +78,30 @@ class BoxScore(
         return a_list[0]
 
     @sportsref.decorators.memoize
+    def get_score(self, home):
+        """Returns home team ID.
+        :returns: 3-character string representing home team's ID.
+        """
+        doc = self.get_main_doc()
+        div = doc('.scorebox')
+
+        scores = []
+        for d in div('.score').items():
+            score.append(int(d.text()))
+		
+        if home:
+            return scores[1]
+        return scores[0]
+    
+
+    @sportsref.decorators.memoize
     def home(self):
         """Returns home team ID.
         :returns: 3-character string representing home team's ID.
         """
 
-        l = self.get_raw_id(True)
-        return l.split('/')[2]
+        l = self.get_raw_id(home=True)
+        return l.split('/')[3]
 
     @sportsref.decorators.memoize
     def away(self):
@@ -92,24 +109,22 @@ class BoxScore(
         :returns: 3-character string representing away team's ID.
         """
         
-        l = self.get_raw_id(False)
-        return l.split('/')[2]
+        l = self.get_raw_id(home=False)
+        return l.split('/')[3]
 
     @sportsref.decorators.memoize
     def home_score(self):
         """Returns score of the home team.
         :returns: int of the home score.
         """
-        linescore = self.linescore()
-        return linescore.loc['home', 'T']
+        return self.get_score(home=True)
 
     @sportsref.decorators.memoize
     def away_score(self):
         """Returns score of the away team.
         :returns: int of the away score.
         """
-        linescore = self.linescore()
-        return linescore.loc['away', 'T']
+        return self.get_score(home=False)
 
     @sportsref.decorators.memoize
     def winner(self):
@@ -130,8 +145,8 @@ class BoxScore(
 
         :returns: An int representing the year of the season.
         """
-        l = self.get_raw_id(True)
-        return l.split('/')[3].replace('.html','')
+        l = self.get_raw_id(home=True)
+        return l.split('/')[4].replace('.html','')
 
     @sportsref.decorators.memoize
     def get_home_stats(self):
@@ -142,7 +157,7 @@ class BoxScore(
         return df
 
     @sportsref.decorators.memoize
-    def get_visitor_stats(self):
+    def get_away_stats(self):
         doc = self.get_main_doc()
         table = doc('table#{}'.format('box-score-visitor'))
         df = sportsref.utils.parse_table(table)
