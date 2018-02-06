@@ -30,7 +30,7 @@ class BoxScore(
     @sportsref.decorators.memoize
     def get_main_doc(self):
         url = ('{}/boxscores/{}.html'
-               .format(sportsref.nba.BASE_URL, self.boxscore_id))
+               .format(sportsref.euro.BASE_URL, self.boxscore_id))
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
