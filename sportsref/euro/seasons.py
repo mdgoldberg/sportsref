@@ -11,15 +11,16 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     """Object representing a given NBA season."""
 
-    def __init__(self, year):
+    def __init__(self, year, league_id):
         """Initializes a Season object for an NBA season.
 
         :year: The year of the season we want.
         """
         self.yr = int(year)
+        self.lg_id = league_id
 
     def __eq__(self, other):
-        return (self.yr == other.yr)
+        return (self.yr == other.yr and self.lg_id == other.lg_id)
 
     def __hash__(self):
         return hash(self.yr)
@@ -27,26 +28,26 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def __repr__(self):
         return 'Season({})'.format(self.yr)
 
-    def _subpage_url(self, page):
-        return (sportsref.nba.BASE_URL +
-                '/leagues/NBA_{}_{}.html'.format(self.yr, page))
+    def _schedule_url(self):
+        return (sportsref.euro.BASE_URL +
+                '/{}/{}-schedule.html'.format(self.lg_id, self.yr))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
         """Returns PyQuery object for the main season URL.
         :returns: PyQuery object.
         """
-        url = (sportsref.nba.BASE_URL +
-               '/leagues/NBA_{}.html'.format(self.yr))
+        url = (sportsref.euro.BASE_URL +
+               '/{}/{}.html'.format(self.lg_id, self.yr))
         return pq(sportsref.utils.get_html(url))
 
     @sportsref.decorators.memoize
-    def get_sub_doc(self, subpage):
+    def get_schedule_doc(self):
         """Returns PyQuery object for a given subpage URL.
         :subpage: The subpage of the season, e.g. 'per_game'.
         :returns: PyQuery object.
         """
-        html = sportsref.utils.get_html(self._subpage_url(subpage))
+        html = sportsref.utils.get_html(self._schedule_url())
         return pq(html)
 
     @sportsref.decorators.memoize
@@ -96,53 +97,15 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: DataFrame of schedule information.
         :rtype: pd.DataFrame
         """
-        kind = kind.upper()[0]
-        dfs = []
-
-        # get games from each month
-        for month in ('october', 'november', 'december', 'january', 'february',
-                      'march', 'april', 'may', 'june'):
-            try:
-                doc = self.get_sub_doc('games-{}'.format(month))
-            except ValueError:
-                continue
-            table = doc('table#schedule')
-            df = sportsref.utils.parse_table(table)
-            dfs.append(df)
-        df = pd.concat(dfs).reset_index(drop=True)
-
-        # figure out how many regular season games
-        try:
-            sportsref.utils.get_html('{}/playoffs/NBA_{}.html'.format(
-                sportsref.nba.BASE_URL, self.yr)
-            )
-            is_past_season = True
-        except ValueError:
-            is_past_season = False
-
-        if is_past_season:
-            team_per_game = self.team_stats_per_game()
-            n_reg_games = int(team_per_game.g.sum() / 2)
-        else:
-            n_reg_games = len(df)
-
-        # subset appropriately based on `kind`
+        doc = self.get_schedule_doc()
+        table_id = 'table#games'
         if kind == 'P':
-            return df.iloc[n_reg_games:]
-        else:
-            return df.iloc[:n_reg_games]
-
-    def finals_winner(self):
-        """Returns the team ID for the winner of that year's NBA Finals.
-        :returns: 3-letter team ID for champ.
-        """
-        raise NotImplementedError('nba.Season.finals_winner')
-
-    def finals_loser(self):
-        """Returns the team ID for the loser of that year's NBA Finals.
-        :returns: 3-letter team ID for runner-up.
-        """
-        raise NotImplementedError('nba.Season.finals_loser')
+            table_id += '_playoffs'
+        
+        table = doc(table_id)
+        df = sportsref.utils.parse_table(table)
+        return df
+  
 
     @sportsref.decorators.memoize
     def _get_team_stats_table(self, selector):
@@ -151,72 +114,24 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc()
         table = doc(selector)
         df = sportsref.utils.parse_table(table)
-        df.set_index('team_id', inplace=True)
+        #df.set_index('team_id', inplace=True)
         return df
+
+    def standings(self):
+        """Returns a Pandas DataFrame of each team's basic per-game stats for
+        the season."""
+
+        if self.lg_id == 'eurocup' or self.lg_id == 'euroleague':
+            return self._get_team_stats_table('table#tournament_standings')
+        else:
+            return self._get_team_stats_table('table#league_standings')
+
+    def team_stats_totals(self):
+        """Returns a Pandas DataFrame of each team's basic per-game stats for
+        the season."""
+        return self._get_team_stats_table('table#team_stats_per_game')
 
     def team_stats_per_game(self):
         """Returns a Pandas DataFrame of each team's basic per-game stats for
         the season."""
-        return self._get_team_stats_table('table#team-stats-per_game')
-
-    def opp_stats_per_game(self):
-        """Returns a Pandas DataFrame of each team's opponent's basic per-game
-        stats for the season."""
-        return self._get_team_stats_table('table#opponent-stats-per_game')
-
-    def team_stats_totals(self):
-        """Returns a Pandas DataFrame of each team's basic stat totals for the
-        season."""
-        return self._get_team_stats_table('table#team-stats-base')
-
-    def opp_stats_totals(self):
-        """Returns a Pandas DataFrame of each team's opponent's basic stat
-        totals for the season."""
-        return self._get_team_stats_table('table#opponent-stats-base')
-
-    def misc_stats(self):
-        """Returns a Pandas DataFrame of miscellaneous stats about each team's
-        season."""
-        return self._get_team_stats_table('table#misc_stats')
-
-    def team_stats_shooting(self):
-        """Returns a Pandas DataFrame of each team's shooting stats for the
-        season."""
-        return self._get_team_stats_table('table#team_shooting')
-
-    def opp_stats_shooting(self):
-        """Returns a Pandas DataFrame of each team's opponent's shooting stats
-        for the season."""
-        return self._get_team_stats_table('table#opponent_shooting')
-
-    @sportsref.decorators.memoize
-    def _get_player_stats_table(self, identifier):
-        """Helper function for player season stats.
-
-        :identifier: string identifying the type of stat, e.g. 'per_game'.
-        :returns: A DataFrame of stats.
-        """
-        doc = self.get_sub_doc(identifier)
-        table = doc('table#{}_stats'.format(identifier))
-        df = sportsref.utils.parse_table(table)
-        return df
-
-    def player_stats_per_game(self):
-        """Returns a DataFrame of per-game player stats for a season."""
-        return self._get_player_stats_table('per_game')
-
-    def player_stats_totals(self):
-        """Returns a DataFrame of player stat totals for a season."""
-        return self._get_player_stats_table('totals')
-
-    def player_stats_per36(self):
-        """Returns a DataFrame of player per-36 min stats for a season."""
-        return self._get_player_stats_table('per_minute')
-
-    def player_stats_per100(self):
-        """Returns a DataFrame of player per-100 poss stats for a season."""
-        return self._get_player_stats_table('per_poss')
-
-    def player_stats_advanced(self):
-        """Returns a DataFrame of player per-100 poss stats for a season."""
-        return self._get_player_stats_table('advanced')
+        return self._get_team_stats_table('table#team_stats_totals')
