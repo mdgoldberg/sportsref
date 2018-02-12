@@ -30,6 +30,10 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
                 '/teams/{}/{}.htm'.format(self.team_id, yr_str))
 
     @sportsref.decorators.memoize
+    def schedule_url(self, year):
+        return (sportsref.euro.BASE_URL + '/schedules/{}/{}.html'.format(self.team_id, year))
+
+    @sportsref.decorators.memoize
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.team_id)
         teamURL = sportsref.euro.BASE_URL + relURL
@@ -39,6 +43,10 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     @sportsref.decorators.memoize
     def get_year_doc(self, yr_str, level='B'):
         return pq(sportsref.utils.get_html(self.team_year_url(yr_str, level=level)))
+
+    @sportsref.decorators.memoize
+    def get_schedule_doc(self, year):
+        return pq(sportsref.utils.get_html(self.schedule_url(year)))    
 
     @sportsref.decorators.memoize
     def get_league_id(self, year=2018):
@@ -74,6 +82,27 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         df = sportsref.utils.parse_table(table)
 
         return df
+
+    @sportsref.decorators.memoize
+    def schedule(self, year, level='B'):
+        doc = self.get_schedule_doc(year)
+        for t in doc('table').items():
+            if self.team_id in t.attr('id'):
+                if 'Euroleague' in t.attr('id'):
+                    e_id = t.attr('id')
+                else:
+                    c_id = t.attr('id')
+
+        if level == 'C':
+            table_id = c_id
+        
+        else:
+            table_id = e_id
+
+        table = doc('table#{}'.format(table_id))
+        df = sportsref.utils.parse_table(table)
+        return df
+        
 
     @sportsref.decorators.memoize
     def all_team_opp_stats(self, year, level='B'):
