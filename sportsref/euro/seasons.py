@@ -69,11 +69,15 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         values.
         """
         doc = self.get_main_doc()
-        table = doc('table#team-stats-per_game')
-        flattened = sportsref.utils.parse_table(table, flatten=True)
-        unflattened = sportsref.utils.parse_table(table, flatten=False)
-        team_ids = flattened['team_id']
-        team_names = unflattened['team_name']
+        table = doc('table#team_stats_per_game')
+        for a in table('a').items():
+            a.removeAttr('href')
+        
+        name_table = sportsref.utils.parse_table(table)
+        id_table = self.team_stats_per_game()
+
+        team_ids = id_table.index.values
+        team_names = name_table['team_name_season']
         if len(team_names) != len(team_ids):
             raise Exception("team names and team IDs don't align")
         return dict(list(zip(team_ids, team_names)))
@@ -131,9 +135,9 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def team_stats_totals(self):
         """Returns a Pandas DataFrame of each team's basic per-game stats for
         the season."""
-        return self._get_team_stats_table('table#team_stats_per_game')
+        return self._get_team_stats_table('table#team_stats_totals')
 
     def team_stats_per_game(self):
         """Returns a Pandas DataFrame of each team's basic per-game stats for
         the season."""
-        return self._get_team_stats_table('table#team_stats_totals')
+        return self._get_team_stats_table('table#team_stats_per_game')
