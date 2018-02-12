@@ -114,7 +114,9 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc()
         table = doc(selector)
         df = sportsref.utils.parse_table(table)
-        #df.set_index('team_id', inplace=True)
+        df['team_name_season'] = df['team_name_season'].apply(lambda x: x.split('/')[3])
+        df.rename(columns={'team_name_season' : 'team_id'}, inplace=True)
+        df.set_index('team_id', inplace=True)
         return df
 
     def standings(self):
