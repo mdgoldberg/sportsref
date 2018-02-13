@@ -62,7 +62,7 @@ class BoxScore(
     @sportsref.decorators.memoize
     def get_raw_id(self, home):
         """Returns home team ID.
-        :returns: 3-character string representing home team's ID.
+        :returns: string representing home team's ID.
         """
         doc = self.get_main_doc()
         div = doc('.scorebox')
@@ -80,7 +80,7 @@ class BoxScore(
     @sportsref.decorators.memoize
     def get_score(self, home):
         """Returns home team ID.
-        :returns: 3-character string representing home team's ID.
+        :returns: string representing home team's ID.
         """
         doc = self.get_main_doc()
         div = doc('.scorebox')
@@ -97,7 +97,7 @@ class BoxScore(
     @sportsref.decorators.memoize
     def home(self):
         """Returns home team ID.
-        :returns: 3-character string representing home team's ID.
+        :returns: string representing home team's ID.
         """
 
         l = self.get_raw_id(home=True)
@@ -106,7 +106,7 @@ class BoxScore(
     @sportsref.decorators.memoize
     def away(self):
         """Returns away team ID.
-        :returns: 3-character string representing away team's ID.
+        :returns: string representing away team's ID.
         """
         
         l = self.get_raw_id(home=False)
