@@ -99,7 +99,24 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: TODO
         """
         doc = self.get_main_doc()
-        raw = 
+        raw = doc('p:contains("Position:")').text()
+        pos = raw.split()[1]
+        return pos
+
+    @sportsref.decorators.memoize
+    def nba_id(self):
+        doc = self.get_main_doc()
+        p = doc('p:contains("NBA Career:")') 
+        href = ''
+        for a in p('a').items():
+            href = a.attr('href')
+
+        if href == '':
+            return None
+
+        nba_id = href.split('/')[3].replace('.html', '')
+
+        return nba_id     
 
     @sportsref.decorators.memoize
     def height(self):
