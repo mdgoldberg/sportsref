@@ -1,3 +1,5 @@
+from builtins import map
+from past.builtins import basestring
 import copy
 import re
 
@@ -27,7 +29,7 @@ def expand_details(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = list(map(sportsref.nfl.pbp.parse_play_details, df['detail'].values))
+    dicts = [sportsref.nfl.pbp.parse_play_details(detail) for detail in df['detail'].values]
     # clean up unmatched details
     cols = {c for d in dicts if d for c in d.keys()}
     blankEntry = {c: np.nan for c in cols}
@@ -60,14 +62,14 @@ def parse_play_details(details):
     """
 
     # if input isn't a string, return None
-    if not isinstance(details, str):
+    if not isinstance(details, basestring):
         return None
 
     rushOptRE = r'(?P<rushDir>{})'.format(
-        r'|'.join(iter(RUSH_OPTS.keys()))
+        r'|'.join(RUSH_OPTS.keys())
     )
     passOptRE = r'(?P<passLoc>{})'.format(
-        r'|'.join(iter(PASS_OPTS.keys()))
+        r'|'.join(PASS_OPTS.keys())
     )
 
     playerRE = r"\S{6,8}\d{2}"
@@ -465,7 +467,7 @@ def _clean_features(struct):
     # creating secsElapsed (in entire game) from qtr_time_remain and quarter
     if pd.notnull(struct.get('qtr_time_remain')):
         qtr = struct['quarter']
-        mins, secs = list(map(int, struct['qtr_time_remain'].split(':')))
+        mins, secs = map(int, struct['qtr_time_remain'].split(':'))
         struct['secsElapsed'] = qtr * 900 - mins * 60 - secs
     # creating columns for turnovers
     struct['isInt'] = pd.notnull(struct.get('interceptor'))
@@ -478,7 +480,7 @@ def _clean_features(struct):
     return pd.Series(struct)
 
 
-def _loc_to_features(l):
+def _loc_to_features(loc):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
 
@@ -487,16 +489,16 @@ def _loc_to_features(l):
     (np.nan) when necessary.
 
     """
-    if l:
-        if isinstance(l, str):
-            l = l.strip()
-            if ' ' in l:
-                r = l.split()
+    if loc:
+        if isinstance(loc, basestring):
+            loc = loc.strip()
+            if ' ' in loc:
+                r = loc.split()
                 r[0] = r[0].lower()
                 r[1] = int(r[1])
             else:
-                r = (np.nan, int(l))
-        elif isinstance(l, float):
+                r = (np.nan, int(loc))
+        elif isinstance(loc, float):
             return (np.nan, 50)
     else:
         r = (np.nan, np.nan)

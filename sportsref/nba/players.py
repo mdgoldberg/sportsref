@@ -1,3 +1,6 @@
+from __future__ import division
+from builtins import map, next
+from past.utils import old_div
 import future
 import future.utils
 
@@ -121,7 +124,14 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns when in the draft the player was picked.
         :returns: TODO
         """
-        raise Exception('not yet implemented - nba.Player.draft_pick')
+        doc = self.get_main_doc()
+        try:
+            p_tags = doc('div#meta p')
+            draft_p_tag = next(p for p in p_tags.items() if p.text().lower().startswith('draft'))
+            draft_pick = int(re.search(r'(\d+)\w{,3}\s+?overall', draft_p_tag.text()).group(1))
+            return draft_pick
+        except Exception as e:
+            return None
 
     @sportsref.decorators.memoize
     def draft_year(self):
