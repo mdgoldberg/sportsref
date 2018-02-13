@@ -17,7 +17,7 @@ __all__ = [
 
 class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
-    """Each instance of this class represents an EuroBB player, uniquely
+    """Each instance of this class represents an Euro player, uniquely
     identified by a player ID. The instance methods give various data available
     from the player's Sports Reference player page."""
 
@@ -95,8 +95,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def position(self):
-        """TODO: Docstring for position.
-        :returns: TODO
+        """Returns the position of a player (note: not consistently coded in bballref)
+        :returns: Position
         """
         doc = self.get_main_doc()
         raw = doc('p:contains("Position:")').text()
@@ -105,6 +105,9 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def nba_id(self):
+        """Returns the euro player's NBA bballref id if they played in the NBA, None if they haven't
+        :returns: NBA_ID
+        """
         doc = self.get_main_doc()
         p = doc('p:contains("NBA Career:")') 
         href = ''
