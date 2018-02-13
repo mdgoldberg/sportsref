@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import map, zip
+from past.builtins import basestring
 import collections
 import json
 import os
@@ -31,7 +34,7 @@ def GamePlayFinder(**kwargs):
 
     # parse score column
     if 'score' in plays.columns:
-        oScore, dScore = list(zip(*plays.score.apply(lambda s: s.split('-'))))
+        oScore, dScore = zip(*plays.score.apply(lambda s: s.split('-')))
         plays['teamScore'] = oScore
         plays['oppScore'] = dScore
     # add parsed pbp info
@@ -54,7 +57,7 @@ def _kwargs_to_qs(**kwargs):
     }
 
     # clean up keys and values
-    for k, v in list(kwargs.items()):
+    for k, v in kwargs.items():
         # pID, playerID => player_id
         if k.lower() in ('pid', 'playerid'):
             del kwargs[k]
@@ -91,7 +94,7 @@ def _kwargs_to_qs(**kwargs):
                 lst = list(v)
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
-            elif isinstance(v, str):
+            elif isinstance(v, basestring):
                 v = list(map(int, v.split(',')))
                 kwargs['year_min'] = min(v)
                 kwargs['year_max'] = max(v)
@@ -105,7 +108,7 @@ def _kwargs_to_qs(**kwargs):
                 lst = list(v)
                 kwargs['week_num_min'] = min(lst)
                 kwargs['week_num_max'] = max(lst)
-            elif isinstance(v, str):
+            elif isinstance(v, basestring):
                 v = list(map(int, v.split(',')))
                 kwargs['week_num_min'] = min(v)
                 kwargs['week_num_max'] = max(v)
@@ -115,7 +118,7 @@ def _kwargs_to_qs(**kwargs):
         # if playoff_round defined, then turn on playoff flag
         if k == 'playoff_round':
             kwargs['game_type'] = 'P'
-        if isinstance(v, str):
+        if isinstance(v, basestring):
             v = v.split(',')
         if not isinstance(v, collections.Iterable):
             v = [v]
@@ -130,7 +133,7 @@ def _kwargs_to_qs(**kwargs):
         # if overwriting a default, overwrite it
         if k in opts:
             # if multiple values separated by commas, split em
-            if isinstance(v, str):
+            if isinstance(v, basestring):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]

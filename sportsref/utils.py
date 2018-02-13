@@ -1,10 +1,12 @@
-from builtins import range
+from __future__ import division, print_function, unicode_literals
+from builtins import object, str
+from past.builtins import basestring
 import ctypes
-import multiprocessing as mp
+import threading
+import multiprocessing
 import re
 import time
 
-import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 import requests
@@ -15,30 +17,31 @@ import sportsref
 THROTTLE_DELAY = 0.5
 
 # variables used to throttle requests across processes
-throttle_lock = mp.Lock()
-last_request_time = mp.Value(ctypes.c_longdouble,
-                             time.time() - 2 * THROTTLE_DELAY)
+throttle_thread_lock = threading.Lock()
+throttle_process_lock = multiprocessing.Lock()
+last_request_time = multiprocessing.Value(ctypes.c_longdouble, time.time() - 10 * THROTTLE_DELAY)
 
-@sportsref.decorators.cache_html
+
+@sportsref.decorators.cache
 def get_html(url):
     """Gets the HTML for the given URL using a GET request.
 
     :url: the absolute URL of the desired page.
     :returns: a string of HTML.
     """
-    
-    with throttle_lock:
+    global last_request_time
+    with throttle_process_lock:
+        with throttle_thread_lock:
+            # sleep until THROTTLE_DELAY secs have passed since last request
+            wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
+            if wait_left > 0:
+                time.sleep(wait_left)
 
-        # sleep until THROTTLE_DELAY secs have passed since last request
-        wait_left = THROTTLE_DELAY - (time.time() - last_request_time.value)
-        if wait_left > 0:
-            time.sleep(wait_left)
+            # make request
+            response = requests.get(url)
 
-        # make request
-        response = requests.get(url)
-
-        # update last request time for throttling
-        last_request_time.value = time.time()
+            # update last request time for throttling
+            last_request_time.value = time.time()
 
     # raise ValueError on 4xx status code, get rid of comments, and return
     if 400 <= response.status_code < 500:
@@ -46,7 +49,6 @@ def get_html(url):
             'Status Code {} received fetching URL "{}"'
             .format(response.status_code, url)
         )
-
     html = response.text
     html = html.replace('<!--', '').replace('-->', '')
 
@@ -54,10 +56,9 @@ def get_html(url):
 
 
 def parse_table(table, flatten=True, footer=False):
-    """Parses a table from SR into a pandas dataframe.
+    """Parses a table from sports-reference sites into a pandas dataframe.
 
-    :param table: the PyQuery <table class="row_summable sortable stats_table" id="per_game" data-cols-to-freeze="1"><caption>Per Game Table</caption>
-object representing the HTML table
+    :param table: the PyQuery object representing the HTML table
     :param flatten: if True, flattens relative URLs to IDs. otherwise, leaves
         all fields as text without cleaning.
     :param footer: If True, returns the summary/footer of the page. Recommended
@@ -66,7 +67,7 @@ object representing the HTML table
     """
     if not len(table):
         return pd.DataFrame()
-    
+
     # get columns
     columns = [c.attrib['data-stat']
                for c in table('thead tr:not([class]) th[data-stat]')]
@@ -168,7 +169,6 @@ object representing the HTML table
         df['game_location'] = df['game_location'].isnull()
         df.rename(columns={'game_location': 'is_home'}, inplace=True)
 
-
     # mp: (min:sec) -> float(min + sec / 60), notes -> NaN, new column
     if 'mp' in df.columns and df.dtypes['mp'] == object and flatten:
         mp_df = df['mp'].str.extract(
@@ -176,23 +176,23 @@ object representing the HTML table
         no_match = mp_df.isnull().all(axis=1)
         if no_match.any():
             df.loc[no_match, 'note'] = df.loc[no_match, 'mp']
-        df['mp'] = mp_df['m'] + mp_df['s'] / 60.
+        df['mp'] = mp_df['m'] + mp_df['s'] / 60
 
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
         m = re.search(r'([-\.\d]+)\%',
-                      val if isinstance(val, str) else str(val), re.U)
+                      val if isinstance(val, basestring) else str(val), re.U)
         try:
             if m:
-                return float(m.group(1)) / 100. if m else val
+                return float(m.group(1)) / 100 if m else val
             if m:
-                return int(m.group(1)) + int(m.group(2)) / 60.
+                return int(m.group(1)) + int(m.group(2)) / 60
         except ValueError:
             return val
         # salaries: $ABC,DEF,GHI -> float(ABCDEFGHI)
         m = re.search(r'\$[\d,]+',
-                      val if isinstance(val, str) else str(val), re.U)
+                      val if isinstance(val, basestring) else str(val), re.U)
         try:
             if m:
                 return float(re.sub(r'\$|,', '', val))
@@ -251,12 +251,12 @@ def flatten_links(td, _recurse=False):
     """
 
     # helper function to flatten individual strings/links
-    def _flattenC(c):
-        if isinstance(c, str):
-            return c.strip('\t\n')
+    def _flatten_node(c):
+        if isinstance(c, basestring):
+            return c.strip()
         elif 'href' in c.attrib:
-            cID = rel_url_to_id(c.attrib['href'])
-            return cID if cID else c.text_content().strip('\t\n')
+            c_id = rel_url_to_id(c.attrib['href'])
+            return c_id if c_id else c.text_content().strip()
         else:
             return flatten_links(pq(c), _recurse=True)
 
@@ -264,7 +264,8 @@ def flatten_links(td, _recurse=False):
     if td is None or not td.text():
         return '' if _recurse else None
 
-    return ''.join(_flattenC(c) for c in td.contents())
+    td.remove('span.note')
+    return ''.join(_flatten_node(c) for c in td.contents())
 
 
 @sportsref.decorators.memoize
@@ -297,7 +298,7 @@ def rel_url_to_id(url):
     coachRegex = r'.*/coaches/(.+?)\.html?'
     stadiumRegex = r'.*/stadiums/(.+?)\.html?'
     refRegex = r'.*/officials/(.+?r)\.html?'
-    collegeRegex = r'.*/schools/(\S+?)/.*'
+    collegeRegex = r'.*/schools/(\S+?)/.*|.*college=([^&]+)'
     hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
     bsDateRegex = r'.*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)'
     leagueRegex = r'.*/leagues/(.*_\d{4}).*'
@@ -332,14 +333,5 @@ def rel_url_to_id(url):
     ):
         return url
 
+    print('WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url))
     return url
-
-
-class ExceptionWrapper(object):
-
-    def __init__(self, ee):
-        self.ee = ee
-        __,  __, self.tb = sys.exc_info()
-
-    def re_raise(self):
-        raise self.ee.with_traceback(self.tb)

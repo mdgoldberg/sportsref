@@ -1,8 +1,13 @@
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map, zip
+from past.builtins import basestring
 import collections
 import json
 import os
 import time
-import urllib.request, urllib.parse, urllib.error
+import urllib.parse
 
 from pyquery import PyQuery as pq
 
@@ -57,7 +62,7 @@ def _kwargs_to_qs(**kwargs):
     }
 
     # clean up keys and values
-    for k, v in list(kwargs.items()):
+    for k, v in kwargs.items():
         del kwargs[k]
         # bool => 'Y'|'N'
         if isinstance(v, bool):
@@ -71,7 +76,7 @@ def _kwargs_to_qs(**kwargs):
                 lst = list(v)
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
-            elif isinstance(v, str):
+            elif isinstance(v, basestring):
                 v = list(map(int, v.split(',')))
                 kwargs['year_min'] = min(v)
                 kwargs['year_max'] = max(v)
@@ -80,7 +85,7 @@ def _kwargs_to_qs(**kwargs):
                 kwargs['year_max'] = v
         # pos, position, positions => pos[]
         elif k.lower() in ('pos', 'position', 'positions'):
-            if isinstance(v, str):
+            if isinstance(v, basestring):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
@@ -90,7 +95,7 @@ def _kwargs_to_qs(**kwargs):
             'draft_pos', 'draftpos', 'draftposition', 'draftpositions',
             'draft_position', 'draft_positions'
         ):
-            if isinstance(v, str):
+            if isinstance(v, basestring):
                 v = v.split(',')
             elif not isinstance(v, collections.Iterable):
                 v = [v]
@@ -105,7 +110,7 @@ def _kwargs_to_qs(**kwargs):
         # opts -> querystring list comp works)
         if k in opts or k in ('pos[]', 'draft_pos[]'):
             # if multiple values separated by commas, split em
-            if isinstance(v, str):
+            if isinstance(v, basestring):
                 v = v.split(',')
             # otherwise, make sure it's a list
             elif not isinstance(v, collections.Iterable):

@@ -1,3 +1,4 @@
+from builtins import next, range, zip
 import future
 import future.utils
 
@@ -33,8 +34,8 @@ def team_names(year):
     df = pd.concat((active_df, inactive_df))
     df = df.loc[~df['has_class_partial_table']]
     ids = df.team_id.str[:3].values
-    names = [tr('th a') for tr in list(active_table('tr').items())]
-    names.extend(tr('th a') for tr in list(inactive_table('tr').items()))
+    names = [tr('th a') for tr in active_table('tr').items()]
+    names.extend(tr('th a') for tr in inactive_table('tr').items())
     names = [_f for _f in names if _f]
     names = [lst[0].text_content() for lst in names]
     # combine IDs and team names into pandas series
@@ -398,7 +399,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """
         doc = self.get_year_doc('{}_splits'.format(year))
         tables = doc('table.stats_table')
-        dfs = [sportsref.utils.parse_table(table) for table in list(tables.items())]
+        dfs = [sportsref.utils.parse_table(table) for table in tables.items()]
         dfs = [
             df.assign(split=df.columns[0])
             .rename(columns={df.columns[0]: 'split_value'})
@@ -418,7 +419,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """
         doc = self.get_year_doc('{}_opp_splits'.format(year))
         tables = doc('table.stats_table')
-        dfs = [sportsref.utils.parse_table(table) for table in list(tables.items())]
+        dfs = [sportsref.utils.parse_table(table) for table in tables.items()]
         dfs = [
             df.assign(split=df.columns[0])
             .rename(columns={df.columns[0]: 'split_value'})
