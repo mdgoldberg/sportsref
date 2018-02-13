@@ -10,10 +10,12 @@ from .players import Player
 
 BASE_URL = 'http://www.basketball-reference.com/euro'
 
+LEAGUE_IDS = ['greek-basket-league','eurocup','spain-liga-acb','italy-basket-serie-a','france-lnb-pro-a','euroleague']
+
 __all__ = [
+    'LEAGUE_IDS',
     'BASE_URL',
     'boxscores', 'BoxScore',
-    'pbp',
     'seasons', 'Season',
     'teams', 'Team',
     'players', 'Player',

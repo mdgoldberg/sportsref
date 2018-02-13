@@ -10,7 +10,7 @@ import sportsref
 class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def __init__(self, team_id):
-        self.team_id = team_id.upper()
+        self.team_id = team_id
 
     def __eq__(self, other):
         return (self.team_id == other.team_id)
@@ -19,20 +19,47 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return hash(self.team_id)
 
     @sportsref.decorators.memoize
-    def team_year_url(self, yr_str):
-        return (sportsref.nba.BASE_URL +
+    def team_year_url(self, year, kind='B'):
+        yr_str = str(year)
+        if kind == 'C':
+            yr_str += '_' + self.get_league_id(year=year)
+        else:
+            yr_str += '_euroleague' 
+  
+        return (sportsref.euro.BASE_URL +
                 '/teams/{}/{}.htm'.format(self.team_id, yr_str))
+
+    @sportsref.decorators.memoize
+    def schedule_url(self, year):
+        return (sportsref.euro.BASE_URL + '/schedules/{}/{}.htm'.format(self.team_id, year))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
         relURL = '/teams/{}'.format(self.team_id)
-        teamURL = sportsref.nba.BASE_URL + relURL
+        teamURL = sportsref.euro.BASE_URL + relURL
         mainDoc = pq(sportsref.utils.get_html(teamURL))
         return mainDoc
 
     @sportsref.decorators.memoize
-    def get_year_doc(self, yr_str):
-        return pq(sportsref.utils.get_html(self.team_year_url(yr_str)))
+    def get_year_doc(self, yr_str, kind='B'):
+        return pq(sportsref.utils.get_html(self.team_year_url(yr_str, kind=kind)))
+
+    @sportsref.decorators.memoize
+    def get_schedule_doc(self, year):
+        return pq(sportsref.utils.get_html(self.schedule_url(year)))    
+
+    @sportsref.decorators.memoize
+    def get_league_id(self, year=2018):
+        """ Year parameter here in case team switched club-play leagues - also makes it easier to find in doc"""
+        doc = self.get_main_doc()
+        table = doc('table#team-index-club')
+
+        start = '/euro/'
+        end = '/{}.html'.format(year)
+
+        for a in table('a[href$="{}"]'.format(end)).items():
+            if 'years' not in a.attr('href'): 
+                return a.attr('href')[len(start):-len(end)]  
 
     @sportsref.decorators.memoize
     def name(self):
@@ -45,31 +72,56 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A string corresponding to the team's full name.
         """
         doc = self.get_main_doc()
-        name = doc('div#info h1[itemprop="name"]').text()
+        name = doc('title').text().replace(' Seasons | Basketball-Reference.com', '')
         return name
 
-    @sportsref.decorators.memoize
-    def roster(self, year):
-        """Returns the roster table for the given year.
-
-        :year: The year for which we want the roster; defaults to current year.
-        :returns: A DataFrame containing roster information for that year.
-        """
-        doc = self.get_year_doc(year)
-        table = doc('table#roster')
+    def get_stats_table(self, table_id, year, kind='B'):
+        doc = self.get_year_doc(year, kind=kind)
+        table = doc('table#{}'.format(table_id))
+        print(table_id)
         df = sportsref.utils.parse_table(table)
-        df['years_experience'] = df['years_experience'].replace('R', 0).astype(int)
+
         return df
 
-    # TODO: kind_rpb
     @sportsref.decorators.memoize
-    def schedule(self, year):
-        """Gets schedule information for a team-season.
+    @sportsref.decorators.kind_rpb(include_type=True)
+    def schedule(self, year, kind='B'):
+        doc = self.get_schedule_doc(year)
+        for t in doc('table').items():
+            if self.team_id in t.attr('id'):
+                if 'Euroleague' in t.attr('id'):
+                    e_id = t.attr('id')
+                else:
+                    c_id = t.attr('id')
+        if kind == 'R':
+            table_id = c_id
+        
+        else:
+            table_id = e_id
 
-        :year: The year for which we want the schedule.
-        :returns: DataFrame of schedule information.
-        """
-        doc = self.get_year_doc('{}_games'.format(year))
-        table = doc('table#games')
+        table = doc("table[id='{}']".format(table_id))
         df = sportsref.utils.parse_table(table)
+        df.rename(columns={'date_game_full' : 'boxscore_id'}, inplace=True)
         return df
+        
+
+    @sportsref.decorators.memoize
+    def all_team_opp_stats(self, year, kind='B'):
+        return self.get_stats_table('team_and_opp', year, kind=kind)
+
+    @sportsref.decorators.memoize    
+    def stats_per_game(self, year, kind='B'):
+        return self.get_stats_table('per_game', year, kind=kind)
+
+    @sportsref.decorators.memoize
+    def stats_totals(self, year, kind='B'):
+        return self.get_stats_table('totals', year, kind=kind)
+
+    @sportsref.decorators.memoize
+    def stats_per36(self, year, kind='B'):
+        return self.get_stats_table('per_minute', year, kind=kind)  
+
+    @sportsref.decorators.memoize
+    def stats_advanced(self, year, kind='B'):
+        return self.get_stats_table('advanced', year, kind=kind)
+

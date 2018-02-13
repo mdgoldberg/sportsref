@@ -98,7 +98,25 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """TODO: Docstring for position.
         :returns: TODO
         """
-        raise Exception('not yet implemented - euro.Player.position')
+        doc = self.get_main_doc()
+        raw = doc('p:contains("Position:")').text()
+        pos = raw.split()[1]
+        return pos
+
+    @sportsref.decorators.memoize
+    def nba_id(self):
+        doc = self.get_main_doc()
+        p = doc('p:contains("NBA Career:")') 
+        href = ''
+        for a in p('a').items():
+            href = a.attr('href')
+
+        if href == '':
+            return None
+
+        nba_id = href.split('/')[3].replace('.html', '')
+
+        return nba_id     
 
     @sportsref.decorators.memoize
     def height(self):
@@ -140,8 +158,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc(level=level)
         if level == 'E': 
             table_id = 'table#{}EUR0'.format(table_id)
-        elif level =='C':
-            table_id = 'table#{}{}'.format(table_id, 'CLU1' if kind == 'P' else 'CLU0')   
+        elif level == 'C':
+            table_id = 'table#{}{}'.format(table_id, 'CLU1' if kind == 'P' else 'CLU0')
         else:
             table_id = 'table#{}{}'.format(table_id, 'ALL1' if kind == 'P' else 'ALL0')
 
