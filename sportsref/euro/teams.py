@@ -19,12 +19,13 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return hash(self.team_id)
 
     @sportsref.decorators.memoize
-    def team_year_url(self, year, kind='B'):
+    def team_year_url(self, year, level='B'):
         yr_str = str(year)
-        if kind == 'C':
+        if level == 'C':
             yr_str += '_' + self.get_league_id(year=year)
-        else:
+        elif level == 'E':
             yr_str += '_euroleague' 
+ 
   
         return (sportsref.euro.BASE_URL +
                 '/teams/{}/{}.htm'.format(self.team_id, yr_str))
@@ -41,8 +42,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         return mainDoc
 
     @sportsref.decorators.memoize
-    def get_year_doc(self, yr_str, kind='B'):
-        return pq(sportsref.utils.get_html(self.team_year_url(yr_str, kind=kind)))
+    def get_year_doc(self, yr_str, level='B'):
+        return pq(sportsref.utils.get_html(self.team_year_url(yr_str, level=level)))
 
     @sportsref.decorators.memoize
     def get_schedule_doc(self, year):
@@ -65,9 +66,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def name(self):
         """Returns the real name of the franchise given the team ID.
 
-        Examples:
-        'BOS' -> 'Boston Celtics'
-        'NJN' -> 'Brooklyn Nets'
+        Example:
+        'barcelona' -> 'FC Barcelona'
 
         :returns: A string corresponding to the team's full name.
         """
@@ -75,10 +75,9 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         name = doc('title').text().replace(' Seasons | Basketball-Reference.com', '')
         return name
 
-    def get_stats_table(self, table_id, year, kind='B'):
-        doc = self.get_year_doc(year, kind=kind)
+    def get_stats_table(self, table_id, year, level='B'):
+        doc = self.get_year_doc(year, level=level)
         table = doc('table#{}'.format(table_id))
-        print(table_id)
         df = sportsref.utils.parse_table(table)
 
         return df
@@ -86,6 +85,9 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
     def schedule(self, year, kind='B'):
+    """Returns the teams schedule, with boxscore_ids for further investigation.
+    :returns: schedule Dataframe
+    """
         doc = self.get_schedule_doc(year)
         for t in doc('table').items():
             if self.team_id in t.attr('id'):
@@ -106,22 +108,22 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         
 
     @sportsref.decorators.memoize
-    def all_team_opp_stats(self, year, kind='B'):
-        return self.get_stats_table('team_and_opp', year, kind=kind)
+    def all_team_opp_stats(self, year, level='B'):
+        return self.get_stats_table('team_and_opp', year, level=level)
 
     @sportsref.decorators.memoize    
-    def stats_per_game(self, year, kind='B'):
-        return self.get_stats_table('per_game', year, kind=kind)
+    def stats_per_game(self, year, level='B'):
+        return self.get_stats_table('per_game', year, level=level)
 
     @sportsref.decorators.memoize
-    def stats_totals(self, year, kind='B'):
-        return self.get_stats_table('totals', year, kind=kind)
+    def stats_totals(self, year, level='B'):
+        return self.get_stats_table('totals', year, level=level)
 
     @sportsref.decorators.memoize
-    def stats_per36(self, year, kind='B'):
-        return self.get_stats_table('per_minute', year, kind=kind)  
+    def stats_per36(self, year, level='B'):
+        return self.get_stats_table('per_minute', year, level=level)  
 
     @sportsref.decorators.memoize
-    def stats_advanced(self, year, kind='B'):
-        return self.get_stats_table('advanced', year, kind=kind)
+    def stats_advanced(self, year, level='B'):
+        return self.get_stats_table('advanced', year, level=level)
 
