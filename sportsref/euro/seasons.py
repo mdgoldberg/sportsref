@@ -30,7 +30,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     def _schedule_url(self):
         return (sportsref.euro.BASE_URL +
-                '/{}/{}-schedule.html'.format(self.lg_id, self.yr))
+                '/{}/{}-schedule.htm'.format(self.lg_id, self.yr))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
@@ -38,7 +38,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: PyQuery object.
         """
         url = (sportsref.euro.BASE_URL +
-               '/{}/{}.html'.format(self.lg_id, self.yr))
+               '/{}/{}.htm'.format(self.lg_id, self.yr))
         return pq(sportsref.utils.get_html(url))
 
     @sportsref.decorators.memoize

@@ -31,7 +31,7 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def schedule_url(self, year):
-        return (sportsref.euro.BASE_URL + '/schedules/{}/{}.html'.format(self.team_id, year))
+        return (sportsref.euro.BASE_URL + '/schedules/{}/{}.htm'.format(self.team_id, year))
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
