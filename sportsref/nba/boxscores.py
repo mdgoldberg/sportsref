@@ -50,7 +50,7 @@ class BoxScore(
         :returns: A datetime.date object with year, month, and day attributes.
         """
         match = re.match(r'(\d{4})(\d{2})(\d{2})', self.boxscore_id)
-        year, month, day = map(int, match.groups())
+        year, month, day = list(map(int, match.groups()))
         return datetime.date(year=year, month=month, day=day)
 
     @sportsref.decorators.memoize
@@ -71,8 +71,8 @@ class BoxScore(
         columns[0] = 'team_id'
 
         data = [
-            [sportsref.utils.flatten_links(td) for td in tr('td').items()]
-            for tr in table('tr.thead').next_all('tr').items()
+            [sportsref.utils.flatten_links(td) for td in list(tr('td').items())]
+            for tr in list(table('tr.thead').next_all('tr').items())
         ]
 
         return pd.DataFrame(data, index=['away', 'home'],
@@ -194,7 +194,7 @@ class BoxScore(
             )
         table = doc('table#pbp')
         trs = [
-            tr for tr in table('tr').items()
+            tr for tr in list(table('tr').items())
             if (not tr.attr['class'] or  # regular data rows
                 tr.attr['id'] and tr.attr['id'].startswith('q'))  # qtr bounds
         ]
@@ -218,7 +218,7 @@ class BoxScore(
             # add time of play to entry
             t_str = row.eq(0).text()
             t_regex = r'(\d+):(\d+)\.(\d+)'
-            mins, secs, tenths = map(int, re.match(t_regex, t_str).groups())
+            mins, secs, tenths = list(map(int, re.match(t_regex, t_str).groups()))
             endQ = (12 * 60 * min(cur_qtr, 4) +
                     5 * 60 * (cur_qtr - 4 if cur_qtr > 4 else 0))
             secsElapsed = endQ - (60 * mins + secs + 0.1 * tenths)
@@ -246,11 +246,11 @@ class BoxScore(
                 # if another case, log and continue
                 else:
                     if not desc.text().lower().startswith('end of '):
-                        print(
+                        print((
                             '{}, Q{}, {} other case: {}'
                             .format(self.boxscore_id, cur_qtr,
                                     t_str, desc.text())
-                        )
+                        ))
                     continue
 
             # handle team play description
@@ -276,8 +276,8 @@ class BoxScore(
                     p = orig_p
                     new_p = new_p[1]
                 elif new_p.get('is_error'):
-                    print("can't parse: {}, boxscore: {}"
-                          .format(desc, self.boxscore_id))
+                    print(("can't parse: {}, boxscore: {}"
+                          .format(desc, self.boxscore_id)))
                     # import pdb; pdb.set_trace()
                 p.update(new_p)
 

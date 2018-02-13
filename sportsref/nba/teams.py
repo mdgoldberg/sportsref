@@ -62,8 +62,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
                                   .replace('R', 0).replace('', np.nan).astype(float))
         return df
 
-    # TODO: kind_rpb
     @sportsref.decorators.memoize
+    @sportsref.decorators.kind_rpb(include_type=True) 
     def schedule(self, year):
         """Gets schedule information for a team-season.
 

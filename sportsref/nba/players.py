@@ -24,6 +24,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     from the player's Basketball Reference player page."""
 
     def __init__(self, player_id):
+        print('init called')
         self.player_id = player_id
         self.url_base = (sportsref.nba.BASE_URL +
                          '/players/{0[0]}/{0}').format(self.player_id)
@@ -43,6 +44,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
+        print('GET_MAIN_DOC called')
         return pq(sportsref.utils.get_html(self.main_url))
 
     @sportsref.decorators.memoize
@@ -68,7 +70,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc()
         date_string = doc('span[itemprop="birthDate"]').attr('data-birth')
         regex = r'(\d{4})\-(\d{2})\-(\d{2})'
-        date_args = map(int, re.match(regex, date_string).groups())
+        date_args = list(map(int, re.match(regex, date_string).groups()))
         birth_date = datetime.date(*date_args)
         age_date = datetime.date(year=year, month=month, day=day)
         delta = age_date - birth_date
@@ -90,7 +92,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_main_doc()
         raw = doc('span[itemprop="height"]').text()
         try:
-            feet, inches = map(int, raw.split('-'))
+            feet, inches = list(map(int, raw.split('-')))
             return feet * 12 + inches
         except ValueError:
             return None
@@ -149,9 +151,12 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame of stats.
         """
         doc = self.get_main_doc()
+        #print(doc)
         table_id = 'table#{}{}'.format(
             'playoffs_' if kind == 'P' else '', table_id)
+        #print(table_id)
         table = doc(table_id)
+        #print(table)
         df = sportsref.utils.parse_table(table, flatten=(not summary),
                                          footer=summary)
         return df
@@ -207,6 +212,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_sub_doc('gamelog/{}'.format(year))
         table = (doc('table#pgl_basic_playoffs')
                  if kind == 'P' else doc('table#pgl_basic'))
+        print('STARTED PARSING')
         df = sportsref.utils.parse_table(table)
         return df
 

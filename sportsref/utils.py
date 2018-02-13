@@ -74,7 +74,14 @@ def parse_table(table, flatten=True, footer=False):
 
     # get data
     rows = list(table('tbody tr' if not footer else 'tfoot tr')
-                .not_('.thead, .stat_total, .stat_average').items())
+                .not_('.thead, .stat_total, .stat_average').items())  
+
+    # edge case for team and opp euro stats (not specifying it by id in case this approach works for other tables set up like this)
+    if len(columns) == 0:
+        columns = [c.attrib['data-stat'] for c in table('.thead th[data-stat]')]
+        columns[0] = 'team'
+        rows = list(table('tr').not_('.thead').items()) 
+    
     data = [
         [flatten_links(td) if flatten else td.text()
          for td in row.items('th,td')]
@@ -322,6 +329,7 @@ def rel_url_to_id(url):
         url.startswith(s) for s in
         (
             '/play-index/',
+            '/euro/'
         )
     ):
         return url
