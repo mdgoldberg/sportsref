@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import map, range, zip
 import future
 import future.utils
 

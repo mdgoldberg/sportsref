@@ -1,3 +1,7 @@
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
 import future
 import future.utils
 
@@ -71,7 +75,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             dateargs = list(map(int, dateargs))
             birthDate = datetime.date(*dateargs)
             delta = datetime.date(year=year, month=month, day=day) - birthDate
-            age = delta.days / 365.
+            age = delta.days / 365
             return age
         except Exception:
             return None
