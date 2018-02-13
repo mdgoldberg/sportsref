@@ -9,12 +9,13 @@ import sportsref
 
 class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
-    """Object representing a given NBA season."""
+    """Object representing a given Euro season."""
 
     def __init__(self, year, league_id):
-        """Initializes a Season object for an NBA season.
+        """Initializes a Season object for an Euro season.
 
         :year: The year of the season we want.
+        :league_id: The league_id that we want (list of league_ids can be obtained by euro.LEAGUE_IDS
         """
         self.yr = int(year)
         self.lg_id = league_id
@@ -43,8 +44,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def get_schedule_doc(self):
-        """Returns PyQuery object for a given subpage URL.
-        :subpage: The subpage of the season, e.g. 'per_game'.
+        """Returns PyQuery object for a given schedule URL.
         :returns: PyQuery object.
         """
         html = sportsref.utils.get_html(self._schedule_url())
@@ -64,7 +64,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def team_ids_to_names(self):
-        """Mapping from 3-letter team IDs to full team names.
+        """Mapping from team IDs to full team names.
         :returns: Dictionary with team IDs as keys and full team strings as
         values.
         """
@@ -84,7 +84,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
     @sportsref.decorators.memoize
     def team_names_to_ids(self):
-        """Mapping from full team names to 3-letter team IDs.
+        """Mapping from full team names to team IDs.
         :returns: Dictionary with tean names as keys and team IDs as values.
         """
         d = self.team_ids_to_names()
@@ -96,7 +96,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns a list of BoxScore IDs for every game in the season.
         Only needs to handle 'R' or 'P' options because decorator handles 'B'.
 
-        :param kind: 'R' for regular season, 'P' for playoffs, 'B' for both.
+        :param kind: 'R' for regular season (club play), 'P' for playoffs (euroleague), 'B' for both.
             Defaults to 'R'.
         :returns: DataFrame of schedule information.
         :rtype: pd.DataFrame
