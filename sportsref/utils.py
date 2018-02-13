@@ -329,6 +329,7 @@ def rel_url_to_id(url):
         url.startswith(s) for s in
         (
             '/play-index/',
+            '/euro/'
         )
     ):
         return url
