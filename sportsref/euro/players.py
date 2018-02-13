@@ -98,7 +98,8 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """TODO: Docstring for position.
         :returns: TODO
         """
-        raise Exception('not yet implemented - euro.Player.position')
+        doc = self.get_main_doc()
+        raw = 
 
     @sportsref.decorators.memoize
     def height(self):
