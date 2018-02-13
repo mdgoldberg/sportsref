@@ -85,9 +85,9 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
     def schedule(self, year, kind='B'):
-    """Returns the teams schedule, with boxscore_ids for further investigation.
-    :returns: schedule Dataframe
-    """
+        """Returns the teams schedule, with boxscore_ids for further investigation.
+        :returns: schedule Dataframe
+        """
         doc = self.get_schedule_doc(year)
         for t in doc('table').items():
             if self.team_id in t.attr('id'):
