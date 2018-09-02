@@ -231,7 +231,7 @@ class BoxScore(
         giTable = sportsref.utils.parse_info_table(table)
         if 'over_under' in giTable:
             ou = giTable['over_under']
-            return float(ou.split()[0])
+            return float(re.findall(r'(\d+\.?\d?)\(.+\)', ou)[0])
         else:
             return None
 
