@@ -1,15 +1,16 @@
-import finders
-import teams
-import players
-import boxscores
-import winProb
-import pbp
+from __future__ import absolute_import
+from . import finders
+from . import teams
+from . import players
+from . import boxscores
+from . import winProb
+from . import pbp
 
-from players import Player
-from seasons import Season
-from teams import Team
-from boxscores import BoxScore
-from finders import GamePlayFinder, PlayerSeasonFinder
+from .players import Player
+from .seasons import Season
+from .teams import Team
+from .boxscores import BoxScore
+from .finders import GamePlayFinder, PlayerSeasonFinder
 
 BASE_URL = 'http://www.pro-football-reference.com'
 
