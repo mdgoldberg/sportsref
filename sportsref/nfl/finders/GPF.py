@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import map, zip
+from past.builtins import basestring
 import collections
 import json
 import os
@@ -21,7 +24,7 @@ def GamePlayFinder(**kwargs):
     url = '{}?{}'.format(GPF_URL, querystring)
     # if verbose, print url
     if kwargs.get('verbose', False):
-        print url
+        print(url)
     html = utils.get_html(url)
     doc = pq(html)
 
@@ -36,7 +39,7 @@ def GamePlayFinder(**kwargs):
         plays['oppScore'] = dScore
     # add parsed pbp info
     if 'description' in plays.columns:
-        plays = pbp.expandDetails(plays, detailCol='description')
+        plays = pbp.expand_details(plays, detailCol='description')
 
     return plays
 
@@ -50,7 +53,7 @@ def _kwargs_to_qs(**kwargs):
     inpOptDef = inputs_options_defaults()
     opts = {
         name: dct['value']
-        for name, dct in inpOptDef.iteritems()
+        for name, dct in inpOptDef.items()
     }
 
     # clean up keys and values
@@ -92,7 +95,7 @@ def _kwargs_to_qs(**kwargs):
                 kwargs['year_min'] = min(lst)
                 kwargs['year_max'] = max(lst)
             elif isinstance(v, basestring):
-                v = map(int, v.split(','))
+                v = list(map(int, v.split(',')))
                 kwargs['year_min'] = min(v)
                 kwargs['year_max'] = max(v)
             else:
@@ -106,7 +109,7 @@ def _kwargs_to_qs(**kwargs):
                 kwargs['week_num_min'] = min(lst)
                 kwargs['week_num_max'] = max(lst)
             elif isinstance(v, basestring):
-                v = map(int, v.split(','))
+                v = list(map(int, v.split(',')))
                 kwargs['week_num_min'] = min(v)
                 kwargs['week_num_max'] = max(v)
             else:
@@ -126,7 +129,7 @@ def _kwargs_to_qs(**kwargs):
             opts[k] = []
 
     # update based on kwargs
-    for k, v in kwargs.iteritems():
+    for k, v in kwargs.items():
         # if overwriting a default, overwrite it
         if k in opts:
             # if multiple values separated by commas, split em
@@ -140,7 +143,7 @@ def _kwargs_to_qs(**kwargs):
     opts['request'] = [1]
 
     qs = '&'.join('{}={}'.format(name, val)
-                  for name, vals in sorted(opts.iteritems()) for val in vals)
+                  for name, vals in sorted(opts.items()) for val in vals)
 
     return qs
 
@@ -167,7 +170,7 @@ def inputs_options_defaults():
     # otherwise, we must regenerate the dict and rewrite it
     else:
 
-        print 'Regenerating GPFConstants file'
+        print('Regenerating GPFConstants file')
 
         html = utils.get_html(GPF_URL)
         doc = pq(html)

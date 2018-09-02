@@ -1,3 +1,6 @@
+from __future__ import division
+from builtins import map, next
+from past.utils import old_div
 import future
 import future.utils
 
@@ -63,7 +66,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: Age in years as a float.
         """
         doc = self.get_main_doc()
-        date_string = doc('span[itemprop="birth_date"]').attr('data-birth')
+        date_string = doc('span[itemprop="birthDate"]').attr('data-birth')
         regex = r'(\d{4})\-(\d{2})\-(\d{2})'
         date_args = map(int, re.match(regex, date_string).groups())
         birth_date = datetime.date(*date_args)
@@ -90,7 +93,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             feet, inches = map(int, raw.split('-'))
             return feet * 12 + inches
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def weight(self):
@@ -103,7 +106,7 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             weight = re.match(r'(\d+)lb', raw).group(1)
             return int(weight)
         except ValueError:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def hand(self):
@@ -119,7 +122,14 @@ class Player(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         """Returns when in the draft the player was picked.
         :returns: TODO
         """
-        raise Exception('not yet implemented - nba.Player.draft_pick')
+        doc = self.get_main_doc()
+        try:
+            p_tags = doc('div#meta p')
+            draft_p_tag = next(p for p in p_tags.items() if p.text().lower().startswith('draft'))
+            draft_pick = int(re.search(r'(\d+)\w{,3}\s+?overall', draft_p_tag.text()).group(1))
+            return draft_pick
+        except Exception as e:
+            return None
 
     @sportsref.decorators.memoize
     def draft_year(self):

@@ -1,6 +1,15 @@
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range, zip
+from past.utils import old_div
+import urllib.parse
+
 import future
 import future.utils
 
+import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
 
@@ -58,7 +67,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         if not df.empty:
             return df.index.tolist()
         else:
-            print 'ERROR: no teams found'
+            print('ERROR: no teams found')
             return []
 
     @sportsref.decorators.memoize
@@ -122,7 +131,7 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
 
         if is_past_season:
             team_per_game = self.team_stats_per_game()
-            n_reg_games = int(team_per_game.g.sum() / 2)
+            n_reg_games = int(team_per_game.g.sum() // 2)
         else:
             n_reg_games = len(df)
 
@@ -143,6 +152,34 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: 3-letter team ID for runner-up.
         """
         raise NotImplementedError('nba.Season.finals_loser')
+
+    def standings(self):
+        """Returns a DataFrame containing standings information."""
+        doc = self.get_sub_doc('standings')
+
+        east_table = doc('table#divs_standings_E')
+        east_df = pd.DataFrame(sportsref.utils.parse_table(east_table))
+        east_df.sort_values('wins', ascending=False, inplace=True)
+        east_df['seed'] = range(1, len(east_df) + 1)
+        east_df['conference'] = 'E'
+
+        west_table = doc('table#divs_standings_W')
+        west_df = sportsref.utils.parse_table(west_table)
+        west_df.sort_values('wins', ascending=False, inplace=True)
+        west_df['seed'] = range(1, len(west_df) + 1)
+        west_df['conference'] = 'W'
+
+        full_df = pd.concat([east_df, west_df], axis=0).reset_index(drop=True)
+        full_df['team_id'] = full_df.team_id.str.extract(r'(\w+)\W*\(\d+\)', expand=False)
+        full_df['gb'] = [gb if isinstance(gb, int) or isinstance(gb, float) else 0
+                         for gb in full_df['gb']]
+        full_df = full_df.drop('has_class_full_table', axis=1)
+
+        expanded_table = doc('table#expanded_standings')
+        expanded_df = sportsref.utils.parse_table(expanded_table)
+
+        full_df = pd.merge(full_df, expanded_df, on='team_id')
+        return full_df
 
     @sportsref.decorators.memoize
     def _get_team_stats_table(self, selector):
@@ -220,3 +257,15 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
     def player_stats_advanced(self):
         """Returns a DataFrame of player per-100 poss stats for a season."""
         return self._get_player_stats_table('advanced')
+
+    def mvp_voting(self):
+        """Returns a DataFrame containing information about MVP voting."""
+        raise NotImplementedError('nba.Season.mvp_voting')
+
+    def roy_voting(self):
+        """Returns a DataFrame containing information about ROY voting."""
+        url = '{}/awards/awards_{}.html'.format(sportsref.nba.BASE_URL, self.yr)
+        doc = pq(sportsref.utils.get_html(url))
+        table = doc('table#roy')
+        df = sportsref.utils.parse_table(table)
+        return df

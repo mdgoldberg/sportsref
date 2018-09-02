@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import map, range, zip
 import future
 import future.utils
 
@@ -118,7 +120,7 @@ class BoxScore(
         elif hmScore < awScore:
             return self.away()
         else:
-            return np.nan
+            return None
 
     @sportsref.decorators.memoize
     def season(self):
@@ -152,12 +154,12 @@ class BoxScore(
         # clean data and add features
         for i, (tm, df) in enumerate(zip(tms, dfs)):
             no_time = df['mp'] == 0
-            stat_cols = [col for col, dtype in df.dtypes.iteritems()
+            stat_cols = [col for col, dtype in df.dtypes.items()
                          if dtype != 'object']
             df.loc[no_time, stat_cols] = 0
-            df.loc[:, 'team_id'] = tm
-            df.loc[:, 'is_home'] = i == 1
-            df.loc[:, 'is_starter'] = [p < 5 for p in range(df.shape[0])]
+            df['team_id'] = tm
+            df['is_home'] = i == 1
+            df['is_starter'] = [p < 5 for p in range(df.shape[0])]
             df.drop_duplicates(subset='player_id', keep='first', inplace=True)
 
         return pd.concat(dfs)
@@ -200,7 +202,7 @@ class BoxScore(
         n_rows = len(trs)
         data = []
         cur_qtr = 0
-        boxscore_id = self.boxscore_id
+        bsid = self.boxscore_id
 
         for i in range(n_rows):
             tr = trs[i]
@@ -233,7 +235,7 @@ class BoxScore(
                     p['is_jump_ball'] = True
                     jb_str = sportsref.utils.flatten_links(desc)
                     p.update(
-                        sportsref.nba.pbp.parse_play(boxscore_id, jb_str, None)
+                        sportsref.nba.pbp.parse_play(bsid, jb_str, None)
                     )
                 # ignore rows marking beginning/end of quarters
                 elif (
@@ -259,7 +261,7 @@ class BoxScore(
                 desc = hm_desc if is_hm_play else aw_desc
                 desc = sportsref.utils.flatten_links(desc)
                 # parse the play
-                new_p = sportsref.nba.pbp.parse_play(boxscore_id, desc, is_hm_play)
+                new_p = sportsref.nba.pbp.parse_play(bsid, desc, is_hm_play)
                 if not new_p:
                     continue
                 elif isinstance(new_p, list):
