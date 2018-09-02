@@ -1,3 +1,5 @@
+from builtins import map
+from past.builtins import basestring
 import copy
 import re
 
@@ -27,9 +29,9 @@ def expand_details(df, detailCol='detail'):
     """
     df = copy.deepcopy(df)
     df['detail'] = df[detailCol]
-    dicts = map(sportsref.nfl.pbp.parse_play_details, df['detail'].values)
+    dicts = [sportsref.nfl.pbp.parse_play_details(detail) for detail in df['detail'].values]
     # clean up unmatched details
-    cols = {c for d in dicts if d for c in d.iterkeys()}
+    cols = {c for d in dicts if d for c in d.keys()}
     blankEntry = {c: np.nan for c in cols}
     newDicts = [d if d else blankEntry for d in dicts]
     # get details DataFrame and merge it with original to create main DataFrame
@@ -64,10 +66,10 @@ def parse_play_details(details):
         return None
 
     rushOptRE = r'(?P<rushDir>{})'.format(
-        r'|'.join(RUSH_OPTS.iterkeys())
+        r'|'.join(RUSH_OPTS.keys())
     )
     passOptRE = r'(?P<passLoc>{})'.format(
-        r'|'.join(PASS_OPTS.iterkeys())
+        r'|'.join(PASS_OPTS.keys())
     )
 
     playerRE = r"\S{6,8}\d{2}"
@@ -255,7 +257,7 @@ def parse_play_details(details):
 
     # create penalty regex
     psPenaltyREstr = (
-        r'Penalty on (?P<penOn>{0}|'.format(playerRE) + r'\w{3}): ' +
+        r'^Penalty on (?P<penOn>{0}|'.format(playerRE) + r'\w{3}): ' +
         r'(?P<penalty>[^\(,]+)(?: \((?P<penDeclined>Declined)\)|' +
         r', (?P<penYds>\d*) yards?|' +
         r'.*?(?: \(no play\)))')
@@ -337,19 +339,19 @@ def parse_play_details(details):
         struct.update(match.groupdict())
         return struct
 
-    # try parsing as a run
-    match = rushRE.search(details)
-    if match:
-        # parse as a run
-        struct['isRun'] = True
-        struct.update(match.groupdict())
-        return struct
-
     # try parsing as a pre-snap penalty
     match = psPenaltyRE.search(details)
     if match:
         # parse as a pre-snap penalty
         struct['isPresnapPenalty'] = True
+        struct.update(match.groupdict())
+        return struct
+
+    # try parsing as a run
+    match = rushRE.search(details)
+    if match:
+        # parse as a run
+        struct['isRun'] = True
         struct.update(match.groupdict())
         return struct
 
@@ -478,7 +480,7 @@ def _clean_features(struct):
     return pd.Series(struct)
 
 
-def _loc_to_features(l):
+def _loc_to_features(loc):
     """Converts a location string "{Half}, {YardLine}" into a tuple of those
     values, the second being an int.
 
@@ -487,16 +489,16 @@ def _loc_to_features(l):
     (np.nan) when necessary.
 
     """
-    if l:
-        if isinstance(l, basestring):
-            l = l.strip()
-            if ' ' in l:
-                r = l.split()
+    if loc:
+        if isinstance(loc, basestring):
+            loc = loc.strip()
+            if ' ' in loc:
+                r = loc.split()
                 r[0] = r[0].lower()
                 r[1] = int(r[1])
             else:
-                r = (np.nan, int(l))
-        elif isinstance(l, float):
+                r = (np.nan, int(loc))
+        elif isinstance(loc, float):
             return (np.nan, 50)
     else:
         r = (np.nan, np.nan)
@@ -574,8 +576,11 @@ def _team_and_opp(struct, curTm=None, curOpp=None):
             curTm = pID
             curOpp = bs.away() if bs.home() == curTm else bs.home()
         elif pID:
-            snaps = bs.snap_counts()
-            curTm = snaps.loc[pID, 'team']
+            player = sportsref.nfl.Player(pID)
+            gamelog = player.gamelog(kind='B')
+            curTm = gamelog.loc[
+                gamelog.boxscore_id == struct['boxscore_id'], 'team_id'
+            ].item()
             curOpp = bs.home() if bs.home() != curTm else bs.away()
 
         return curTm, curOpp
