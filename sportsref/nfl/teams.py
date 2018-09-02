@@ -1,3 +1,4 @@
+from builtins import next, range, zip
 import future
 import future.utils
 
@@ -36,7 +37,7 @@ def team_names(year):
     ids = df.team_id.str[:3].values
     names = [tr('th a') for tr in active_table('tr').items()]
     names.extend(tr('th a') for tr in inactive_table('tr').items())
-    names = filter(None, names)
+    names = [_f for _f in names if _f]
     names = [lst[0].text_content() for lst in names]
     # combine IDs and team names into pandas series
     series = pd.Series(names, index=ids)
@@ -55,7 +56,7 @@ def team_ids(year):
     :returns: A dictionary with full team name keys and teamID values.
     """
     names = team_names(year)
-    return {v: k for k, v in names.iteritems()}
+    return {v: k for k, v in names.items()}
 
 
 @sportsref.decorators.memoize
@@ -65,7 +66,7 @@ def list_teams(year):
     :year: The year of the season in question (as an int).
     :returns: A list of team IDs.
     """
-    return team_names(year).keys()
+    return list(team_names(year).keys())
 
 
 class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
@@ -304,9 +305,42 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             coachAndTenure.append((coachID, tenure))
 
         coachIDs = [
-            cID for cID, games in coachAndTenure for _ in xrange(games)
+            cID for cID, games in coachAndTenure for _ in range(games)
         ]
         return np.array(coachIDs[::-1])
+
+    @sportsref.decorators.memoize
+    def wins(self, year):
+        """Returns the # of regular season wins a team in a year.
+
+        :year: The year for the season in question.
+        :returns: The number of regular season wins.
+        """
+        schedule = self.schedule(year)
+        if schedule.empty:
+            return np.nan
+        return schedule.query('week_num <= 17').is_win.sum()
+
+    @sportsref.decorators.memoize
+    def schedule(self, year):
+        """Returns a DataFrame with schedule information for the given year.
+
+        :year: The year for the season in question.
+        :returns: Pandas DataFrame with schedule information.
+        """
+        doc = self.get_year_doc(year)
+        table = doc('table#games')
+        df = sportsref.utils.parse_table(table)
+        if df.empty:
+            return pd.DataFrame()
+        df = df.loc[df['week_num'].notnull()]
+        df['week_num'] = np.arange(len(df)) + 1
+        df['is_win'] = df['game_outcome'] == 'W'
+        df['is_loss'] = df['game_outcome'] == 'L'
+        df['is_tie'] = df['game_outcome'] == 'T'
+        df['is_bye'] = df['game_outcome'].isnull()
+        df['is_ot'] = df['overtime'].notnull()
+        return df
 
     @sportsref.decorators.memoize
     def srs(self, year):
@@ -315,7 +349,10 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SRS.
         """
-        srs_text = self._year_info_pq(year, 'SRS').text()
+        try:
+            srs_text = self._year_info_pq(year, 'SRS').text()
+        except ValueError:
+            return None
         m = re.match(r'SRS\s*?:\s*?(\S+)', srs_text)
         if m:
             return float(m.group(1))
@@ -330,7 +367,10 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :year: The year for the season in question.
         :returns: A float of SOS.
         """
-        sos_text = self._year_info_pq(year, 'SOS').text()
+        try:
+            sos_text = self._year_info_pq(year, 'SOS').text()
+        except ValueError:
+            return None
         m = re.search(r'SOS\s*:\s*(\S+)', sos_text)
         if m:
             return float(m.group(1))
@@ -417,6 +457,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         doc = self.get_year_doc(year)
         table = doc('table#team_stats')
         df = sportsref.utils.parse_table(table)
+        if df.empty:
+            return pd.Series()
         return df.loc[df.player_id == 'Team Stats'].iloc[0]
 
     @sportsref.decorators.memoize
@@ -461,6 +503,8 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             .rename(columns={df.columns[0]: 'split_value'})
             for df in dfs
         ]
+        if not dfs:
+            return pd.DataFrame()
         return pd.concat(dfs).reset_index(drop=True)
 
     @sportsref.decorators.memoize
@@ -479,4 +523,6 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
             .rename(columns={df.columns[0]: 'split_value'})
             for df in dfs
         ]
+        if not dfs:
+            return pd.DataFrame()
         return pd.concat(dfs).reset_index(drop=True)
