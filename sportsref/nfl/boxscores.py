@@ -16,7 +16,7 @@ __all__ = [
 
 
 @sportsref.decorators.memoize
-def get_season_boxscores_IDs(year):
+def get_season_boxscores_IDs(year, past_only=True):
     """Returns a series of boxscore IDs for a given season.
 
     :year: The year of the season in question (as an int).
@@ -26,13 +26,15 @@ def get_season_boxscores_IDs(year):
     doc = pq(sportsref.utils.get_html(url))
     table = doc('table#games')
     df = sportsref.utils.parse_table(table)
+    if past_only:
+         df = df[(df['pts_win'].notnull()) & (df['gametime'].notnull())]
     if df['week_num'].dtype == 'O':
         df = df[df['week_num'].notnull()]
         df['week_num'] = df['week_num'].replace(to_replace={'WildCard': '18',
                                                             'Division': '19',
                                                             'ConfChamp':'20',
                                                             'SuperBowl':'21'})
-        df = df[~df['week_num'].str.contains('Pre', na = False)]
+        df = df[~df['week_num'].str.contains('Pre', na=False)]
         df['week_num'] = df['week_num'].apply(pd.to_numeric)
     df.set_index(['week_num'], inplace=True)
     return df['boxscore_id']
@@ -45,13 +47,19 @@ def get_future_boxscores_info(year):
     doc = pq(sportsref.utils.get_html(url))
     table = doc('table#games')
     df = sportsref.utils.parse_table(table)
+    df = df[df['week_num'].apply(lambda x: type(x)!=str)].reset_index(drop=True)
     df['season'] = year
     df['week'] = df['week_num'].astype(int)
     df['date'] = df['boxscore_id'].apply(lambda x: BoxScore(x).date())
     df['weekday'] = df['boxscore_id'].apply(lambda x: BoxScore(x).weekday())
     df['start_time'] = df['gametime'].str.lower()
-    df = df[df['pts_win'].isnull()]
-    df = df.rename(columns={'loser':'home','winner':'away'})
+    df = df[(df['pts_win'].isnull()) & (df['gametime'].notnull())]
+    cols_rename = {
+        'loser':'home',
+        'winner':'away',
+        'home_team':'home',
+        'visitor_team':'away',}
+    df = df.rename(columns=cols_rename)
     cols = ['season','week','boxscore_id','date','weekday','start_time','home','away']
     df = df[cols].reset_index(drop=True)
     return df
@@ -90,7 +98,8 @@ class BoxScore(
 
     @sportsref.decorators.memoize
     def date(self):
-        """Returns the date of the game. See Python datetime.date documentation
+        """
+        Returns the date of the game. See Python datetime.date documentation
         for more.
         :returns: A datetime.date object with year, month, and day attributes.
         """
@@ -100,9 +109,9 @@ class BoxScore(
 
     @sportsref.decorators.memoize
     def weekday(self):
-        """Returns the day of the week on which the game occurred.
+        """
+        Returns the day of the week on which the game occurred.
         :returns: String representation of the day of the week for the game.
-
         """
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
                 'Saturday', 'Sunday']
@@ -767,9 +776,9 @@ class BoxScore(
             df['boxscore_id'] = self.boxscore_id
             df['season'] = self.season()
             df['week'] = self.week()
-            df['off_pct'] = df['off_pct'].astype('float')/100
-            df['def_pct'] = df['def_pct'].astype('float')/100
-            df['st_pct'] = df['st_pct'].astype('float')/100
+            df['off_pct'] = df['off_pct'].astype('float')
+            df['def_pct'] = df['def_pct'].astype('float')
+            df['st_pct'] = df['st_pct'].astype('float')
             df.rename(columns={'pos':'position',
                                'offense':'off_snaps',
                                'off_pct':'off_snaps_pct',

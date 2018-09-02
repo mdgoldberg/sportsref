@@ -6,6 +6,7 @@ import re
 import numpy as np
 import pandas as pd
 from pyquery import PyQuery as pq
+from datetime import datetime
 
 import sportsref
 
@@ -119,6 +120,30 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         teamwords = headerwords[:lastIdx]
         return ' '.join(teamwords)
 
+    def current_injuries(self, year):
+        """Returns dataframe of team's current injuries
+        """
+        doc = self.get_year_doc(str(year))
+        # get date injuries was updated
+        match = re.search(r"Updated\s(.+\s\d{2},\s\d{4})",
+                          doc('div#all_{}_current_injuries'.format(self.teamID)).text())
+        if match: last_update = datetime.strptime(match.groups()[0], '%B %d, %Y').date()
+        else: last_update = np.nan
+        # parse table
+        table = doc('table#{}_current_injuries'.format(self.teamID))
+        df = sportsref.utils.parse_table(table)
+        df['season'] = year
+        df['team'] = self.teamID
+        df['last_update'] = last_update
+        df.rename(columns={'injury_class':'status',
+                           'injury_type':'type',
+                           'injury_comment':'comment'},
+                  inplace=True)
+        cols = ['last_update','season','team','player_id','player_name',
+                'position','status','type','comment']
+        df = df[cols]
+        return df
+
     @sportsref.decorators.memoize
     def injury_status(self, year):
         """Returns the player's injury status each week of the given year.
@@ -193,8 +218,9 @@ class Team(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         if not df.empty:
             df['season'] = int(year)
             df['team'] = self.teamID
+            df['position'] = df['position'].str.upper()
             player_names = [c.text for c in table('tbody tr td a[href]')
-                           if c.attrib['href'][1:8]=='players']
+                            if c.attrib['href'][1:8]=='players']
             if len(df) == len(player_names):
                 df['player_name'] = player_names
             df.rename(columns={'pos':'position',
