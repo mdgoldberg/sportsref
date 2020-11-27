@@ -16,9 +16,7 @@ class Player(object, metaclass=sportsref.decorators.Cached):
 
     def __init__(self, player_id):
         self.player_id = player_id
-        self.url_base = (sportsref.nba.BASE_URL + "/players/{0[0]}/{0}").format(
-            self.player_id
-        )
+        self.url_base = f"{sportsref.nba.BASE_URL}/players/{player_id[0]}/{player_id}"
         self.main_url = self.url_base + ".htm"
 
     def __eq__(self, other):
@@ -28,7 +26,7 @@ class Player(object, metaclass=sportsref.decorators.Cached):
         return hash(self.player_id)
 
     def __repr__(self):
-        return "Player({})".format(self.player_id)
+        return f"Player({self.player_id})"
 
     def __str__(self):
         return self.name()
@@ -39,7 +37,7 @@ class Player(object, metaclass=sportsref.decorators.Cached):
 
     @sportsref.decorators.memoize
     def get_sub_doc(self, rel_url):
-        url = "{}/{}".format(self.url_base, rel_url)
+        url = f"{self.url_base}/{rel_url}"
         return pq(sportsref.utils.get_html(url))
 
     @sportsref.decorators.memoize
@@ -145,7 +143,7 @@ class Player(object, metaclass=sportsref.decorators.Cached):
         :returns: A DataFrame of stats.
         """
         doc = self.get_main_doc()
-        table_id = "table#{}{}".format("playoffs_" if kind == "P" else "", table_id)
+        table_id = f"table#{'playoffs_' if kind == 'P' else ''}{table_id}"
         table = doc(table_id)
         df = sportsref.utils.parse_table(table, flatten=(not summary), footer=summary)
         return df
@@ -181,9 +179,14 @@ class Player(object, metaclass=sportsref.decorators.Cached):
         return self._get_stats_table("shooting", kind=kind, summary=summary)
 
     @sportsref.decorators.memoize
+    def stats_adjusted_shooting(self, kind="R", summary=False):
+        """Returns a DataFrame of adjusted shooting stats."""
+        return self._get_stats_table("adj-shooting", kind=kind, summary=summary)
+
+    @sportsref.decorators.memoize
     def stats_pbp(self, kind="R", summary=False):
         """Returns a DataFrame of play-by-play stats."""
-        return self._get_stats_table("advanced_pbp", kind=kind, summary=summary)
+        return self._get_stats_table("pbp", kind=kind, summary=summary)
 
     @sportsref.decorators.memoize
     @sportsref.decorators.kind_rpb(include_type=True)
@@ -197,7 +200,7 @@ class Player(object, metaclass=sportsref.decorators.Cached):
             game of the season.
         :rtype: pd.DataFrame
         """
-        doc = self.get_sub_doc("gamelog/{}".format(year))
+        doc = self.get_sub_doc(f"gamelog/{year}")
         table = (
             doc("table#pgl_basic_playoffs") if kind == "P" else doc("table#pgl_basic")
         )
@@ -217,7 +220,7 @@ class Player(object, metaclass=sportsref.decorators.Cached):
             the season.
         :rtype: pd.DataFrame
         """
-        doc = self.get_sub_doc("gamelog-advanced/{}".format(year))
+        doc = self.get_sub_doc(f"gamelog-advanced/{year}")
         table = (
             doc("table#pgl_advanced_playoffs")
             if kind == "P"

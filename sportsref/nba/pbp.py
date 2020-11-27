@@ -501,7 +501,7 @@ def get_period_starters(df):
         :rtype: tuple of lists
         """
         # if it's a tech FT from between periods, don't count this play
-        if play["clock_time"] == "12:00.0" and (
+        if play["clock_str"] == "12:00.0" and (
             play.get("is_tech_foul") or play.get("is_tech_fta")
         ):
             return [], []
@@ -661,7 +661,7 @@ def get_dense_lineups(df):
             # otherwise, let's print and pretend this never happened
             print(
                 "ERROR IN SUB IN {}, Q{}, {}: {}".format(
-                    row["boxscore_id"], row["quarter"], row["clock_time"], row["detail"]
+                    row["boxscore_id"], row["quarter"], row["clock_str"], row["detail"]
                 )
             )
             raise

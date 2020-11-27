@@ -16,14 +16,13 @@ class Team(object, metaclass=sportsref.decorators.Cached):
 
     @sportsref.decorators.memoize
     def team_year_url(self, yr_str):
-        return sportsref.nba.BASE_URL + "/teams/{}/{}.htm".format(self.team_id, yr_str)
+        return f"{sportsref.nba.BASE_URL}/teams/{self.team_id}/{yr_str}.htm"
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
-        relURL = "/teams/{}".format(self.team_id)
-        teamURL = sportsref.nba.BASE_URL + relURL
-        mainDoc = pq(sportsref.utils.get_html(teamURL))
-        return mainDoc
+        team_url = f"{sportsref.nba.BASE_URL}/teams/{self.team_id}"
+        main_doc = pq(sportsref.utils.get_html(team_url))
+        return main_doc
 
     @sportsref.decorators.memoize
     def get_year_doc(self, yr_str):
@@ -66,7 +65,7 @@ class Team(object, metaclass=sportsref.decorators.Cached):
         :year: The year for which we want the schedule.
         :returns: DataFrame of schedule information.
         """
-        doc = self.get_year_doc("{}_games".format(year))
+        doc = self.get_year_doc(f"{year}_games")
         table = doc("table#games")
         df = sportsref.utils.parse_table(table)
         return df

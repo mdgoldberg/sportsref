@@ -102,7 +102,7 @@ def cache(func):
         encoded_url = url.encode(errors="replace")
         file_hash.update(encoded_url)
         file_hash = file_hash.hexdigest()
-        filename = "{}/{}".format(CACHE_DIR, file_hash)
+        filename = f"{CACHE_DIR}/{file_hash}"
 
         sport_id = None
         for a_base_url, a_sport_id in sportsref.SITE_ABBREV.items():
@@ -111,7 +111,7 @@ def cache(func):
                 break
         else:
             # TODO: log
-            print("No sport ID found for {}, not able to check cache".format(url))
+            print(f"No sport ID found for {url}, not able to check cache")
 
         # check whether cache is valid or stale
         file_exists = os.path.isfile(filename)
@@ -190,9 +190,7 @@ def memoize(fun):
             return ret
         except TypeError:
             print(
-                "memoization type error in function {} for arguments {}".format(
-                    fun.__name__, key
-                )
+                f"memoization type error in function {fun.__name__} for arguments {key}"
             )
             raise
 

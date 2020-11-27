@@ -1,12 +1,12 @@
 import ctypes
-import threading
 import multiprocessing
 import re
+import threading
 import time
 
 import pandas as pd
-from pyquery import PyQuery as pq
 import requests
+from pyquery import PyQuery as pq
 
 import sportsref
 
@@ -45,9 +45,7 @@ def get_html(url):
     # raise ValueError on 4xx status code, get rid of comments, and return
     if 400 <= response.status_code < 500:
         raise ValueError(
-            'Status Code {} received fetching URL "{}"'.format(
-                response.status_code, url
-            )
+            f'Status Code {response.status_code} received fetching URL "{url}"'
         )
     html = response.text
     html = html.replace("<!--", "").replace("-->", "")
@@ -317,5 +315,5 @@ def rel_url_to_id(url):
     if any(url.startswith(s) for s in ("/play-index/",)):
         return url
 
-    print('WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url))
+    print(f'WARNING. NO MATCH WAS FOUND FOR "{url}"')
     return url

@@ -131,7 +131,7 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
         advanced, depending on the argument.
 
         :param table_id_fmt: Format string for str.format with a placeholder
-            for the team ID (e.g. 'box_{}_basic')
+            for the team ID (e.g. 'box-{}-game-basic')
         :returns: DataFrame of player stats
         """
 
