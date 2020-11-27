@@ -1,5 +1,3 @@
-from builtins import object, str
-from past.builtins import str
 import ctypes
 import threading
 import multiprocessing

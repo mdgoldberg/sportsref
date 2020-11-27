@@ -2,7 +2,8 @@ from . import finders
 from . import teams
 from . import players
 from . import boxscores
-from . import winProb
+
+# from . import winProb
 from . import pbp
 
 from .players import Player
@@ -27,6 +28,6 @@ __all__ = [
     "Season",
     "teams",
     "Team",
-    "winProb",
+    # "winProb",
     "pbp",
 ]

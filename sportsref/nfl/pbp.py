@@ -1,5 +1,3 @@
-from builtins import map
-from past.builtins import str
 import copy
 import re
 
@@ -88,7 +86,7 @@ def parse_play_details(details):
     # TODO: record the play both before & after an overturned challenge
     challengeRE = re.compile(
         r".+\. (?P<challenger>.+?) challenged.*? the play was "
-        "(?P<callUpheld>upheld|overturned)\.",
+        r"(?P<callUpheld>upheld|overturned)\.",
         re.IGNORECASE,
     )
     match = challengeRE.search(details)

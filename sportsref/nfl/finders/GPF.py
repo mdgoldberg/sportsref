@@ -1,5 +1,3 @@
-from builtins import map, zip
-from past.builtins import str
 import collections
 import json
 import os
@@ -223,7 +221,7 @@ def inputs_options_defaults():
                     def_dict[k]["options"] = sorted(
                         list(def_dict[k]["options"]), key=int
                     )
-                except:
+                except Exception:
                     def_dict[k]["value"] = sorted(list(def_dict[k]["value"]))
                     def_dict[k]["options"] = sorted(list(def_dict[k]["options"]))
             json.dump(def_dict, f)

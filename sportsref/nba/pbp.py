@@ -1,8 +1,3 @@
-from builtins import map
-from past.builtins import str
-from builtins import enumerate, int, list, range, zip
-
-import operator
 import re
 
 import numpy as np
