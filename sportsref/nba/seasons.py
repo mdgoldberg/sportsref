@@ -152,22 +152,19 @@ class Season(object, metaclass=sportsref.decorators.Cached):
         """Returns a DataFrame containing standings information."""
         doc = self.get_sub_doc("standings")
 
-        east_table = doc("table#divs_standings_E")
-        east_df = pd.DataFrame(sportsref.utils.parse_table(east_table))
+        east_table = doc("table#confs_standings_E")
+        east_df = sportsref.utils.parse_table(east_table)
         east_df.sort_values("wins", ascending=False, inplace=True)
         east_df["seed"] = list(range(1, len(east_df) + 1))
         east_df["conference"] = "E"
 
-        west_table = doc("table#divs_standings_W")
+        west_table = doc("table#confs_standings_W")
         west_df = sportsref.utils.parse_table(west_table)
         west_df.sort_values("wins", ascending=False, inplace=True)
         west_df["seed"] = list(range(1, len(west_df) + 1))
         west_df["conference"] = "W"
 
         full_df = pd.concat([east_df, west_df], axis=0).reset_index(drop=True)
-        full_df["team_id"] = full_df.team_id.str.extract(
-            r"(\w+)\W*\(\d+\)", expand=False
-        )
         full_df["gb"] = [
             gb if isinstance(gb, int) or isinstance(gb, float) else 0
             for gb in full_df["gb"]

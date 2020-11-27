@@ -7,6 +7,8 @@ from pyquery import PyQuery as pq
 
 import sportsref
 
+CLOCK_REGEX = re.compile(r"(\d+):(\d+)\.(\d+)")
+
 
 class BoxScore(object, metaclass=sportsref.decorators.Cached):
     def __init__(self, boxscore_id):
@@ -65,18 +67,9 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
         """Returns the linescore for the game as a DataFrame."""
         doc = self.get_main_doc()
         table = doc("table#line_score")
-
-        columns = [th.text() for th in table("tr.thead").items("th")]
-        columns[0] = "team_id"
-
-        data = [
-            [sportsref.utils.flatten_links(td) for td in list(tr("td").items())]
-            for tr in list(table("tr.thead").next_all("tr").items())
-        ]
-
-        return pd.DataFrame(
-            data, index=["away", "home"], columns=columns, dtype="float"
-        )
+        df = sportsref.utils.parse_table(table)
+        df.index = ["away", "home"]
+        return df
 
     @sportsref.decorators.memoize
     def home(self):
@@ -147,8 +140,8 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
         # get data
         doc = self.get_main_doc()
         tms = self.away(), self.home()
-        tm_ids = [table_id_fmt.format(tm) for tm in tms]
-        tables = [doc("table#{}".format(tm_id).lower()) for tm_id in tm_ids]
+        team_table_ids = [table_id_fmt.format(tm.upper()) for tm in tms]
+        tables = [doc(f"table#{table_id}") for table_id in team_table_ids]
         dfs = [sportsref.utils.parse_table(table) for table in tables]
 
         # clean data and add features
@@ -168,12 +161,12 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
     @sportsref.decorators.memoize
     def basic_stats(self):
         """Returns a DataFrame of basic player stats from the game."""
-        return self._get_player_stats("box_{}_basic")
+        return self._get_player_stats("box-{}-game-basic")
 
     @sportsref.decorators.memoize
     def advanced_stats(self):
         """Returns a DataFrame of advanced player stats from the game."""
-        return self._get_player_stats("box_{}_advanced")
+        return self._get_player_stats("box-{}-game-advanced")
 
     @sportsref.decorators.memoize
     def pbp(self, dense_lineups=False, sparse_lineups=False):
@@ -192,26 +185,25 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
             raise ValueError(
                 "Error fetching PBP subpage for boxscore {}".format(self.boxscore_id)
             )
+
         table = doc("table#pbp")
         trs = [
             tr
             for tr in list(table("tr").items())
             if (
                 not tr.attr["class"]
-                or tr.attr["id"]  # regular data rows
-                and tr.attr["id"].startswith("q")
-            )  # qtr bounds
+                or (tr.attr["id"] and tr.attr["id"].startswith("q"))
+            )
         ]
         rows = [tr.children("td") for tr in trs]
         n_rows = len(trs)
         data = []
         cur_qtr = 0
-        bsid = self.boxscore_id
 
         for i in range(n_rows):
             tr = trs[i]
             row = rows[i]
-            p = {}
+            play = {}
 
             # increment cur_qtr when we hit a new quarter
             if tr.attr["id"] and tr.attr["id"].startswith("q"):
@@ -220,16 +212,17 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                 continue
 
             # add time of play to entry
-            t_str = row.eq(0).text()
-            t_regex = r"(\d+):(\d+)\.(\d+)"
-            mins, secs, tenths = list(map(int, re.match(t_regex, t_str).groups()))
-            endQ = 12 * 60 * min(cur_qtr, 4) + 5 * 60 * (
+            clock_str = row.eq(0).text()
+            mins, secs, tenths = list(
+                map(int, re.match(CLOCK_REGEX, clock_str).groups())
+            )
+            secs_in_period = 12 * 60 * min(cur_qtr, 4) + 5 * 60 * (
                 cur_qtr - 4 if cur_qtr > 4 else 0
             )
-            secsElapsed = endQ - (60 * mins + secs + 0.1 * tenths)
-            p["secs_elapsed"] = secsElapsed
-            p["clock_time"] = t_str
-            p["quarter"] = cur_qtr
+            secs_elapsed = secs_in_period - (60 * mins + secs + 0.1 * tenths)
+            play["secs_elapsed"] = secs_elapsed
+            play["clock_str"] = clock_str
+            play["quarter"] = cur_qtr
 
             # handle single play description
             # ex: beginning/end of quarter, jump ball
@@ -237,9 +230,13 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                 desc = row.eq(1)
                 # handle jump balls
                 if desc.text().lower().startswith("jump ball: "):
-                    p["is_jump_ball"] = True
-                    jb_str = sportsref.utils.flatten_links(desc)
-                    p.update(sportsref.nba.pbp.parse_play(bsid, jb_str, None))
+                    play["is_jump_ball"] = True
+                    jump_ball_str = sportsref.utils.flatten_links(desc)
+                    play.update(
+                        sportsref.nba.pbp.parse_play(
+                            self.boxscore_id, jump_ball_str, is_home=None
+                        )
+                    )
                 # ignore rows marking beginning/end of quarters
                 elif desc.text().lower().startswith(
                     "start of "
@@ -250,7 +247,7 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                     if not desc.text().lower().startswith("end of "):
                         print(
                             "{}, Q{}, {} other case: {}".format(
-                                self.boxscore_id, cur_qtr, t_str, desc.text()
+                                self.boxscore_id, cur_qtr, clock_str, desc.text()
                             )
                         )
                     continue
@@ -263,26 +260,28 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                 desc = hm_desc if is_hm_play else aw_desc
                 desc = sportsref.utils.flatten_links(desc)
                 # parse the play
-                new_p = sportsref.nba.pbp.parse_play(bsid, desc, is_hm_play)
-                if not new_p:
+                new_play = sportsref.nba.pbp.parse_play(
+                    self.boxscore_id, desc, is_hm_play
+                )
+                if not new_play:
                     continue
-                elif isinstance(new_p, list):
+                elif isinstance(new_play, list):
                     # this happens when a row needs to be expanded to 2 rows;
                     # ex: double personal foul -> two PF rows
 
                     # first, update and append the first row
-                    orig_p = dict(p)
-                    p.update(new_p[0])
-                    data.append(p)
+                    orig_p = dict(play)
+                    play.update(new_play[0])
+                    data.append(play)
                     # second, set up the second row to be appended below
-                    p = orig_p
-                    new_p = new_p[1]
-                elif new_p.get("is_error"):
+                    play = orig_p
+                    new_play = new_play[1]
+                elif new_play.get("is_error"):
                     print(
                         "can't parse: {}, boxscore: {}".format(desc, self.boxscore_id)
                     )
                     # import pdb; pdb.set_trace()
-                p.update(new_p)
+                play.update(new_play)
 
             # otherwise, I don't know what this was
             else:
@@ -290,7 +289,7 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                     ("don't know how to handle row of length {}".format(row.length))
                 )
 
-            data.append(p)
+            data.append(play)
 
         # convert to DataFrame and clean columns
         df = pd.DataFrame.from_records(data)
@@ -316,12 +315,12 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                 .fillna(False)
             )
             no_reb_before = ((df.fta_num == df.tot_fta)).shift(-1).fillna(False)
-            se_end_qtr = df.loc[df.clock_time == "0:00.0", "secs_elapsed"].unique()
+            se_end_qtr = df.loc[df.clock_str == "0:00.0", "secs_elapsed"].unique()
             no_reb_when = df.secs_elapsed.isin(se_end_qtr)
-            drop_mask = (
-                (df.rebounder == "Team") & (no_reb_after | no_reb_before | no_reb_when)
-            ).nonzero()[0]
-            df.drop(drop_mask, axis=0, inplace=True)
+            drop_mask = (df.rebounder == "Team") & (
+                no_reb_after | no_reb_before | no_reb_when
+            )
+            df.drop(df.loc[drop_mask].index, axis=0, inplace=True)
             df.reset_index(drop=True, inplace=True)
             return df
 
@@ -445,14 +444,15 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
         # "play" is differentiated from "poss" by counting OReb as new play
         # "plays" end with non-and1 FGA, TO, last non-tech FTA, or end of qtr
         # (or double lane viol)
-        new_qtr = df.quarter.diff().shift(-1).fillna(False).astype(bool)
-        and1 = (
+        new_qtr = df.quarter.diff().shift(-1).fillna(False).astype(bool)  # noqa
+        and1 = (  # noqa
             df.is_fgm
             & df.is_pf.shift(-1).fillna(False)
             & df.is_fta.shift(-2).fillna(False)
             & ~df.secs_elapsed.diff().shift(-1).fillna(False).astype(bool)
         )
-        double_lane = df.get("viol_type") == "double lane"
+        double_lane = df.get("viol_type") == "double lane"  # noqa
+
         new_play = df.eval(
             "(is_fga & ~(@and1)) | is_to | @new_qtr |"
             "(is_fta & ~is_tech_fta & fta_num == tot_fta) |"

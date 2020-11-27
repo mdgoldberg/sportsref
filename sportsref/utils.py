@@ -242,10 +242,10 @@ def flatten_links(td, _recurse=False):
     # helper function to flatten individual strings/links
     def _flatten_node(c):
         if isinstance(c, str):
-            return c.strip()
+            return c
         elif "href" in c.attrib:
             c_id = rel_url_to_id(c.attrib["href"])
-            return c_id if c_id else c.text_content().strip()
+            return c_id if c_id else c.text_content()
         else:
             return flatten_links(pq(c), _recurse=True)
 

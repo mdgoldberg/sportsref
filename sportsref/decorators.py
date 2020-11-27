@@ -148,7 +148,6 @@ def get_class_instance_key(cls, args, kwargs):
     for arg in args:
         identifiers.append(id(arg))
     identifiers.extend((k, id(v)) for k, v in list(kwargs.items()))
-    __import__("ipdb").set_trace()
     return tuple(sorted(identifiers))
 
 
