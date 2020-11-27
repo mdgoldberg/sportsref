@@ -21,19 +21,17 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
         return hash(self.boxscore_id)
 
     def __repr__(self):
-        return "BoxScore({})".format(self.boxscore_id)
+        return f"BoxScore({self.boxscore_id})"
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
-        url = "{}/boxscores/{}.html".format(sportsref.nba.BASE_URL, self.boxscore_id)
+        url = f"{sportsref.nba.BASE_URL}/boxscores/{self.boxscore_id}.html"
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
     @sportsref.decorators.memoize
     def get_subpage_doc(self, page):
-        url = sportsref.nba.BASE_URL + "/boxscores/{}/{}.html".format(
-            page, self.boxscore_id
-        )
+        url = f"{sportsref.nba.BASE_URL}/boxscores/{page}/{self.boxscore_id}.html"
         doc = pq(sportsref.utils.get_html(url))
         return doc
 
@@ -183,7 +181,7 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
             doc = self.get_subpage_doc("pbp")
         except Exception:
             raise ValueError(
-                "Error fetching PBP subpage for boxscore {}".format(self.boxscore_id)
+                f"Error fetching PBP subpage for boxscore {self.boxscore_id}"
             )
 
         table = doc("table#pbp")
@@ -246,9 +244,7 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                 else:
                     if not desc.text().lower().startswith("end of "):
                         print(
-                            "{}, Q{}, {} other case: {}".format(
-                                self.boxscore_id, cur_qtr, clock_str, desc.text()
-                            )
+                            f"{self.boxscore_id}, Q{cur_qtr}, {clock_str} other case: {desc.text()}"
                         )
                     continue
 
@@ -270,24 +266,20 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                     # ex: double personal foul -> two PF rows
 
                     # first, update and append the first row
-                    orig_p = dict(play)
+                    orig_play = dict(play)
                     play.update(new_play[0])
                     data.append(play)
                     # second, set up the second row to be appended below
-                    play = orig_p
+                    play = orig_play
                     new_play = new_play[1]
                 elif new_play.get("is_error"):
-                    print(
-                        "can't parse: {}, boxscore: {}".format(desc, self.boxscore_id)
-                    )
+                    print(f"can't parse: {desc}, boxscore: {self.boxscore_id}")
                     # import pdb; pdb.set_trace()
                 play.update(new_play)
 
             # otherwise, I don't know what this was
             else:
-                raise Exception(
-                    ("don't know how to handle row of length {}".format(row.length))
-                )
+                raise Exception(f"don't know how to handle row of length {row.length}")
 
             data.append(play)
 
@@ -421,9 +413,7 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
                     df.loc[idx, "sub_in"] = p_in
                     df.loc[idx, "sub_out"] = p_out
                     df.loc[idx, "sub_team"] = tm
-                    df.loc[idx, "detail"] = "{} enters the game for {}".format(
-                        p_in, p_out
-                    )
+                    df.loc[idx, "detail"] = f"{p_in} enters the game for {p_out}"
                 # third, if applicable, remove old sub entries when there are
                 # redundant subs
                 n_extra = len(group) - len(sub_in)
