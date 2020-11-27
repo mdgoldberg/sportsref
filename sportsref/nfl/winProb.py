@@ -1,4 +1,3 @@
-from __future__ import division
 import numpy as np
 from scipy.stats import norm
 
@@ -11,9 +10,9 @@ def initialWinProb(line):
     :returns: A float in [0., 100.] that represents the win probability.
     """
     line = float(line)
-    probWin = 1. - norm.cdf(0.5, -line, 13.86)
+    probWin = 1.0 - norm.cdf(0.5, -line, 13.86)
     probTie = norm.cdf(0.5, -line, 13.86) - norm.cdf(-0.5, -line, 13.86)
-    return 100. * (probWin + 0.5 * probTie)
+    return 100.0 * (probWin + 0.5 * probTie)
 
 
 def winProb(line, margin, secsElapsed, expPts):
@@ -26,7 +25,8 @@ def winProb(line, margin, secsElapsed, expPts):
     minRemain = 60 - secsElapsed / 60 + 0.00001
     adjMean = baseMean * minRemain / 60
     adjStd = baseStd / np.sqrt(60 / minRemain)
-    probWin = 1. - norm.cdf(-expMargin + 0.5, adjMean, adjStd)
-    probTie = (norm.cdf(-expMargin + 0.5, adjMean, adjStd) -
-               norm.cdf(-expMargin - 0.5, adjMean, adjStd))
-    return 100. * (probWin + 0.5 * probTie)
+    probWin = 1.0 - norm.cdf(-expMargin + 0.5, adjMean, adjStd)
+    probTie = norm.cdf(-expMargin + 0.5, adjMean, adjStd) - norm.cdf(
+        -expMargin - 0.5, adjMean, adjStd
+    )
+    return 100.0 * (probWin + 0.5 * probTie)

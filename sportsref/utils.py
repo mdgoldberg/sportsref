@@ -1,6 +1,5 @@
-from __future__ import division, print_function, unicode_literals
 from builtins import object, str
-from past.builtins import basestring
+from past.builtins import str
 import ctypes
 import threading
 import multiprocessing
@@ -19,7 +18,9 @@ THROTTLE_DELAY = 0.5
 # variables used to throttle requests across processes
 throttle_thread_lock = threading.Lock()
 throttle_process_lock = multiprocessing.Lock()
-last_request_time = multiprocessing.Value(ctypes.c_longdouble, time.time() - 10 * THROTTLE_DELAY)
+last_request_time = multiprocessing.Value(
+    ctypes.c_longdouble, time.time() - 10 * THROTTLE_DELAY
+)
 
 
 @sportsref.decorators.cache
@@ -46,11 +47,12 @@ def get_html(url):
     # raise ValueError on 4xx status code, get rid of comments, and return
     if 400 <= response.status_code < 500:
         raise ValueError(
-            'Status Code {} received fetching URL "{}"'
-            .format(response.status_code, url)
+            'Status Code {} received fetching URL "{}"'.format(
+                response.status_code, url
+            )
         )
     html = response.text
-    html = html.replace('<!--', '').replace('-->', '')
+    html = html.replace("<!--", "").replace("-->", "")
 
     return html
 
@@ -69,113 +71,110 @@ def parse_table(table, flatten=True, footer=False):
         return pd.DataFrame()
 
     # get columns
-    columns = [c.attrib['data-stat']
-               for c in table('thead tr:not([class]) th[data-stat]')]
+    columns = [
+        c.attrib["data-stat"] for c in table("thead tr:not([class]) th[data-stat]")
+    ]
 
     # get data
-    rows = list(table('tbody tr' if not footer else 'tfoot tr')
-                .not_('.thead, .stat_total, .stat_average').items())
+    rows = list(
+        table("tbody tr" if not footer else "tfoot tr")
+        .not_(".thead, .stat_total, .stat_average")
+        .items()
+    )
     data = [
-        [flatten_links(td) if flatten else td.text()
-         for td in row.items('th,td')]
+        [flatten_links(td) if flatten else td.text() for td in row.items("th,td")]
         for row in rows
     ]
 
     # make DataFrame
-    df = pd.DataFrame(data, columns=columns, dtype='float')
+    df = pd.DataFrame(data, columns=columns, dtype="float")
 
     # add has_class columns
     allClasses = set(
-        cls
-        for row in rows
-        if row.attr['class']
-        for cls in row.attr['class'].split()
+        cls for row in rows if row.attr["class"] for cls in row.attr["class"].split()
     )
     for cls in allClasses:
-        df['has_class_' + cls] = [
-            bool(row.attr['class'] and
-                 cls in row.attr['class'].split())
-            for row in rows
+        df["has_class_" + cls] = [
+            bool(row.attr["class"] and cls in row.attr["class"].split()) for row in rows
         ]
 
     # cleaning the DataFrame
 
-    df.drop(['ranker', 'Xxx', 'Yyy', 'Zzz'],
-            axis=1, inplace=True, errors='ignore')
+    df.drop(["ranker", "Xxx", "Yyy", "Zzz"], axis=1, inplace=True, errors="ignore")
 
     # year_id -> year (as int)
-    if 'year_id' in df.columns:
-        df.rename(columns={'year_id': 'year'}, inplace=True)
+    if "year_id" in df.columns:
+        df.rename(columns={"year_id": "year"}, inplace=True)
         if flatten:
-            df.year = df.year.fillna(method='ffill')
-            df['year'] = df.year.map(lambda s: str(s)[:4]).astype(int)
+            df.year = df.year.fillna(method="ffill")
+            df["year"] = df.year.map(lambda s: str(s)[:4]).astype(int)
 
     # pos -> position
-    if 'pos' in df.columns:
-        df.rename(columns={'pos': 'position'}, inplace=True)
+    if "pos" in df.columns:
+        df.rename(columns={"pos": "position"}, inplace=True)
 
     # boxscore_word, game_date -> boxscore_id and separate into Y, M, D columns
-    for bs_id_col in ('boxscore_word', 'game_date', 'box_score_text'):
+    for bs_id_col in ("boxscore_word", "game_date", "box_score_text"):
         if bs_id_col in df.columns:
-            df.rename(columns={bs_id_col: 'boxscore_id'}, inplace=True)
+            df.rename(columns={bs_id_col: "boxscore_id"}, inplace=True)
             break
 
     # ignore *, +, and other characters used to note things
-    df.replace(re.compile(r'[\*\+\u2605]', re.U), '', inplace=True)
+    df.replace(re.compile(r"[\*\+\u2605]", re.U), "", inplace=True)
     for col in df.columns:
-        if hasattr(df[col], 'str'):
+        if hasattr(df[col], "str"):
             df[col] = df[col].str.strip()
 
     # player -> player_id and/or player_name
-    if 'player' in df.columns:
+    if "player" in df.columns:
         if flatten:
-            df.rename(columns={'player': 'player_id'}, inplace=True)
+            df.rename(columns={"player": "player_id"}, inplace=True)
             # when flattening, keep a column for names
-            player_names = parse_table(table, flatten=False)['player_name']
-            df['player_name'] = player_names
+            player_names = parse_table(table, flatten=False)["player_name"]
+            df["player_name"] = player_names
         else:
-            df.rename(columns={'player': 'player_name'}, inplace=True)
+            df.rename(columns={"player": "player_name"}, inplace=True)
 
     # team, team_name -> team_id
-    for team_col in ('team', 'team_name'):
+    for team_col in ("team", "team_name"):
         if team_col in df.columns:
             # first, get rid of faulty rows
-            df = df.loc[~df[team_col].isin(['XXX'])]
+            df = df.loc[~df[team_col].isin(["XXX"])]
             if flatten:
-                df.rename(columns={team_col: 'team_id'}, inplace=True)
+                df.rename(columns={team_col: "team_id"}, inplace=True)
 
     # season -> int
-    if 'season' in df.columns and flatten:
-        df['season'] = df['season'].astype(int)
+    if "season" in df.columns and flatten:
+        df["season"] = df["season"].astype(int)
 
     # handle date_game columns (different types)
-    if 'date_game' in df.columns and flatten:
-        date_re = r'month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)'
-        date_df = df['date_game'].str.extract(date_re, expand=True)
+    if "date_game" in df.columns and flatten:
+        date_re = r"month=(?P<month>\d+)&day=(?P<day>\d+)&year=(?P<year>\d+)"
+        date_df = df["date_game"].str.extract(date_re, expand=True)
         if date_df.notnull().all(axis=1).any():
             df = pd.concat((df, date_df), axis=1)
         else:
-            df.rename(columns={'date_game': 'boxscore_id'}, inplace=True)
+            df.rename(columns={"date_game": "boxscore_id"}, inplace=True)
 
     # game_location -> is_home
-    if 'game_location' in df.columns and flatten:
-        df['game_location'] = df['game_location'].isnull()
-        df.rename(columns={'game_location': 'is_home'}, inplace=True)
+    if "game_location" in df.columns and flatten:
+        df["game_location"] = df["game_location"].isnull()
+        df.rename(columns={"game_location": "is_home"}, inplace=True)
 
     # mp: (min:sec) -> float(min + sec / 60), notes -> NaN, new column
-    if 'mp' in df.columns and df.dtypes['mp'] == object and flatten:
-        mp_df = df['mp'].str.extract(
-            r'(?P<m>\d+):(?P<s>\d+)', expand=True).astype(float)
+    if "mp" in df.columns and df.dtypes["mp"] == object and flatten:
+        mp_df = (
+            df["mp"].str.extract(r"(?P<m>\d+):(?P<s>\d+)", expand=True).astype(float)
+        )
         no_match = mp_df.isnull().all(axis=1)
         if no_match.any():
-            df.loc[no_match, 'note'] = df.loc[no_match, 'mp']
-        df['mp'] = mp_df['m'] + mp_df['s'] / 60
+            df.loc[no_match, "note"] = df.loc[no_match, "mp"]
+        df["mp"] = mp_df["m"] + mp_df["s"] / 60
 
     # converts number-y things to floats
     def convert_to_float(val):
         # percentages: (number%) -> float(number * 0.01)
-        m = re.search(r'([-\.\d]+)\%',
-                      val if isinstance(val, basestring) else str(val), re.U)
+        m = re.search(r"([-\.\d]+)\%", val if isinstance(val, str) else str(val), re.U)
         try:
             if m:
                 return float(m.group(1)) / 100 if m else val
@@ -184,11 +183,10 @@ def parse_table(table, flatten=True, footer=False):
         except ValueError:
             return val
         # salaries: $ABC,DEF,GHI -> float(ABCDEFGHI)
-        m = re.search(r'\$[\d,]+',
-                      val if isinstance(val, basestring) else str(val), re.U)
+        m = re.search(r"\$[\d,]+", val if isinstance(val, str) else str(val), re.U)
         try:
             if m:
-                return float(re.sub(r'\$|,', '', val))
+                return float(re.sub(r"\$|,", "", val))
         except Exception:
             return val
         # generally try to coerce to float, unless it's an int or bool
@@ -217,10 +215,10 @@ def parse_info_table(table):
     :returns: A dictionary representing the information.
     """
     ret = {}
-    for tr in list(table('tr').not_('.thead').items()):
-        th, td = list(tr('th, td').items())
+    for tr in list(table("tr").not_(".thead").items()):
+        th, td = list(tr("th, td").items())
         key = th.text().lower()
-        key = re.sub(r'\W', '_', key)
+        key = re.sub(r"\W", "_", key)
         val = sportsref.utils.flatten_links(td)
         ret[key] = val
     return ret
@@ -232,7 +230,7 @@ def parse_awards_table(table):
     :table: PyQuery object representing the HTML table.
     :returns: A list of the entries in the table, with flattened links.
     """
-    return [flatten_links(tr) for tr in list(table('tr').items())]
+    return [flatten_links(tr) for tr in list(table("tr").items())]
 
 
 def flatten_links(td, _recurse=False):
@@ -245,20 +243,20 @@ def flatten_links(td, _recurse=False):
 
     # helper function to flatten individual strings/links
     def _flatten_node(c):
-        if isinstance(c, basestring):
+        if isinstance(c, str):
             return c.strip()
-        elif 'href' in c.attrib:
-            c_id = rel_url_to_id(c.attrib['href'])
+        elif "href" in c.attrib:
+            c_id = rel_url_to_id(c.attrib["href"])
             return c_id if c_id else c.text_content().strip()
         else:
             return flatten_links(pq(c), _recurse=True)
 
     # if there's no text, just return None
     if td is None or not td.text():
-        return '' if _recurse else None
+        return "" if _recurse else None
 
-    td.remove('span.note')
-    return ''.join(_flatten_node(c) for c in td.contents())
+    td.remove("span.note")
+    return "".join(_flatten_node(c) for c in td.contents())
 
 
 @sportsref.decorators.memoize
@@ -284,18 +282,18 @@ def rel_url_to_id(url):
 
     :returns: ID associated with the given relative URL.
     """
-    yearRegex = r'.*/years/(\d{4}).*|.*/gamelog/(\d{4}).*'
-    playerRegex = r'.*/players/(?:\w/)?(.+?)(?:/|\.html?)'
-    boxscoresRegex = r'.*/boxscores/(.+?)\.html?'
-    teamRegex = r'.*/teams/(\w{3})/.*'
-    coachRegex = r'.*/coaches/(.+?)\.html?'
-    stadiumRegex = r'.*/stadiums/(.+?)\.html?'
-    refRegex = r'.*/officials/(.+?r)\.html?'
-    collegeRegex = r'.*/schools/(\S+?)/.*|.*college=([^&]+)'
-    hsRegex = r'.*/schools/high_schools\.cgi\?id=([^\&]{8})'
-    bsDateRegex = r'.*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)'
-    leagueRegex = r'.*/leagues/(.*_\d{4}).*'
-    awardRegex = r'.*/awards/(.+)\.htm'
+    yearRegex = r".*/years/(\d{4}).*|.*/gamelog/(\d{4}).*"
+    playerRegex = r".*/players/(?:\w/)?(.+?)(?:/|\.html?)"
+    boxscoresRegex = r".*/boxscores/(.+?)\.html?"
+    teamRegex = r".*/teams/(\w{3})/.*"
+    coachRegex = r".*/coaches/(.+?)\.html?"
+    stadiumRegex = r".*/stadiums/(.+?)\.html?"
+    refRegex = r".*/officials/(.+?r)\.html?"
+    collegeRegex = r".*/schools/(\S+?)/.*|.*college=([^&]+)"
+    hsRegex = r".*/schools/high_schools\.cgi\?id=([^\&]{8})"
+    bsDateRegex = r".*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)"
+    leagueRegex = r".*/leagues/(.*_\d{4}).*"
+    awardRegex = r".*/awards/(.+)\.htm"
 
     regexes = [
         yearRegex,
@@ -318,12 +316,7 @@ def rel_url_to_id(url):
             return [_f for _f in match.groups() if _f][0]
 
     # things we don't want to match but don't want to print a WARNING
-    if any(
-        url.startswith(s) for s in
-        (
-            '/play-index/',
-        )
-    ):
+    if any(url.startswith(s) for s in ("/play-index/",)):
         return url
 
     print('WARNING. NO MATCH WAS FOUND FOR "{}"'.format(url))

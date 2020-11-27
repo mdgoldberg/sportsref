@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from . import GPF
 from . import PSF
 
@@ -6,33 +5,26 @@ from .PSF import PlayerSeasonFinder
 from .GPF import GamePlayFinder
 
 # modules/variables to expose
-__all__ = [
-    'PlayerSeasonFinder',
-    'GamePlayFinder',
-]
+__all__ = ["PlayerSeasonFinder", "GamePlayFinder"]
 
 # Fill in PlayerSeasonFinder docstring
 
 IOD = PSF.inputs_options_defaults()
 
-paramStr = '\n'.join(
-    ':param {}: default="{}"'.format(
+paramStr = "\n".join(
+    ':param {}: default="{}"'.format(name, ",".join(dct["value"]))
+    for name, dct in sorted(IOD.items())
+)
+optsStr = "\n".join(
+    "{}: {}".format(name, ",".join('"{}"'.format(opt) for opt in dct["options"]))
+    if len(dct["options"]) <= 10
+    else "{}: {}...{}".format(
         name,
-        ','.join(dct['value'])
+        ",".join('"{}"'.format(opt) for opt in dct["options"][:10]),
+        ",".join('"{}"'.format(opt) for opt in dct["options"][-2:]),
     )
-    for name, dct in sorted(IOD.items()))
-optsStr = '\n'.join(
-    '{}: {}'.format(
-        name,
-        ','.join('"{}"'.format(opt) for opt in dct['options'])
-    )
-    if len(dct['options']) <= 10 else
-    '{}: {}...{}'.format(
-        name,
-        ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
-        ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
-    )
-    for name, dct in sorted(IOD.items()))
+    for name, dct in sorted(IOD.items())
+)
 
 
 PSF.PlayerSeasonFinder.__doc__ = """
@@ -50,7 +42,9 @@ Options for inputs:
 :returns: list of matching player-season tuples
 :rtype: [(player ID, season year)]
 
-""".format(paramStr, optsStr)
+""".format(
+    paramStr, optsStr
+)
 
 # clean up namespace
 del IOD, paramStr, optsStr
@@ -60,24 +54,18 @@ del IOD, paramStr, optsStr
 
 IOD = GPF.inputs_options_defaults()
 
-paramStr = '\n'.join(
-    ':param {}: default="{}"'.format(
-        name,
-        ','.join(dct['value'])
-    )
+paramStr = "\n".join(
+    ':param {}: default="{}"'.format(name, ",".join(dct["value"]))
     for name, dct in sorted(IOD.items())
 )
 
-optsStr = '\n'.join(
-    '{}: {}'.format(
+optsStr = "\n".join(
+    "{}: {}".format(name, ",".join('"{}"'.format(opt) for opt in dct["options"]))
+    if len(dct["options"]) <= 10
+    else "{}: {}...{}".format(
         name,
-        ','.join('"{}"'.format(opt) for opt in dct['options'])
-    )
-    if len(dct['options']) <= 10 else
-    '{}: {}...{}'.format(
-        name,
-        ','.join('"{}"'.format(opt) for opt in dct['options'][:10]),
-        ','.join('"{}"'.format(opt) for opt in dct['options'][-2:])
+        ",".join('"{}"'.format(opt) for opt in dct["options"][:10]),
+        ",".join('"{}"'.format(opt) for opt in dct["options"][-2:]),
     )
     for name, dct in sorted(IOD.items())
 )
@@ -98,7 +86,9 @@ Options for the inputs:
 {}
 :returns: Pandas dataframe of plays
 :rtype: pd.DataFrame
-""".format(paramStr, optsStr)
+""".format(
+    paramStr, optsStr
+)
 
 # clean up namespace
 del IOD, paramStr, optsStr
