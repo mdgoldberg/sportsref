@@ -610,7 +610,8 @@ def get_sparse_lineups(df):
 def get_dense_lineups(df):
     """Returns a new DataFrame based on the one it is passed. Specifically, it
     adds five columns for each team (ten total), where each column has the ID
-    of a player on the court during the play.
+    of a player on the court during the play. Assumes the DataFrame corresponds
+    to only a single game (one unique boxscore ID).
 
     This information is figured out sequentially from the game's substitution
     data in the passed DataFrame, so the DataFrame passed as an argument must
@@ -627,7 +628,6 @@ def get_dense_lineups(df):
     :returns: A DataFrame with additional lineup columns.
 
     """
-    # TODO: add this precondition to documentation
     assert df["boxscore_id"].nunique() == 1
 
     def lineup_dict(aw_lineup, hm_lineup):
@@ -745,8 +745,6 @@ def get_dense_lineups(df):
                 "found to be missing significant minutes"
             )
         else:
-            # import ipdb
-            # ipdb.set_trace()
             for is_home, group in missing_df.groupby("is_home"):
                 player_id = group.index.item()
                 tm_cols = (
