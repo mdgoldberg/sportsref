@@ -104,11 +104,11 @@ class BoxScore(object, metaclass=sportsref.decorators.Cached):
     @sportsref.decorators.memoize
     def winner(self):
         """Returns the team ID of the winning team. Returns NaN if a tie."""
-        hmScore = self.home_score()
-        awScore = self.away_score()
-        if hmScore > awScore:
+        hm_score = self.home_score()
+        aw_score = self.away_score()
+        if hm_score > aw_score:
             return self.home()
-        elif hmScore < awScore:
+        elif hm_score < aw_score:
             return self.away()
         else:
             return None

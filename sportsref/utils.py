@@ -86,10 +86,10 @@ def parse_table(table, flatten=True, footer=False):
     df = pd.DataFrame(data, columns=columns, dtype="float")
 
     # add has_class columns
-    allClasses = set(
+    all_classes = set(
         cls for row in rows if row.attr["class"] for cls in row.attr["class"].split()
     )
-    for cls in allClasses:
+    for cls in all_classes:
         df["has_class_" + cls] = [
             bool(row.attr["class"] and cls in row.attr["class"].split()) for row in rows
         ]
@@ -278,32 +278,32 @@ def rel_url_to_id(url):
 
     :returns: ID associated with the given relative URL.
     """
-    yearRegex = r".*/years/(\d{4}).*|.*/gamelog/(\d{4}).*"
-    playerRegex = r".*/players/(?:\w/)?(.+?)(?:/|\.html?)"
-    boxscoresRegex = r".*/boxscores/(.+?)\.html?"
-    teamRegex = r".*/teams/(\w{3})/.*"
-    coachRegex = r".*/coaches/(.+?)\.html?"
-    stadiumRegex = r".*/stadiums/(.+?)\.html?"
-    refRegex = r".*/officials/(.+?r)\.html?"
-    collegeRegex = r".*/schools/(\S+?)/.*|.*college=([^&]+)"
-    hsRegex = r".*/schools/high_schools\.cgi\?id=([^\&]{8})"
-    bsDateRegex = r".*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)"
-    leagueRegex = r".*/leagues/(.*_\d{4}).*"
-    awardRegex = r".*/awards/(.+)\.htm"
+    year_regex = r".*/years/(\d{4}).*|.*/gamelog/(\d{4}).*"
+    player_regex = r".*/players/(?:\w/)?(.+?)(?:/|\.html?)"
+    boxscores_regex = r".*/boxscores/(.+?)\.html?"
+    team_regex = r".*/teams/(\w{3})/.*"
+    coach_regex = r".*/coaches/(.+?)\.html?"
+    stadium_regex = r".*/stadiums/(.+?)\.html?"
+    ref_regex = r".*/officials/(.+?r)\.html?"
+    college_regex = r".*/schools/(\S+?)/.*|.*college=([^&]+)"
+    hs_regex = r".*/schools/high_schools\.cgi\?id=([^\&]{8})"
+    bs_date_regex = r".*/boxscores/index\.f?cgi\?(month=\d+&day=\d+&year=\d+)"
+    league_regex = r".*/leagues/(.*_\d{4}).*"
+    award_regex = r".*/awards/(.+)\.htm"
 
     regexes = [
-        yearRegex,
-        playerRegex,
-        boxscoresRegex,
-        teamRegex,
-        coachRegex,
-        stadiumRegex,
-        refRegex,
-        collegeRegex,
-        hsRegex,
-        bsDateRegex,
-        leagueRegex,
-        awardRegex,
+        year_regex,
+        player_regex,
+        boxscores_regex,
+        team_regex,
+        coach_regex,
+        stadium_regex,
+        ref_regex,
+        college_regex,
+        hs_regex,
+        bs_date_regex,
+        league_regex,
+        award_regex,
     ]
 
     for regex in regexes:

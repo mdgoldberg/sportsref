@@ -16,7 +16,7 @@ import sportsref
 
 
 # TODO: move PSFConstants and GPFConstants to appdirs cache dir
-def switch_to_dir(dirPath):
+def switch_to_dir(dir_path):
     """
     Decorator that switches to given directory before executing function, and
     then returning to orignal directory.
@@ -26,7 +26,7 @@ def switch_to_dir(dirPath):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             orig_cwd = os.getcwd()
-            os.chdir(dirPath)
+            os.chdir(dir_path)
             ret = func(*args, **kwargs)
             os.chdir(orig_cwd)
             return ret

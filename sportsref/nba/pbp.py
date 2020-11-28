@@ -372,11 +372,11 @@ def parse_play(boxscore_id, details, is_home):
     if match:
         play["is_timeout"] = True
         play.update(match.groupdict())
-        isOfficialTO = play["timeout_team"].lower() == "official"
+        is_official_to = play["timeout_team"].lower() == "official"
         name_to_id = season.team_names_to_ids()
         play["timeout_team"] = (
             "Official"
-            if isOfficialTO
+            if is_official_to
             else name_to_id.get(hm, name_to_id.get(aw, play["timeout_team"]))
         )
         return play
