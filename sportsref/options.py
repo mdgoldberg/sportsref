@@ -1,8 +1,4 @@
-from __future__ import print_function
-OPTIONS = {
-    'cache': True,
-    'memoize': True,
-}
+OPTIONS = {"cache": True, "memoize": True}
 
 
 def get_option(option):
@@ -10,7 +6,8 @@ def get_option(option):
     if option in OPTIONS:
         return OPTIONS[option]
     else:
-        print('option {} not recognized'.format(option))
+        # TODO: log
+        print(f"option {option} not recognized")
         return None
 
 
@@ -19,4 +16,5 @@ def set_option(option, value):
     if option in OPTIONS:
         OPTIONS[option] = value
     else:
-        print('option {} not recognized'.format(option))
+        # TODO: log
+        print("option {option} not recognized")

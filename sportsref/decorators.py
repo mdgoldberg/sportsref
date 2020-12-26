@@ -1,8 +1,3 @@
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-
-import codecs
 import copy
 import datetime
 import functools
@@ -13,7 +8,6 @@ import re
 import time
 
 import appdirs
-from boltons import funcutils
 import mementos
 import pandas as pd
 from pyquery import PyQuery as pq
@@ -22,20 +16,21 @@ import sportsref
 
 
 # TODO: move PSFConstants and GPFConstants to appdirs cache dir
-def switch_to_dir(dirPath):
+def switch_to_dir(dir_path):
     """
     Decorator that switches to given directory before executing function, and
     then returning to orignal directory.
     """
 
     def decorator(func):
-        @funcutils.wraps(func)
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             orig_cwd = os.getcwd()
-            os.chdir(dirPath)
+            os.chdir(dir_path)
             ret = func(*args, **kwargs)
             os.chdir(orig_cwd)
             return ret
+
         return wrapper
 
     return decorator
@@ -43,14 +38,14 @@ def switch_to_dir(dirPath):
 
 def _days_valid_pfr(url):
     # boxscores are static, but refresh quarterly to be sure
-    if 'boxscore' in url:
+    if "boxscore" in url:
         return 90
     # important dates
     today = datetime.date.today()
     start_of_season = datetime.date(today.year, 8, 15)
     end_of_season = datetime.date(today.year, 2, 15)
     # check for a year in the filename
-    m = re.search(r'(\d{4})', url)
+    m = re.search(r"(\d{4})", url)
     if m:
         # if it was a year prior to the current season, we're good
         year = int(m.group(1))
@@ -66,14 +61,14 @@ def _days_valid_pfr(url):
 
 def _days_valid_bkref(url):
     # boxscores are static, but refresh quarterly to be sure
-    if 'boxscore' in url:
+    if "boxscore" in url:
         return 90
     # important dates
     today = datetime.date.today()
     start_of_season = datetime.date(today.year, 10, 1)
     end_of_season = datetime.date(today.year, 7, 1)
     # check for a year in the filename
-    m = re.search(r'(\d{4})', url)
+    m = re.search(r"(\d{4})", url)
     if m:
         # if it was a year prior to the current season, we're good
         year = int(m.group(1))
@@ -97,18 +92,17 @@ def cache(func):
     the user cache determined by the appdirs package.
     """
 
-    CACHE_DIR = appdirs.user_cache_dir('sportsref', getpass.getuser())
-    if not os.path.isdir(CACHE_DIR):
-        os.makedirs(CACHE_DIR)
+    CACHE_DIR = appdirs.user_cache_dir("sportsref", getpass.getuser())
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
-    @funcutils.wraps(func)
+    @functools.wraps(func)
     def wrapper(url):
         # hash based on the URL
         file_hash = hashlib.md5()
-        encoded_url = url.encode(errors='replace')
+        encoded_url = url.encode(errors="replace")
         file_hash.update(encoded_url)
         file_hash = file_hash.hexdigest()
-        filename = '{}/{}'.format(CACHE_DIR, file_hash)
+        filename = f"{CACHE_DIR}/{file_hash}"
 
         sport_id = None
         for a_base_url, a_sport_id in sportsref.SITE_ABBREV.items():
@@ -116,7 +110,8 @@ def cache(func):
                 sport_id = a_sport_id
                 break
         else:
-            print('No sport ID found for {}, not able to check cache'.format(url))
+            # TODO: log
+            print(f"No sport ID found for {url}, not able to check cache")
 
         # check whether cache is valid or stale
         file_exists = os.path.isfile(filename)
@@ -124,20 +119,21 @@ def cache(func):
             cur_time = int(time.time())
             mod_time = int(os.path.getmtime(filename))
             days_since_mod = datetime.timedelta(seconds=(cur_time - mod_time)).days
-            days_cache_valid = globals()['_days_valid_{}'.format(sport_id)](url)
+            # TODO: refactor _days_valid_ functions to not use globals
+            days_cache_valid = globals()[f"_days_valid_{sport_id}"](url)
             cache_is_valid = days_since_mod < days_cache_valid
         else:
             cache_is_valid = False
 
         # if file found and cache is valid, read from file
-        allow_caching = sportsref.get_option('cache')
+        allow_caching = sportsref.get_option("cache")
         if file_exists and cache_is_valid and allow_caching:
-            with codecs.open(filename, 'r', encoding='utf-8', errors='replace') as f:
+            with open(filename, "r", encoding="utf-8", errors="replace") as f:
                 text = f.read()
         # otherwise, execute function and cache results
         else:
             text = func(url)
-            with codecs.open(filename, 'w+', encoding='utf-8') as f:
+            with open(filename, "w+", encoding="utf-8") as f:
                 f.write(text)
         return text
 
@@ -148,16 +144,16 @@ def get_class_instance_key(cls, args, kwargs):
     """
     Returns a unique identifier for a class instantiation.
     """
-    l = [id(cls)]
+    identifiers = [id(cls)]
     for arg in args:
-        l.append(id(arg))
-    l.extend((k, id(v)) for k, v in kwargs.items())
-    return tuple(sorted(l))
+        identifiers.append(id(arg))
+    identifiers.extend((k, id(v)) for k, v in list(kwargs.items()))
+    return tuple(sorted(identifiers))
 
 
 # used as a metaclass for classes that should be memoized
 # (technically not a decorator, but it's similar enough)
-Cached = mementos.memento_factory('Cached', get_class_instance_key)
+Cached = mementos.memento_factory("Cached", get_class_instance_key)
 
 
 def memoize(fun):
@@ -167,10 +163,11 @@ def memoize(fun):
     list-like or dict-like arguments will not be memoized, and this function
     will raise a TypeError.
     """
-    @funcutils.wraps(fun)
+
+    @functools.wraps(fun)
     def wrapper(*args, **kwargs):
 
-        do_memoization = sportsref.get_option('memoize')
+        do_memoization = sportsref.get_option("memoize")
         if not do_memoization:
             return fun(*args, **kwargs)
 
@@ -192,8 +189,9 @@ def memoize(fun):
             ret = _copy(cache[key])
             return ret
         except TypeError:
-            print('memoization type error in function {} for arguments {}'
-                  .format(fun.__name__, key))
+            print(
+                f"memoization type error in function {fun.__name__} for arguments {key}"
+            )
             raise
 
     cache = {}
@@ -207,23 +205,26 @@ def kind_rpb(include_type=False):
         ('B'). If given 'B', it will call the function with both 'R' and 'P'
         and concatenate the results.
         """
+
         @functools.wraps(fun)
         def wrapper(*args, **kwargs):
-            kind = kwargs.get('kind', 'R').upper()
-            if kind == 'B':
-                kwargs['kind'] = 'R'
+            kind = kwargs.get("kind", "R").upper()
+            if kind == "B":
+                kwargs["kind"] = "R"
                 reg = fun(*args, **kwargs)
                 if include_type:
-                    reg['is_playoffs'] = False
-                kwargs['kind'] = 'P'
+                    reg["is_playoffs"] = False
+                kwargs["kind"] = "P"
                 poffs = fun(*args, **kwargs)
                 if include_type:
-                    poffs['is_playoffs'] = True
+                    poffs["is_playoffs"] = True
                 return pd.concat((reg, poffs), ignore_index=True)
             else:
                 df = fun(*args, **kwargs)
                 if include_type:
-                    df['is_playoffs'] = (kind == 'P')
+                    df["is_playoffs"] = kind == "P"
                 return df
+
         return wrapper
+
     return decorator

@@ -1,16 +1,12 @@
-import future
-import future.utils
-
-import pandas as pd
 from pyquery import PyQuery as pq
 
 import sportsref
 
 
-__all__ = ['Season']
+__all__ = ["Season"]
 
 
-class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
+class Season(object, metaclass=sportsref.decorators.Cached):
 
     """Object representing a given NFL season."""
 
@@ -22,24 +18,23 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         self.yr = int(year)
 
     def __eq__(self, other):
-        return (self.yr == other.yr)
+        return self.yr == other.yr
 
     def __hash__(self):
         return hash(self.yr)
 
     def __repr__(self):
-        return 'Season({})'.format(self.yr)
+        return "Season({})".format(self.yr)
 
     def _subpage_url(self, page):
-        return (sportsref.nfl.BASE_URL +
-                '/years/{}/{}.htm'.format(self.yr, page))
+        return sportsref.nfl.BASE_URL + "/years/{}/{}.htm".format(self.yr, page)
 
     @sportsref.decorators.memoize
     def get_main_doc(self):
         """Returns PyQuery object for the main season URL.
         :returns: PyQuery object.
         """
-        url = sportsref.nfl.BASE_URL + '/years/{}/'.format(self.yr)
+        url = sportsref.nfl.BASE_URL + "/years/{}/".format(self.yr)
         return pq(sportsref.utils.get_html(url))
 
     @sportsref.decorators.memoize
@@ -82,18 +77,18 @@ class Season(future.utils.with_metaclass(sportsref.decorators.Cached, object)):
         :returns: A DataFrame of stats.
         """
         doc = self.get_sub_doc(subpage)
-        table = doc('table#{}'.format(table_id))
+        table = doc("table#{}".format(table_id))
         df = sportsref.utils.parse_table(table)
         return df
 
     def player_stats_passing(self):
         """Returns a DataFrame of passing player stats for a season."""
-        return self._get_player_stats_table('passing', 'passing')
+        return self._get_player_stats_table("passing", "passing")
 
     def player_stats_rushing(self):
         """Returns a DataFrame of rushing player stats for a season."""
-        return self._get_player_stats_table('rushing', 'rushing_and_receiving')
+        return self._get_player_stats_table("rushing", "rushing_and_receiving")
 
     def player_stats_receiving(self):
         """Returns a DataFrame of receiving player stats for a season."""
-        return self._get_player_stats_table('receiving', 'receiving')
+        return self._get_player_stats_table("receiving", "receiving")
